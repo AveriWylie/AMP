@@ -130,7 +130,8 @@ class Bot:
             api_key = None
             print("Warning: api_key.txt not found, planner will not function")
 
-        self._planner = Planner(self._world_state, self._pathfinder, api_key)
+        self._planner = Planner(self._world_state, api_key)
+        self._run_thread = None
 
     # entrance for cli
     def start(self):
@@ -218,6 +219,18 @@ class Bot:
 
         if health <= 0:
             print("Bot has died")
+            self._respawn()
+
+    def _respawn(self):
+        # Client Status packet 0x07, action 0 = perform respawn
+        packet_id = self._connection._encode_varint(0x07)
+        data = self._connection._encode_varint(0)
+        length = self._connection._encode_varint(len(packet_id + data))
+        self._connection._send(length + packet_id + data)
+        # reset world state health and food to full after respawn request sent
+        self._world_state["health"] = 20.0
+        self._world_state["food"] = 20
+        print("Respawn sent")
 
     # entity id is a varint — for simplicity read first byte
     # full varint parsing needed for large entity counts
@@ -331,9 +344,10 @@ class Bot:
         """
         if not self._execution_started:
         """
-        self._execution_thread = threading.Thread(target=self._execution_loop, daemon=True)
-        self._execution_thread.start()
-        self._execution_started = True
+        if self._connection._connected:
+            self._execution_thread = threading.Thread(target=self._execution_loop, daemon=True)
+            self._execution_thread.start()
+            self._execution_started = True
 
         """
         else:
@@ -376,11 +390,14 @@ class Bot:
     def prompt(self, user_prompt):
         commands = self._planner.plan(user_prompt)
         for cmd in commands:
-            self._executor.enque_command(cmd)
+            if cmd.get("action") in ("go_to", "find"):
+                self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+            else:
+                self._executor.enque_command(cmd)
 
     """
     --------------------------------------------------------------------------------------------
-    Function Header - run
+    Function Field Header - run and injection handling 
     --------------------------------------------------------------------------------------------
     Public interface for autonomous mode. Takes a high level goal string and passes it to
     the planner agentic loop which reasons step by step until the goal is complete or
@@ -388,7 +405,31 @@ class Bot:
     --------------------------------------------------------------------------------------------
     """
     def run(self, goal, max_steps=20):
-        self._planner.plan_loop(goal, self._executor, max_steps=max_steps)
+        def on_step(commands):
+            for cmd in commands:
+                if cmd.get("action") in ("go_to", "find"):
+                    self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+                else:
+                    self._executor.enque_command(cmd)
+
+        self._run_thread = threading.Thread(
+            target=self._planner.plan_loop,
+            args=(goal,),
+            kwargs={"on_step": on_step, "max_steps": max_steps},
+            daemon=True
+        )
+        self._run_thread.start()
+
+    def inject(self, prompt):
+        # injects a mid-task prompt into the autonomous loop while it is running
+        self._planner.inject(prompt)
+
+    def stop_run(self):
+        # signals the autonomous loop to stop after the current step completes
+        # by injecting a stop signal into the planner history
+        self._planner.inject("Stop the current task immediately. Return [].")
+
+        # ------------------------------------------------------------------------------------------
 
     """
     --------------------------------------------------------------------------------------------

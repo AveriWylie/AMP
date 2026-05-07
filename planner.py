@@ -28,6 +28,7 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 # imports
 import json
 import requests
+import threading
 
 """
 --------------------------------------------------------------------------------------------
@@ -49,12 +50,13 @@ class Planner:
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place"}
 
-    def __init__(self, world_state, pathfinder, api_key):
+    def __init__(self, world_state, api_key):
         self._world_state = world_state
-        self._pathfinder = pathfinder
         self._api_key = api_key
         # conversation history for autonomous agentic loop
         self._history = []
+        # thread-safe queue for mid-task prompt injection in autonomous mode
+        self._inject_queue = threading.Queue()
 
     """
     --------------------------------------------------------------------------------------------
@@ -206,47 +208,35 @@ class Planner:
 
     go_to: calls pathfinder.find_path from current position to target, expands into moves
     find:  scans nearby_surface_blocks from the snapshot for the target block type, then
-    resolves as go_to once the coordinate is known
+           resolves as go_to once the coordinate is known
     mine and place are stubs for now, they resolve to go_to the target coordinate and a
     placeholder print since block interaction packets are not yet implemented.
     --------------------------------------------------------------------------------------------
     """
     def _resolve(self, command, snapshot):
         action = command.get("action")
-        pos = self._world_state["position"]
-        start = (pos["x"], pos["y"], pos["z"])
 
         if action == "go_to":
-            goal = (command["x"], command["y"], command["z"])
-            path = self._pathfinder.find_path(start, goal)
-            return [{"action": "move", "x": x, "y": y, "z": z} for x, y, z in path]
+            return [command]
 
         elif action == "find":
             target_block = command.get("block", "")
             for coord_str, block_name in snapshot["nearby_surface_blocks"].items():
                 if block_name == target_block:
                     x, y, z = map(int, coord_str.split(","))
-                    goal = (x, y, z)
-                    path = self._pathfinder.find_path(start, goal)
-                    return [{"action": "move", "x": x, "y": y, "z": z} for x, y, z in path]
+                    return [{"action": "go_to", "x": x, "y": y, "z": z}]
             print(f"Block '{target_block}' not found in loaded chunks")
             return []
 
         elif action == "mine":
             goal = (command["x"], command["y"], command["z"])
-            path = self._pathfinder.find_path(start, goal)
-            moves = [{"action": "move", "x": x, "y": y, "z": z} for x, y, z in path]
-            # block interaction not yet implemented, stub
-            print(f"Mine at {goal} — block interaction packets not yet implemented")
-            return moves
+            print(f"Mine at {goal} - block interaction packets not yet implemented")
+            return [{"action": "go_to", "x": command["x"], "y": command["y"], "z": command["z"]}]
 
         elif action == "place":
             goal = (command["x"], command["y"], command["z"])
-            path = self._pathfinder.find_path(start, goal)
-            moves = [{"action": "move", "x": x, "y": y, "z": z} for x, y, z in path]
-            # block interaction not yet implemented, stub
-            print(f"Place {command.get('block')} at {goal} — block interaction packets not yet implemented")
-            return moves
+            print(f"Place {command.get('block')} at {goal} - block interaction packets not yet implemented")
+            return [{"action": "go_to", "x": command["x"], "y": command["y"], "z": command["z"]}]
 
         return [command]
 
@@ -298,11 +288,18 @@ class Planner:
     executed, giving the model grounded feedback to reason over for its next decision.
     --------------------------------------------------------------------------------------------
     """
-    def plan_loop(self, goal, executor, max_steps=20):
+    def plan_loop(self, goal, on_step=None, max_steps=20):
         self._history = []
         last_result = "Starting task."
 
         for step in range(max_steps):
+            # drain any mid-task prompts injected by the user and add to history
+            while not self._inject_queue.empty():
+                injected = self._inject_queue.get_nowait()
+                self._history.append({"role": "user", "content": f"Mid-task update: {injected}"})
+                self._history.append({"role": "assistant", "content": "Understood, adjusting plan."})
+                print(f"Injected prompt applied: {injected}")
+
             snapshot = self._build_snapshot()
             user_message = (
                 f"Goal: {goal}\n\n"
@@ -325,11 +322,16 @@ class Planner:
                 else:
                     resolved.extend(self._resolve(cmd, snapshot))
 
-            for cmd in resolved:
-                executor.enque_command(cmd)
+            if on_step:
+                on_step(resolved)
 
             last_result = f"Executed {len(resolved)} commands: {[c.get('action') for c in resolved]}"
             print(f"Step {step + 1}: {last_result}")
 
         else:
             print(f"Autonomous loop reached max steps ({max_steps}).")
+
+    def inject(self, prompt):
+        # thread-safe injection of a mid-task prompt into the autonomous loop
+        # using ordering of prompt queue upon injection
+        self._inject_queue.put(prompt)

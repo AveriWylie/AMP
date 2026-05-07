@@ -2,13 +2,14 @@
 --------------------------------------------------------------------------------------------
 Pathfinder Module
 --------------------------------------------------------------------------------------------
-A* pathfinder over real chunk data. Single public interface is find_path(start, goal)
-which returns an ordered list of (x, y, z) tuples the bot should walk through.
+A* pathfinder algorithm (memorized process, most documenting will be usage / interaction /
+project specific things over real chunk data. Single public interface is find_path(start,
+goal) which returns an ordered list of (x, y, z) tuples the bot should walk through.
 
 A few things to note. The heuristic is Manhattan distance, fast to compute and admissible
-for grid movement. Neighbors are the 4 cardinal directions plus vertical steps up and down
-by 1, covering walking, stepping up one block, and dropping down. Diagonal movement is
-excluded, Minecraft movement is axis-aligned per tick.
+for grid movement (weighted, see set_mode from bot). Neighbors are the 4 cardinal directions
+plus vertical steps up and down by 1, covering walking, stepping up one block, and dropping
+down. Diagonal movement is excluded, Minecraft movement is axis-aligned per tick.
 
 The pathfinder queries world state directly via the get_block helper, which resolves chunk
 coordinates to the right Chunk object and calls get_block on it. If a chunk isn't loaded
@@ -42,7 +43,6 @@ dict is keyed by (cx, cz) chunk coordinates and values are Chunk objects with ge
 --------------------------------------------------------------------------------------------
 """
 class Pathfinder:
-
     def __init__(self, world_state):
         self._world_state = world_state
 
@@ -72,15 +72,15 @@ class Pathfinder:
     - the block at (x, y+1, z) is passable (bot's head)
     - the block at (x, y-1, z) is solid (something to stand on)
 
-    The solid check is just the inverse of passable, if it's not in the passable set,
-    it's solid enough to stand on.
+    The solid check is just the inverse of passable, if it's not in the passable set, it's 
+    solid enough to stand on.
     --------------------------------------------------------------------------------------------
     """
     def _is_walkable(self, x, y, z):
         feet = self._get_block(x, y, z)
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
-        return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
+        return (feet and head and floor) in PASSABLE
 
     """
     --------------------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ class Pathfinder:
     Function Header - Heuristic
     --------------------------------------------------------------------------------------------
     Manhattan distance in 3D. Admissible for grid movement with unit costs so A* is
-    guaranteed to find the shortest path.
+    guaranteed to find the shortest path. Wieight not yet applied
     --------------------------------------------------------------------------------------------
     """
     @staticmethod
@@ -194,5 +194,6 @@ class Pathfinder:
         while (x, y, z) in came_from:
             x, y, z = came_from[(x, y, z)]
             path.append((x, y, z))
+
         path.reverse()
         return path

@@ -1,0 +1,10 @@
+--------------------------------------------------------------------------------------------
+Project philosophy
+--------------------------------------------------------------------------------------------
+Efficiency is not a want but a necessity, for the cpu, user, and creator. The goal when
+working in this project (due to its powering by claude api), is:
+
+min(T) where T = developer_hours + api_latency + token_cost_as_time_equivalent
+
+Where T is relative to the project release time.
+--------------------------------------------------------------------------------------------

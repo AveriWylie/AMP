@@ -5,9 +5,24 @@ from bot import Bot
 File Header - Interactive CLI
 --------------------------------------------------------------------------------------------
 No class needed here. A CLI is procedural by nature, it's just a sequence of steps: collect 
-input, start the bot, loop. Wrapping it in a class would add structure without adding anything 
-useful. Just plain module with functions and a if __name__ == "__main__" entry point at 
-the bottom.
+input, start the bot, loop. Wrapping it in a class would add structure without adding 
+anything useful. Just plain module with functions and a if __name__ == "__main__" entry 
+point at the bottom.
+
+CLI calls bot.prompt(user_prompt) in guided mode and bot.run(goal) then bot.inject(prompt) 
+in autonomous mode. Bot is the single interface, CLI never touches planner, pathfinder, 
+or executor directly.
+
+run is called once with the initial goal to start the autonomous loop on its thread.run is 
+called once with the initial goal to start the autonomous loop on its thread. Every 
+subsequent input the user types while that loop is running goes through inject. The user 
+never calls either directly, the CLI handles it: 
+
+goal = input("Goal: ")   # first input -> bot.run(goal)
+...
+user_input = input("> ") # all subsequent inputs -> bot.inject(user_input)
+So from the user's perspective they just type. run vs inject is an implementation detail 
+the CLI abstracts away.
 --------------------------------------------------------------------------------------------
 """
 def collect_config():
@@ -73,15 +88,36 @@ def guided_loop(bot):
 
 def autonomous_loop(bot):
     print("\n=== Autonomous Mode ===")
-    print("Enter a high level goal. The bot will reason and act until complete.\n")
+    print("Enter a high level goal. The bot will reason and act until complete.")
+    print("While running: type new instructions to inject mid-task, 'stop' to end task, 'quit' to disconnect.\n")
 
     goal = input("Goal: ").strip()
     if not goal:
         print("No goal entered.")
         return
 
+    bot.run(goal)
+
     try:
-        bot.run(goal)
+        while True:
+            user_input = input("> ").strip()
+
+            if not user_input:
+                continue
+
+            if user_input.lower() == "quit":
+                bot._connection.disconnect()
+                print("Disconnected.")
+                break
+
+            if user_input.lower() == "stop":
+                bot.stop_run()
+                print("Stop signal sent.")
+                break
+
+            bot.inject(user_input)
+            print(f"Injected: '{user_input}'")
+
     except KeyboardInterrupt:
         bot._connection.disconnect()
         print("\nDisconnected.")
