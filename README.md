@@ -1,6 +1,6 @@
 # AMP - Agentic Minecraft Player
 
-AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data, and uses Claude as an AI planning layer to translate natural language into in-game actions.
+AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data (to do this I created a chunk parser available on my page in the mc-chunk-parcer repository, and uses Claude as an AI planning layer to translate natural language into in-game actions. 
 
 ## How to build
 
