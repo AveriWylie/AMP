@@ -402,20 +402,24 @@ class Bot:
     Public interface for autonomous mode. Takes a high level goal string and passes it to
     the planner agentic loop which reasons step by step until the goal is complete or
     max_steps is reached. Commands are enqueued directly by the planner loop.
+    
+    plan_loop runs on the thread, and each time it completes a step it calls s
+    elf._on_step(resolved) which enqueues the commands. The execution thread then independently 
+    drains the command queue at 20tps and sends the packet
     --------------------------------------------------------------------------------------------
     """
-    def run(self, goal, max_steps=20):
-        def on_step(commands):
-            for cmd in commands:
-                if cmd.get("action") in ("go_to", "find"):
-                    self.move_to((cmd["x"], cmd["y"], cmd["z"]))
-                else:
-                    self._executor.enque_command(cmd)
+    def _on_step(self, commands):
+        for cmd in commands:
+            if cmd.get("action") in ("go_to", "find"):
+                self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+            else:
+                self._executor.enque_command(cmd)
 
+    def run(self, goal, max_steps=20):
         self._run_thread = threading.Thread(
             target=self._planner.plan_loop,
             args=(goal,),
-            kwargs={"on_step": on_step, "max_steps": max_steps},
+            kwargs={"on_step": self._on_step, "max_steps": max_steps},
             daemon=True
         )
         self._run_thread.start()
