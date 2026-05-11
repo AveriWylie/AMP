@@ -89,4 +89,4 @@ planner.py      - Claude API integration, guided and autonomous planning
 
 ## Project status
 
-Block interaction (mining and placing) is stubbed. The autonomous planning loop is functional but untested end to end against a live server.
+Block interaction (mining and placing) is stubbed. The autonomous planning loop is functional but more testing is in a live server is required.
