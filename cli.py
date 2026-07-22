@@ -40,8 +40,8 @@ def collect_config():
 
     username = input("Username (default: Guest): ").strip() or "Guest"
 
-    print("\nValid versions: see mc_versions.txt")
-    version = input("Version (default: 1.21.4): ").strip() or "1.21.4"
+    print("\nSupported this base: 1.19.4, 1.20, 1.20.1 (offline-mode / LAN). See mc_versions.txt")
+    version = input("Version (default: 1.19.4): ").strip() or "1.19.4"
 
     print("\nGame modes: survival, creative, superflat, adventure, spectator")
     game_mode = input("Game mode (default: survival): ").strip() or "survival"

@@ -14,9 +14,11 @@ BAsic python comments the reader can ignore.
 """
 
 import connection_test as con_test
+import iteration01_test as iter_test
 
 def main():
     con_test.run()
+    iter_test.run()
 
 if __name__ == "__main__":
     main()

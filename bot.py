@@ -16,6 +16,7 @@ import socket
 import threading
 import struct
 import time
+import zlib
 from collections import deque
 from execution import Execute
 from pathfinder import Pathfinder
@@ -30,7 +31,8 @@ Class Header - Bot initialization
 class Bot:
     # above all constants, an initialization of version array to define a constant with it.
     arr = []
-    with open("TEXT/mc_versions.txt", "r+", encoding="utf-8", errors="ignore") as f:
+    # flat layout: mc_versions.txt lives beside bot.py, not in a TEXT/ subfolder
+    with open("mc_versions.txt", "r+", encoding="utf-8", errors="ignore") as f:
         for line in f:
             arr.append(line.strip())
 
@@ -47,8 +49,20 @@ class Bot:
                       "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
                       "version": arr}
 
-    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.21.4",
+    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.19.4",
         "game_mode": "survival", "behavior_mode": "passive"}
+
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Version to protocol map
+    --------------------------------------------------------------------------------------------
+    The handshake sends a protocol number, not a version string, and every packet ID is keyed
+    to that number. Only pre-configuration-phase versions are mapped here (1.19.4=762,
+    1.20.1=763). 1.20.2+ adds a Configuration state between Login and Play not yet implemented
+    here, so anything unmapped falls back to 762 (1.19.4) with a warning.
+    --------------------------------------------------------------------------------------------
+    """
+    version_protocol = {"1.19.4": 762, "1.20": 763, "1.20.1": 763}
 
     # ------------------------------------------------------------------------------------------
 
@@ -114,9 +128,16 @@ class Bot:
         # guarantee the object is always in a valid state immediately after
         # creation with config get
         self._validate_input()
+        # protocol number resolved from the validated version, not hardcoded, so the handshake
+        # and the server agree. Unmapped versions fall back to 762 (see version_protocol above).
+        protocol = self.version_protocol.get(self._version)
+        if protocol is None:
+            print(f"Warning: version '{self._version}' not supported by this base "
+                  f"(supported: {list(self.version_protocol)}). Falling back to protocol 762 (1.19.4).")
+            protocol = 762
         # keyword args must come after all positional arguments in python
         self._connection = Connection(self._host, self._port, self._version, self._username,
-                                      on_failure=self._handle_failure, protocol_version=762, packet_handler = self._on_packet)
+                                      on_failure=self._handle_failure, protocol_version=protocol, packet_handler = self._on_packet)
         self._input_mode = None
         self._pathfinder = Pathfinder(self._world_state)
         self._executor = Execute(self._connection, game_mode=config.get("game_mode","survival"),
@@ -530,6 +551,21 @@ as the Connection class is defined in that file, Bot can reference it directly.
 
 class Connection:
 
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Play-state packet IDs (BLACK-BOX KNOBS)
+    --------------------------------------------------------------------------------------------
+    Version specific IDs the connection layer sends/detects while in the Play state. Centralized
+    here so black-box tuning is one place, not a hunt. Values are for protocol 762 (1.19.4):
+      keepalive_in  drops after ~20-30s -> clientbound Keep Alive id wrong
+      keepalive_out drops after ~20-30s -> serverbound Keep Alive id wrong
+    --------------------------------------------------------------------------------------------
+    """
+    play_ids = {
+        "keepalive_in": 0x21,   # clientbound Keep Alive (server -> us)
+        "keepalive_out": 0x21,  # serverbound Keep Alive (us -> server) - verify (often 0x12)
+    }
+
     def __init__(self, host, port, version, username, on_failure, protocol_version, packet_handler=None):
         self._host = host
         self._port = port
@@ -542,6 +578,9 @@ class Connection:
         self._thread_a = None
         self._started = False
         self._packet_handler = packet_handler
+        # None until the server sends Set Compression during login. Once set to a threshold,
+        # every read and every send uses the compressed frame envelope (see _read_packet/_send).
+        self._compression_threshold = None
 
     """
     --------------------------------------------------------------------------------------------
@@ -674,6 +713,37 @@ class Connection:
 
     """
     --------------------------------------------------------------------------------------------
+    Function Header - Decode varint from an in-memory buffer
+    --------------------------------------------------------------------------------------------
+    The socket version above reads one byte at a time off the wire. This one reads a varint
+    that is already sitting in a bytes buffer at a known offset, returning both the value and
+    how many bytes it consumed. Needed to read the Data Length inside a compressed frame and
+    the threshold inside Set Compression, where the bytes are already in hand.
+    --------------------------------------------------------------------------------------------
+    """
+
+    @staticmethod
+    def _decode_varint_bytes(buf: bytes, offset: int) -> tuple[int, int]:
+        result = 0
+        shift = 0
+        consumed = 0
+        while True:
+            byte = buf[offset + consumed]
+            result |= (byte & 0b01111111) << shift
+            consumed += 1
+
+            if not (byte & 0b10000000):
+                break
+
+            shift += 7
+
+            if shift >= 32:
+                raise ValueError("VarInt too large")
+
+        return result, consumed
+
+    """
+    --------------------------------------------------------------------------------------------
     Function Field Header - Recieve packets
     --------------------------------------------------------------------------------------------
     Recv(4096) doesn't guarantee you get a full packet. It returns however many 
@@ -703,14 +773,26 @@ class Connection:
         return buf
 
     def _read_packet(self) -> tuple[int, bytes]:
-        if self._connected:
-            length = self._read_varint_from_socket()
-            payload = self._read_exact(length)
-            packet_id = payload[0]
-            return packet_id, payload[1:]
+        # No _connected guard: this must run DURING login (before _connected is True) to read
+        # Set Compression / Login Success, and again in Play. The live socket is the real
+        # precondition.
+        length = self._read_varint_from_socket()
+        frame = self._read_exact(length)
 
+        # Uncompressed framing: the frame is packet_id + data directly.
+        if self._compression_threshold is None:
+            payload = frame
+
+        # Compressed framing (after Set Compression): frame is Data Length (varint) + body.
+        # Data Length 0 means the body was under the threshold and is raw; otherwise the body
+        # is zlib-compressed and inflates to Data Length bytes.
         else:
-            raise ConnectionError("Cannot read: not connected")
+            data_length, consumed = self._decode_varint_bytes(frame, 0)
+            body = frame[consumed:]
+            payload = body if data_length == 0 else zlib.decompress(body)
+
+        packet_id = payload[0]
+        return packet_id, payload[1:]
 
     # ------------------------------------------------------------------------------------------
 
@@ -725,15 +807,45 @@ class Connection:
     """
 
     def _send(self, data: bytes):
-        if self._connected:
-            return self._socket.sendall(data)
+        if not self._connected:
+            # ""b is base None return case for bytes
+            return b""
 
-        # ""b is base None return case for bytes
-        return b""
+        # Callers hand us the uncompressed frame (length + packet_id + data). Once the server
+        # has enabled compression, every Play-state packet must be re-framed into the compressed
+        # envelope before it goes out, or the server misreads it.
+        if self._compression_threshold is not None:
+            data = self._compress_frame(data)
 
-    # Same envelope as the handshake packets, length, packet_id, data.
+        return self._socket.sendall(data)
+
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Compressed frame builder
+    --------------------------------------------------------------------------------------------
+    Re-frames an already-built uncompressed packet (length_varint + body) into the compressed
+    envelope: Packet Length, then Data Length, then the body. Body at/above threshold is
+    zlib-compressed with Data Length = uncompressed size; below threshold sent raw with Data
+    Length 0. The old length prefix is stripped first since the compressed envelope recomputes
+    its own outer length.
+    --------------------------------------------------------------------------------------------
+    """
+
+    def _compress_frame(self, uncompressed_frame: bytes) -> bytes:
+        _, consumed = self._decode_varint_bytes(uncompressed_frame, 0)
+        body = uncompressed_frame[consumed:]
+
+        if len(body) >= self._compression_threshold:
+            payload = self._encode_varint(len(body)) + zlib.compress(body)
+        else:
+            payload = self._encode_varint(0) + body
+
+        return self._encode_varint(len(payload)) + payload
+
+    # Same envelope as the handshake packets, length, packet_id, data. Packet id comes from
+    # play_ids so keepalive tuning stays one place.
     def _keepalive_response_aux(self, payload: bytes) -> bytes:
-        packet_id = b"\x21"
+        packet_id = self._encode_varint(self.play_ids["keepalive_out"])
         length = self._encode_varint(len(packet_id + payload))
         return length + packet_id + payload
 
@@ -757,7 +869,7 @@ class Connection:
                 # when the 20 seconds is up, helper builds and sends data (in read_p)
                 packet_id, payload = self._read_packet()
 
-                if packet_id == 0x21:
+                if packet_id == self.play_ids["keepalive_in"]:
                     self._send(self._keepalive_response_aux(payload))
 
                 else:
@@ -820,20 +932,41 @@ class Connection:
             self._socket.connect((self._host, self._port))
             self._send_handshake()
             self._send_login_start()
-            # but then connected is true seemingly for a period while connection failed
-            # based of packet id7:02 PMThat's a valid concern but it's acceptable in
-            # practice the window is a single blocking call to _read_packet(), which
-            # returns almost instantly. Nothing else can observe _connected = True during
-            # that window because the keepalive thread hasn't started yet and no other
-            # code is running concurrently at that point.
+            self._login()
+
+        else:
+            print("Already connected")
+
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Login state machine
+    --------------------------------------------------------------------------------------------
+    After Login Start the server drives a short exchange before Play begins, and it does not
+    always end on the first packet, so we loop until Login Success rather than read exactly one.
+      0x03 Set Compression    -> store threshold, all frames after this are compressed
+      0x02 Login Success      -> transition to Play, start keepalive/listen thread
+      0x00 Disconnect         -> server rejected us
+      0x01 Encryption Request -> online-mode server, unsupported by this base
+    _read_packet already honors _compression_threshold, so once Set Compression sets it the
+    following Login Success frame is read compressed automatically.
+    --------------------------------------------------------------------------------------------
+    """
+
+    def _login(self):
+        while True:
             packet_id, payload = self._read_packet()
 
-            if packet_id == 0x02:
+            if packet_id == 0x03:
+                threshold, _ = self._decode_varint_bytes(payload, 0)
+                self._compression_threshold = threshold
+
+            elif packet_id == 0x02:
                 # because we (As per design choice) have keepalive handled within connection
                 # we start it when someone connects
                 self._connected = True
                 self._start_func()
                 print(f"Connected to {self._host}:{self._port}")
+                break
 
             # connect is called on Connection directly by whatever sets up the bot, so that
             # ConnectionError propagates up to that caller, not to _listen. They're the same
@@ -845,8 +978,12 @@ class Connection:
                 # gen case for this raised exception
                 raise ConnectionError("Login failed: server rejected connection")
 
-        else:
-            print("Already connected")
+            elif packet_id == 0x01:
+                raise ConnectionError("Server is online-mode (encryption required). This "
+                                      "base only supports offline-mode / LAN servers.")
+
+            else:
+                raise ConnectionError(f"Unexpected login packet id {hex(packet_id)}")
 
     def disconnect(self):
         if self._connected:

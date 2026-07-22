@@ -134,7 +134,9 @@ def test_connection_composition():
     assert conn._started is False
     assert conn._socket is None
     assert conn._thread_a is None
-    assert conn._on_failure is bot._handle_failure
+    # == not is: each access to bot._handle_failure builds a fresh bound-method object, so `is`
+    # is always False. == compares __self__ and __func__, the identity we actually mean.
+    assert conn._on_failure == bot._handle_failure
 
     print("[PASS] test_connection_composition")
 

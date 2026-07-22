@@ -3,3 +3,58 @@ TEST POINT
 --------------------------------------------------------------------------------------------
 From this point (May 6th 2026), the bot is ready to test its pathfinder and movement
 --------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------
+TEST RUN - Iteration 01 (2026-07-22)
+--------------------------------------------------------------------------------------------
+Command: .venv/bin/python test_main.py
+Result:  20 passed, 1 skipped (live connection - no server on localhost:25565)
+
+Fixed this iteration (were blockers to ever connecting):
+  - bot.py: mc_versions.txt path corrected to flat layout (was "TEXT/mc_versions.txt")
+  - bot.py: _read_packet no longer required _connected, which made login's own read
+    raise "not connected" before login could ever finish
+  - bot.py: login state machine (_login) added - handles Set Compression (0x03) before
+    Login Success (0x02), previously only Login Success/Disconnect were handled and
+    compression silently corrupted every packet after login
+  - bot.py: version_protocol map added, default version 1.19.4 (was 1.21.4, protocol
+    762 hardcoded and mismatched)
+  - pathfinder.py: _is_walkable fixed - `(feet and head and floor) in PASSABLE` collapsed
+    to `floor in PASSABLE` and inverted the floor check; now checks all three explicitly
+  - pathfinder.py: node-expansion count now recorded per search, making the guided (w=1.0)
+    vs autonomous (w=1.5) difference measurable, not just asserted
+  - planner.py: threading.Queue() -> queue.Queue() (threading has no Queue attribute)
+  - blocks/blocks_1.19.4.json added (23,725 block states) - chunk.py's version-aware
+    loader had no data file to load, would crash on the first chunk packet
+
+connection_test.py (existing suite):
+  [PASS] test_validation
+  [PASS] test_set
+  [PASS] test_connection_composition
+  [PASS] test_encode_varint
+  [PASS] test_encode_string
+  [PASS] test_encode_unsigned_short
+  [PASS] test_serialize_handshake
+  [PASS] test_keepalive_response
+  [PASS] test_disconnect_state
+  [PASS] test_double_connect_guard
+  [PASS] test_failure_handler
+  [PASS] test_failure_handler_non_connection_error
+  [PASS] test_failure_handler_succeeds_on_retry
+  [SKIP] test_live_connection - no server on localhost:25565
+
+iteration01_test.py (new - compression, login flow, pathfinder):
+  [PASS] test_compression_round_trip
+  [PASS] test_uncompressed_read
+  [PASS] test_login_flow_with_compression
+  [PASS] test_login_rejections
+  [PASS] test_walkable_rule
+  [PASS] test_find_path_basic
+  [PASS] test_mode_expansion_difference (guided=91, autonomous=55 nodes)
+
+Note: test_live_connection is the only offline-unverifiable case - skips cleanly with no
+server, runs the full connect/keepalive/disconnect lifecycle when a 1.19.4 offline-mode
+server is up on localhost:25565. The mode-expansion result (guided 91 vs autonomous 55
+nodes) is the weighted-A* efficiency principle measured: the greedier autonomous weight
+expanded far fewer nodes for the same path.
+--------------------------------------------------------------------------------------------

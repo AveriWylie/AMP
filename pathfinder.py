@@ -45,6 +45,10 @@ dict is keyed by (cx, cz) chunk coordinates and values are Chunk objects with ge
 class Pathfinder:
     def __init__(self, world_state):
         self._world_state = world_state
+        # last search's node-expansion count, set by find_path via _finish. Exposed so the
+        # weighted-A* mode difference (guided w=1.0 vs autonomous w=1.5) is measurable at the
+        # boundary rather than just asserted.
+        self._last_nodes_expanded = 0
 
     """
     --------------------------------------------------------------------------------------------
@@ -80,7 +84,11 @@ class Pathfinder:
         feet = self._get_block(x, y, z)
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
-        return (feet and head and floor) in PASSABLE
+        # feet and head must be passable (2-block hitbox fits) and floor must be solid
+        # (something to stand on). The old `(feet and head and floor) in PASSABLE` collapsed
+        # to `floor in PASSABLE` because block names are truthy strings, dropping the feet/head
+        # checks and inverting the floor check.
+        return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
 
     """
     --------------------------------------------------------------------------------------------
@@ -124,6 +132,20 @@ class Pathfinder:
 
     """
     --------------------------------------------------------------------------------------------
+    Function Header - Search exit recorder
+    --------------------------------------------------------------------------------------------
+    Every find_path exit routes through here so node-expansion is recorded/printed in one place.
+    This is what makes the weighted heuristic measurable: run the same start/goal with weight
+    1.0 then 1.5 and nodes_expanded differs, the greedier weight expanding fewer nodes.
+    --------------------------------------------------------------------------------------------
+    """
+    def _finish(self, visited, result, weight):
+        self._last_nodes_expanded = visited
+        print(f"Pathfinder: weight={weight}, nodes_expanded={visited}, path_len={len(result)}")
+        return result
+
+    """
+    --------------------------------------------------------------------------------------------
     Function Header - find_path
     --------------------------------------------------------------------------------------------
     Public interface. Takes start and goal as (x, y, z) tuples and returns an ordered list
@@ -148,7 +170,7 @@ class Pathfinder:
         gx, gy, gz = int(gx), int(gy), int(gz)
 
         if (sx, sy, sz) == (gx, gy, gz):
-            return [(sx, sy, sz)]
+            return self._finish(0, [(sx, sy, sz)], weight)
 
         h = self._heuristic(sx, sy, sz, gx, gy, gz)
         # heap entry: (f, g, x, y, z)
@@ -159,13 +181,13 @@ class Pathfinder:
 
         while open_heap:
             if visited >= max_nodes:
-                return []
+                return self._finish(visited, [], weight)
 
             f, g, x, y, z = heapq.heappop(open_heap)
             visited += 1
 
             if (x, y, z) == (gx, gy, gz):
-                return self._reconstruct(came_from, x, y, z)
+                return self._finish(visited, self._reconstruct(came_from, x, y, z), weight)
 
             # skip stale heap entries
             if g > g_score.get((x, y, z), float("inf")):
@@ -179,7 +201,7 @@ class Pathfinder:
                     nh = self._heuristic(nx, ny, nz, gx, gy, gz)
                     heapq.heappush(open_heap, (ng + weight * nh, ng, nx, ny, nz))
 
-        return []
+        return self._finish(visited, [], weight)
 
     """
     --------------------------------------------------------------------------------------------

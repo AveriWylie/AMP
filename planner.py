@@ -29,6 +29,7 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 import json
 import requests
 import threading
+import queue
 
 """
 --------------------------------------------------------------------------------------------
@@ -56,7 +57,7 @@ class Planner:
         # conversation history for autonomous agentic loop
         self._history = []
         # thread-safe queue for mid-task prompt injection in autonomous mode
-        self._inject_queue = threading.Queue()
+        self._inject_queue = queue.Queue()
 
     """
     --------------------------------------------------------------------------------------------
