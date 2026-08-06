@@ -1,4 +1,4 @@
-"""
+﻿"""
 --------------------------------------------------------------------------------------------
 Specific Test Module - Bot and Connection structural and behavioral tests
 --------------------------------------------------------------------------------------------
@@ -10,6 +10,8 @@ the class that which this test's.
 """
 # imports
 import socket
+
+import pytest
 from bot import Bot, Connection
 
 """
@@ -45,11 +47,11 @@ def _probe_localhost() -> bool:
 # --------------------------------------------------------------------------------------------
 # Bot correctly accepts good config, rejects bad values with fallback to defaults.
 def test_validation():
-    # All valid — all flags should be True
+    # All valid â€” all flags should be True
     bot_good = _make_bot()
     assert all(bot_good._valid_flags.values()), "Expected all flags True for good config"
 
-    # Bad values — flags False, fields replaced by defaults
+    # Bad values â€” flags False, fields replaced by defaults
     bot_bad = _make_bot({"port": 99, "version": "0.0.0", "game_mode": "god_mode"})
     assert not bot_bad._valid_flags["port"]
     assert not bot_bad._valid_flags["version"]
@@ -66,19 +68,18 @@ def test_validation():
     assert bot_bad._username == "TestBot"
     assert bot_bad._behavior_mode == "passive"
 
-    # Empty config — everything replaced by defaults, we are making bot without helper here
+    # Empty config â€” everything replaced by defaults, we are making bot without helper here
     bot_empty = Bot({})
     for key, default in Bot.default_values.items():
         assert getattr(bot_empty, f"_{key}") == default, (f"Expected default for {key}, "
                                                           f"got {getattr(bot_empty, f'_{key}')}")
 
-    # None values explicitly passed — treated same as missing
+    # None values explicitly passed â€” treated same as missing
     bot_none = Bot({k: None for k in Bot.default_values})
     for key, default in Bot.default_values.items():
         assert getattr(bot_none, f"_{key}") == default, \
             f"Expected default for {key} when None passed"
 
-    print("[PASS] test_validation")
 
 
 # --------------------------------------------------------------------------------------------
@@ -94,12 +95,12 @@ def test_set():
     assert bot._game_mode == "creative"
     assert bot._valid_flags["game_mode"] is True
 
-    # Invalid update — falls back to default, flag corrects itself
+    # Invalid update â€” falls back to default, flag corrects itself
     bot.set("behavior_mode", "berserker")
     assert bot._behavior_mode == Bot.default_values["behavior_mode"]
     assert bot._valid_flags["behavior_mode"] is True
 
-    # Setting a field to its current value — no-op, stays valid
+    # Setting a field to its current value â€” no-op, stays valid
     bot.set("game_mode", "creative")
     assert bot._game_mode == "creative"
 
@@ -113,7 +114,6 @@ def test_set():
         bot.set("behavior_mode", mode)
         assert bot._behavior_mode == mode
 
-    print("[PASS] test_set")
 
 
 # --------------------------------------------------------------------------------------------
@@ -138,7 +138,6 @@ def test_connection_composition():
     # is always False. == compares __self__ and __func__, the identity we actually mean.
     assert conn._on_failure == bot._handle_failure
 
-    print("[PASS] test_connection_composition")
 
 
 # --------------------------------------------------------------------------------------------
@@ -149,7 +148,7 @@ def test_connection_composition():
 def test_encode_varint():
     enc = Connection._encode_varint
 
-    # Single byte — 0 to 127 fit in 7 bits, no continuation bit needed
+    # Single byte â€” 0 to 127 fit in 7 bits, no continuation bit needed
     assert enc(0) == b"\x00"
     assert enc(1) == b"\x01"
     assert enc(127) == b"\x7f"
@@ -157,7 +156,7 @@ def test_encode_varint():
     # 128 is the first value that spills into a second byte
     assert enc(128) == b"\x80\x01"
 
-    # 300 — known 2-byte encoding
+    # 300 â€” known 2-byte encoding
     assert enc(300) == b"\xac\x02"
 
     # Protocol version used in handshake
@@ -170,7 +169,7 @@ def test_encode_varint():
     except ValueError:
         pass
 
-    # Round-trip every boundary value — encode then decode manually
+    # Round-trip every boundary value â€” encode then decode manually
     for val in [0, 1, 127, 128, 255, 300, 762, 2097151]:
         encoded = enc(val)
         decoded = 0
@@ -180,7 +179,6 @@ def test_encode_varint():
             shift += 7
         assert decoded == val, f"Round-trip failed for {val}"
 
-    print("[PASS] test_encode_varint")
 
 
 # --------------------------------------------------------------------------------------------
@@ -191,18 +189,17 @@ def test_encode_varint():
 def test_encode_string():
     conn = Connection("localhost", 25565, "1.21.4", "TestBot", None, 762)
 
-    # "hello" is 5 UTF-8 bytes — VarInt(5) = 0x05
+    # "hello" is 5 UTF-8 bytes â€” VarInt(5) = 0x05
     assert conn._encode_string("hello") == b"\x05hello"
 
-    # Empty string — VarInt(0) + nothing
+    # Empty string â€” VarInt(0) + nothing
     assert conn._encode_string("") == b"\x00"
 
-    # 200 'a's — VarInt(200) = [0xC8, 0x01] as a 2-byte prefix
+    # 200 'a's â€” VarInt(200) = [0xC8, 0x01] as a 2-byte prefix
     result = conn._encode_string("a" * 200)
     assert result[:2] == b"\xc8\x01"
     assert result[2:] == b"a" * 200
 
-    print("[PASS] test_encode_string")
 
 
 # --------------------------------------------------------------------------------------------
@@ -220,10 +217,9 @@ def test_encode_unsigned_short():
     assert enc(65535) == b"\xff\xff"
     assert len(enc(25565)) == 2
 
-    print("[PASS] test_encode_unsigned_short")
 
 
-def test_ka_sh(packet) -> tuple:
+def _decode_packet_length(packet) -> tuple:
     idx = 0
     length = 0
     shift = 0
@@ -247,7 +243,7 @@ def test_serialize_handshake():
     packet = conn._serialize_handshake()
 
     # Decode the leading VarInt length prefix
-    idx, length = test_ka_sh(packet)
+    idx, length = _decode_packet_length(packet)
 
     payload = packet[idx:]
 
@@ -260,10 +256,9 @@ def test_serialize_handshake():
     # Host string must appear in the payload
     assert b"localhost" in payload
 
-    # Next state VarInt(2) must be the last byte — login intent
+    # Next state VarInt(2) must be the last byte â€” login intent
     assert payload[-1] == 0x02
 
-    print("[PASS] test_serialize_handshake")
 
 
 # --------------------------------------------------------------------------------------------
@@ -278,18 +273,17 @@ def test_keepalive_response():
     packet = conn._keepalive_response_aux(payload)
 
     # Decode the length prefix
-    idx, length = test_ka_sh(packet)
+    idx, length = _decode_packet_length(packet)
 
     body = packet[idx:]
     assert len(body) == length
     assert body[0:1] == b"\x21"  # correct packet_id
     assert body[1:] == payload  # payload echoed exactly
 
-    # Empty payload — packet_id still present, length accounts for it
+    # Empty payload â€” packet_id still present, length accounts for it
     empty = conn._keepalive_response_aux(b"")
     assert b"\x21" in empty
 
-    print("[PASS] test_keepalive_response")
 
 
 # --------------------------------------------------------------------------------------------
@@ -311,13 +305,12 @@ def test_disconnect_state():
     assert conn._connected is False
     assert conn._socket is None
 
-    # Second disconnect — must not raise
+    # Second disconnect â€” must not raise
     try:
         conn.disconnect()
     except Exception as e:
         assert False, f"disconnect() raised on already-disconnected: {e}"
 
-    print("[PASS] test_disconnect_state")
 
 
 # --------------------------------------------------------------------------------------------
@@ -341,7 +334,6 @@ def test_double_connect_guard():
     conn._connected = False
     fake_sock.close()
 
-    print("[PASS] test_double_connect_guard")
 
 
 # --------------------------------------------------------------------------------------------
@@ -351,7 +343,7 @@ def test_double_connect_guard():
 # ConnectionError
 def test_failure_handler():
     bot = _make_bot()
-    attempts = []  # list not int — avoids Python closure rebind scoping issue
+    attempts = []  # list not int â€” avoids Python closure rebind scoping issue
 
     def fake_connect():
         attempts.append(1)
@@ -362,7 +354,6 @@ def test_failure_handler():
 
     assert len(attempts) == 3, f"Expected 3 reconnect attempts, got {len(attempts)}"
 
-    print("[PASS] test_failure_handler")
 
 # _handle_failure with a non-ConnectionError does not enter the reconnect loop, the loop
 # is gated on isinstance(e, ConnectionError)
@@ -378,7 +369,6 @@ def test_failure_handler_non_connection_error():
 
     assert len(attempts) == 0, "Reconnect loop should not fire for non-ConnectionError"
 
-    print("[PASS] test_failure_handler_non_connection_error")
 
 # _handle_failure stops retrying as soon as connect() succeeds, before exhausting all 3
 # attempts.
@@ -397,7 +387,6 @@ def test_failure_handler_succeeds_on_retry():
 
     assert len(attempts) == 2, f"Expected 2 attempts before success, got {len(attempts)}"
 
-    print("[PASS] test_failure_handler_succeeds_on_retry")
 
 
 # --------------------------------------------------------------------------------------------
@@ -408,8 +397,7 @@ def test_failure_handler_succeeds_on_retry():
 def test_live_connection():
 
     if not _probe_localhost():
-        print("[SKIP] test_live_connection — no server on localhost:25565")
-        return
+        pytest.skip("no server on localhost:25565")
 
     import time
     bot = _make_bot()
@@ -430,23 +418,5 @@ def test_live_connection():
         assert conn._socket is None
 
     except ConnectionError as e:
-        print(f"[SKIP] test_live_connection — server rejected handshake: {e}")
-        return
+        pytest.skip(f"server rejected handshake: {e}")
 
-    print("[PASS] test_live_connection")
-
-def run():
-    test_validation()
-    test_set()
-    test_connection_composition()
-    test_encode_varint()
-    test_encode_string()
-    test_encode_unsigned_short()
-    test_serialize_handshake()
-    test_keepalive_response()
-    test_disconnect_state()
-    test_double_connect_guard()
-    test_failure_handler()
-    test_failure_handler_non_connection_error()
-    test_failure_handler_succeeds_on_retry()
-    test_live_connection()
