@@ -7,7 +7,7 @@ From this point (May 6th 2026), the bot is ready to test its pathfinder and move
 --------------------------------------------------------------------------------------------
 TEST RUN - Iteration 01 (2026-07-22)
 --------------------------------------------------------------------------------------------
-Command: .venv/bin/python test_main.py
+Command: python -m pytest
 Result:  20 passed, 1 skipped (live connection - no server on localhost:25565)
 
 Fixed this iteration (were blockers to ever connecting):
@@ -27,7 +27,7 @@ Fixed this iteration (were blockers to ever connecting):
   - blocks/blocks_1.19.4.json added (23,725 block states) - chunk.py's version-aware
     loader had no data file to load, would crash on the first chunk packet
 
-connection_test.py (existing suite):
+tests/test_connection.py (existing suite):
   [PASS] test_validation
   [PASS] test_set
   [PASS] test_connection_composition
@@ -43,11 +43,12 @@ connection_test.py (existing suite):
   [PASS] test_failure_handler_succeeds_on_retry
   [SKIP] test_live_connection - no server on localhost:25565
 
-iteration01_test.py (new - compression, login flow, pathfinder):
+tests/test_protocol.py (compression and login flow):
   [PASS] test_compression_round_trip
   [PASS] test_uncompressed_read
   [PASS] test_login_flow_with_compression
   [PASS] test_login_rejections
+tests/test_pathfinder.py (pathfinder):
   [PASS] test_walkable_rule
   [PASS] test_find_path_basic
   [PASS] test_mode_expansion_difference (guided=91, autonomous=55 nodes)

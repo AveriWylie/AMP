@@ -5,10 +5,22 @@ AMP is a Python-based Minecraft bot with guided and fully autonomous execution m
 ## How to build
 
 ```bash
-pip install requests
+python -m pip install -r requirements.txt
 ```
 
 Requires Python 3.9+.
+
+## Tests
+
+The offline test suite uses pytest discovery and does not require a Minecraft server:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The live connection test is skipped automatically when no server is listening on
+`localhost:25565`.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.1.json`.
 
