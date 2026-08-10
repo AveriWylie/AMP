@@ -13,6 +13,7 @@ bot.start()
 """
 # imports
 import socket
+import os
 import threading
 import struct
 import time
@@ -24,6 +25,7 @@ from pathfinder import Pathfinder
 from planner import Planner
 from chunk import Chunk
 from protocol_data import packet_ids_for_protocol, version_protocols
+from dotenv import load_dotenv
 
 """
 --------------------------------------------------------------------------------------------
@@ -146,13 +148,17 @@ class Bot:
         self._executor = Execute(self._connection, game_mode=config.get("game_mode","survival"),
                                  behavior_mode=config.get("behavior_mode", "neutral"))
         self._execution_started = False
-        # api key loaded from file so it is never hardcoded
-        try:
-            with open("api_key.txt", "r") as f:
-                api_key = f.read().strip()
-        except FileNotFoundError:
-            api_key = None
-            print("Warning: api_key.txt not found, planner will not function")
+        # Load local development credentials without overriding environment variables
+        # supplied by a shell, CI runner, or deployment platform.
+        load_dotenv()
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            try:
+                with open("api_key.txt", "r", encoding="utf-8") as f:
+                    api_key = f.read().strip()
+            except FileNotFoundError:
+                api_key = None
+                print("Warning: ANTHROPIC_API_KEY not found, planner will not function")
 
         self._planner = Planner(self._world_state, api_key)
         self._run_thread = None

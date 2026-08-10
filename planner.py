@@ -27,9 +27,9 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 """
 # imports
 import json
-import requests
 import threading
 import queue
+from anthropic import Anthropic
 
 """
 --------------------------------------------------------------------------------------------
@@ -41,8 +41,7 @@ The API key is read from a local file at init time so it is never hardcoded.
 """
 class Planner:
 
-    API_URL = "https://api.anthropic.com/v1/messages"
-    MODEL = "claude-opus-4-5"
+    MODEL = "claude-opus-4-6"
     MAX_TOKENS = 1024
 
     # commands the executor handles directly, no planner resolution needed
@@ -51,9 +50,11 @@ class Planner:
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place"}
 
-    def __init__(self, world_state, api_key):
+    def __init__(self, world_state, api_key=None, client=None):
         self._world_state = world_state
-        self._api_key = api_key
+        # Client injection keeps planning tests offline and allows callers to supply
+        # an Anthropic-compatible client without changing the planner interface.
+        self._client = client or (Anthropic(api_key=api_key) if api_key else None)
         # conversation history for autonomous agentic loop
         self._history = []
         # thread-safe queue for mid-task prompt injection in autonomous mode
@@ -126,6 +127,10 @@ class Planner:
     --------------------------------------------------------------------------------------------
     """
     def _call_api(self, user_message):
+        if self._client is None:
+            print("Planner unavailable: set ANTHROPIC_API_KEY or create api_key.txt")
+            return "[]"
+
         system = (
             "You are the AI brain of a Minecraft bot with genuine spatial awareness. "
             "You receive a snapshot of the bot's world state and a natural language instruction. "
@@ -148,25 +153,16 @@ class Planner:
             "content": user_message
         })
 
-        response = requests.post(
-            self.API_URL,
-            headers={
-                "x-api-key": self._api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json"
-            },
-            json={
-                "model": self.MODEL,
-                "max_tokens": self.MAX_TOKENS,
-                "system": system,
-                "messages": self._history
-            },
-            timeout=30
+        response = self._client.messages.create(
+            model=self.MODEL,
+            max_tokens=self.MAX_TOKENS,
+            system=system,
+            messages=list(self._history)
         )
-
-        response.raise_for_status()
-        data = response.json()
-        reply = data["content"][0]["text"].strip()
+        reply = "".join(
+            block.text for block in response.content
+            if getattr(block, "type", None) == "text"
+        ).strip()
 
         self._history.append({
             "role": "assistant",

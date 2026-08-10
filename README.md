@@ -24,7 +24,9 @@ The live connection test is skipped automatically when no server is listening on
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.1.json`.
 
-**api_key.txt** - create this file in the project root containing your Anthropic API key.
+**Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
+provided by your shell, CI, or deployment take precedence. The old ignored `api_key.txt` file
+remains supported as a compatibility fallback.
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
 
@@ -101,7 +103,7 @@ planner.py      - Claude API integration, guided and autonomous planning
 
 ## AI planning
 
-- Claude API integration for natural language to structured command translation
+- Official [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) integration for natural language to structured command translation
 - World state snapshot passed as context: position, health, food, nearby surface blocks sampled in 8-block radius, entity positions
 - Guided mode: single API call per prompt, history cleared between prompts
 - Autonomous mode: closed-loop agentic planning where each executed step feeds back as context for the next decision, runs on a dedicated thread so mid-task prompts can be injected without blocking
