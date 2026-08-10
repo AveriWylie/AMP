@@ -100,11 +100,13 @@ def test_block_change_decodes_multibyte_state_id_and_negative_coordinates():
 
 
 def test_play_packet_ids_match_protocol_762():
-    assert Bot.play_ids == {
+    bot = _bot()
+    assert bot.play_ids == {
         "spawn_entity": 0x01,
         "block_change": 0x0A,
+        "keep_alive": 0x23,
         "map_chunk": 0x24,
         "position": 0x3C,
         "update_health": 0x57,
     }
-    assert Connection.play_ids == {"keepalive_in": 0x23, "keepalive_out": 0x12}
+    assert bot._connection.play_ids["keep_alive"] == 0x12

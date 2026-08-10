@@ -28,6 +28,24 @@ The live connection test is skipped automatically when no server is listening on
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
 
+## Protocol data
+
+AMP's supported protocol numbers and packet IDs are generated from pinned
+[PrismarineJS minecraft-data](https://github.com/PrismarineJS/minecraft-data) definitions.
+The compact generated table is checked in at `protocol/packet_ids.json`, so running AMP does
+not require Node.js, network access, or the full upstream dataset.
+
+To regenerate the table after intentionally updating the pinned revision in
+`tools/sync_minecraft_data.py`:
+
+```bash
+python tools/sync_minecraft_data.py
+python tools/sync_minecraft_data.py --check
+python -m pytest
+```
+
+See `THIRD_PARTY_NOTICES.md` for attribution and licensing notes.
+
 ## How to use
 
 ```bash

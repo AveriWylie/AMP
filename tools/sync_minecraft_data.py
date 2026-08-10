@@ -1,0 +1,141 @@
+"""Generate AMP's compact packet table from pinned minecraft-data definitions."""
+
+import argparse
+import json
+import sys
+import urllib.request
+from pathlib import Path
+
+
+REPOSITORY = "https://github.com/PrismarineJS/minecraft-data"
+REVISION = "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d"
+RAW_ROOT = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/{REVISION}/data/pc"
+OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
+
+VERSION_SOURCES = {
+    "1.19.4": "1.19.4",
+    "1.20": "1.20",
+    "1.20.1": "1.20",
+}
+
+PACKETS = {
+    "clientbound": (
+        "spawn_entity",
+        "block_change",
+        "keep_alive",
+        "map_chunk",
+        "position",
+        "update_health",
+    ),
+    "serverbound": (
+        "teleport_confirm",
+        "chat_message",
+        "client_command",
+        "keep_alive",
+        "position",
+        "look",
+        "block_dig",
+        "entity_action",
+        "arm_animation",
+        "block_place",
+        "use_item",
+    ),
+}
+
+
+def fetch_json(relative_path):
+    request = urllib.request.Request(
+        f"{RAW_ROOT}/{relative_path}",
+        headers={"User-Agent": "AMP-protocol-table-generator"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def find_packet_mapping(protocol, direction, required_names):
+    """Extract the packet-name mapper from a minecraft-data protocol definition."""
+    root = protocol["play"]["toClient" if direction == "clientbound" else "toServer"]
+    candidates = []
+
+    def visit(value):
+        if isinstance(value, dict):
+            mappings = value.get("mappings")
+            if isinstance(mappings, dict):
+                candidates.append(mappings)
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(root["types"]["packet"])
+    required = set(required_names)
+    for mapping in candidates:
+        if required.issubset(mapping.values()):
+            return {name: int(packet_id, 0) for packet_id, name in mapping.items()}
+    raise ValueError(f"Could not find {direction} packet mapping containing {sorted(required)}")
+
+
+def build_table(fetch=fetch_json):
+    protocol_versions = fetch("common/protocolVersions.json")
+    version_numbers = {
+        entry["minecraftVersion"]: entry["version"]
+        for entry in protocol_versions
+    }
+    definitions = {}
+    versions = {}
+
+    for version, source_version in VERSION_SOURCES.items():
+        if source_version not in definitions:
+            definitions[source_version] = fetch(f"{source_version}/protocol.json")
+        protocol = definitions[source_version]
+        entry = {
+            "protocol": version_numbers[version],
+            "source_version": source_version,
+        }
+        for direction, names in PACKETS.items():
+            mapping = find_packet_mapping(protocol, direction, names)
+            entry[direction] = {name: mapping[name] for name in names}
+        versions[version] = entry
+
+    return {
+        "source": {
+            "repository": REPOSITORY,
+            "revision": REVISION,
+            "license": "MIT",
+        },
+        "versions": versions,
+    }
+
+
+def render_table(table):
+    return json.dumps(table, indent=2, sort_keys=True) + "\n"
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if the checked-in table differs from freshly generated output",
+    )
+    args = parser.parse_args(argv)
+    rendered = render_table(build_table())
+
+    if args.check:
+        if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != rendered:
+            print(f"Generated protocol data is stale: {OUTPUT}", file=sys.stderr)
+            return 1
+        print(f"Protocol data is current: {OUTPUT}")
+        return 0
+
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    temporary = OUTPUT.with_suffix(".json.tmp")
+    temporary.write_text(rendered, encoding="utf-8", newline="\n")
+    temporary.replace(OUTPUT)
+    print(f"Wrote {OUTPUT}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

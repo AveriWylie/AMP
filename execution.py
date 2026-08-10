@@ -20,6 +20,7 @@ mode, but the action is decided with the behavior in mind before the command is 
 import struct
 from collections import deque
 import time
+from protocol_data import packet_ids_for_protocol
 
 """
 --------------------------------------------------------------------------------------------
@@ -31,23 +32,14 @@ the thread drives execution automatically once _start_execution is called in sta
 --------------------------------------------------------------------------------------------
 """
 class Execute:
-    # Serverbound Play packet IDs for protocols 762 (1.19.4) and 763 (1.20/1.20.1).
-    play_ids = {
-        "chat": 0x05,
-        "position": 0x14,
-        "look": 0x16,
-        "block_dig": 0x1D,
-        "entity_action": 0x1E,
-        "swing": 0x2F,
-        "block_place": 0x31,
-        "use_item": 0x32,
-    }
-
     def __init__(self, connection, game_mode, behavior_mode):
         self._connection = connection
         self._command_queue = deque()
         self._game_mode = game_mode
         self._behavior_mode = behavior_mode
+        self.play_ids = packet_ids_for_protocol(
+            connection._protocol_version, "serverbound"
+        )
         self._sequence = 0
 
     def _next_sequence(self):
@@ -154,7 +146,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def _create_chat_packet(self, message):
-        packet_id = self._connection._encode_varint(self.play_ids["chat"])
+        packet_id = self._connection._encode_varint(self.play_ids["chat_message"])
         msg_bytes = message.encode("utf-8")
         msg = self._connection._encode_varint(len(msg_bytes)) + msg_bytes
         # timestamp in milliseconds as a big-endian long
@@ -197,7 +189,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def _create_swing_packet(self, hand=0):
-        packet_id = self._connection._encode_varint(self.play_ids["swing"])
+        packet_id = self._connection._encode_varint(self.play_ids["arm_animation"])
         data = self._connection._encode_varint(hand)
         length = self._connection._encode_varint(len(packet_id + data))
 

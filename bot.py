@@ -23,6 +23,7 @@ from execution import Execute
 from pathfinder import Pathfinder
 from planner import Planner
 from chunk import Chunk
+from protocol_data import packet_ids_for_protocol, version_protocols
 
 """
 --------------------------------------------------------------------------------------------
@@ -30,14 +31,6 @@ Class Header - Bot initialization
 --------------------------------------------------------------------------------------------
 """
 class Bot:
-    # Clientbound Play packet IDs shared by protocols 762 (1.19.4) and 763 (1.20/1.20.1).
-    play_ids = {
-        "spawn_entity": 0x01,
-        "block_change": 0x0A,
-        "map_chunk": 0x24,
-        "position": 0x3C,
-        "update_health": 0x57,
-    }
     # above all constants, an initialization of version array to define a constant with it.
     arr = []
     # flat layout: mc_versions.txt lives beside bot.py, not in a TEXT/ subfolder
@@ -71,7 +64,7 @@ class Bot:
     here, so anything unmapped falls back to 762 (1.19.4) with a warning.
     --------------------------------------------------------------------------------------------
     """
-    version_protocol = {"1.19.4": 762, "1.20": 763, "1.20.1": 763}
+    version_protocol = version_protocols()
 
     # ------------------------------------------------------------------------------------------
 
@@ -144,6 +137,7 @@ class Bot:
             print(f"Warning: version '{self._version}' not supported by this base "
                   f"(supported: {list(self.version_protocol)}). Falling back to protocol 762 (1.19.4).")
             protocol = 762
+        self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
         # keyword args must come after all positional arguments in python
         self._connection = Connection(self._host, self._port, self._version, self._username,
                                       on_failure=self._handle_failure, protocol_version=protocol, packet_handler = self._on_packet)
@@ -235,7 +229,9 @@ class Bot:
     # we must echo it back with packet 0x00 (confirm teleport)
     def _confirm_position(self, payload):
         teleport_id, _ = Connection._decode_varint_bytes(payload, 33)
-        packet_id = self._connection._encode_varint(0x00)
+        packet_id = self._connection._encode_varint(
+            self._connection.play_ids["teleport_confirm"]
+        )
         data = self._connection._encode_varint(teleport_id)
         length = self._connection._encode_varint(len(packet_id + data))
         self._connection._send(length + packet_id + data)
@@ -253,7 +249,9 @@ class Bot:
 
     def _respawn(self):
         # Client Status packet 0x07, action 0 = perform respawn
-        packet_id = self._connection._encode_varint(0x07)
+        packet_id = self._connection._encode_varint(
+            self._connection.play_ids["client_command"]
+        )
         data = self._connection._encode_varint(0)
         length = self._connection._encode_varint(len(packet_id + data))
         self._connection._send(length + packet_id + data)
@@ -567,25 +565,21 @@ class Connection:
 
     """
     --------------------------------------------------------------------------------------------
-    Function Header - Play-state packet IDs (BLACK-BOX KNOBS)
+    Function Header - Generated Play-state packet IDs
     --------------------------------------------------------------------------------------------
-    Version specific IDs the connection layer sends/detects while in the Play state. Centralized
-    here so black-box tuning is one place, not a hunt. Values are for protocol 762 (1.19.4):
-      keepalive_in  drops after ~20-30s -> clientbound Keep Alive id wrong
-      keepalive_out drops after ~20-30s -> serverbound Keep Alive id wrong
+    Version-specific IDs are loaded by numeric protocol from protocol/packet_ids.json, which is
+    generated from the pinned minecraft-data definitions. The connection retains both directions
+    because keepalive is received clientbound and echoed serverbound.
     --------------------------------------------------------------------------------------------
     """
-    play_ids = {
-        "keepalive_in": 0x23,   # clientbound Keep Alive (server -> us)
-        "keepalive_out": 0x12,  # serverbound Keep Alive (us -> server)
-    }
-
     def __init__(self, host, port, version, username, on_failure, protocol_version, packet_handler=None):
         self._host = host
         self._port = port
         self._version = version
         self._socket = None
         self._protocol_version = protocol_version
+        self.play_ids = packet_ids_for_protocol(protocol_version, "serverbound")
+        self.clientbound_ids = packet_ids_for_protocol(protocol_version, "clientbound")
         self._connected = False
         self._username = username
         self._on_failure = on_failure
@@ -867,7 +861,7 @@ class Connection:
     # Same envelope as the handshake packets, length, packet_id, data. Packet id comes from
     # play_ids so keepalive tuning stays one place.
     def _keepalive_response_aux(self, payload: bytes) -> bytes:
-        packet_id = self._encode_varint(self.play_ids["keepalive_out"])
+        packet_id = self._encode_varint(self.play_ids["keep_alive"])
         length = self._encode_varint(len(packet_id + payload))
         return length + packet_id + payload
 
@@ -891,7 +885,7 @@ class Connection:
                 # when the 20 seconds is up, helper builds and sends data (in read_p)
                 packet_id, payload = self._read_packet()
 
-                if packet_id == self.play_ids["keepalive_in"]:
+                if packet_id == self.clientbound_ids["keep_alive"]:
                     self._send(self._keepalive_response_aux(payload))
 
                 else:

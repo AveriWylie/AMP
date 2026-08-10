@@ -100,13 +100,16 @@ def test_interaction_sequence_increments_across_packets():
 
 
 def test_protocol_762_packet_id_table():
-    assert Execute.play_ids == {
-        "chat": 0x05,
+    assert _executor().play_ids == {
+        "teleport_confirm": 0x00,
+        "chat_message": 0x05,
+        "client_command": 0x07,
+        "keep_alive": 0x12,
         "position": 0x14,
         "look": 0x16,
         "block_dig": 0x1D,
         "entity_action": 0x1E,
-        "swing": 0x2F,
+        "arm_animation": 0x2F,
         "block_place": 0x31,
         "use_item": 0x32,
     }

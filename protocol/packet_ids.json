@@ -1,0 +1,84 @@
+{
+  "source": {
+    "license": "MIT",
+    "repository": "https://github.com/PrismarineJS/minecraft-data",
+    "revision": "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d"
+  },
+  "versions": {
+    "1.19.4": {
+      "clientbound": {
+        "block_change": 10,
+        "keep_alive": 35,
+        "map_chunk": 36,
+        "position": 60,
+        "spawn_entity": 1,
+        "update_health": 87
+      },
+      "protocol": 762,
+      "serverbound": {
+        "arm_animation": 47,
+        "block_dig": 29,
+        "block_place": 49,
+        "chat_message": 5,
+        "client_command": 7,
+        "entity_action": 30,
+        "keep_alive": 18,
+        "look": 22,
+        "position": 20,
+        "teleport_confirm": 0,
+        "use_item": 50
+      },
+      "source_version": "1.19.4"
+    },
+    "1.20": {
+      "clientbound": {
+        "block_change": 10,
+        "keep_alive": 35,
+        "map_chunk": 36,
+        "position": 60,
+        "spawn_entity": 1,
+        "update_health": 87
+      },
+      "protocol": 763,
+      "serverbound": {
+        "arm_animation": 47,
+        "block_dig": 29,
+        "block_place": 49,
+        "chat_message": 5,
+        "client_command": 7,
+        "entity_action": 30,
+        "keep_alive": 18,
+        "look": 22,
+        "position": 20,
+        "teleport_confirm": 0,
+        "use_item": 50
+      },
+      "source_version": "1.20"
+    },
+    "1.20.1": {
+      "clientbound": {
+        "block_change": 10,
+        "keep_alive": 35,
+        "map_chunk": 36,
+        "position": 60,
+        "spawn_entity": 1,
+        "update_health": 87
+      },
+      "protocol": 763,
+      "serverbound": {
+        "arm_animation": 47,
+        "block_dig": 29,
+        "block_place": 49,
+        "chat_message": 5,
+        "client_command": 7,
+        "entity_action": 30,
+        "keep_alive": 18,
+        "look": 22,
+        "position": 20,
+        "teleport_confirm": 0,
+        "use_item": 50
+      },
+      "source_version": "1.20"
+    }
+  }
+}
