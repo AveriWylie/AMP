@@ -16,6 +16,7 @@ import socket
 import threading
 import struct
 import time
+import uuid
 import zlib
 from collections import deque
 from execution import Execute
@@ -29,6 +30,14 @@ Class Header - Bot initialization
 --------------------------------------------------------------------------------------------
 """
 class Bot:
+    # Clientbound Play packet IDs shared by protocols 762 (1.19.4) and 763 (1.20/1.20.1).
+    play_ids = {
+        "spawn_entity": 0x01,
+        "block_change": 0x0A,
+        "map_chunk": 0x24,
+        "position": 0x3C,
+        "update_health": 0x57,
+    }
     # above all constants, an initialization of version array to define a constant with it.
     arr = []
     # flat layout: mc_versions.txt lives beside bot.py, not in a TEXT/ subfolder
@@ -181,8 +190,8 @@ class Bot:
     handles non-keepalive response packets for world state an other data to flow to the bot. 
     Conventional to minecraft:
     
-    A few things to be aware of: the packet IDs 0x26, 0x40, 0x1D are for protocol 762 
-    (1.20.1) — double check against wiki.vg if you're targeting a different version.
+    Packet IDs are centralized for the supported pre-configuration protocols: 762
+    (1.19.4) and 763 (1.20/1.20.1).
     
     tldr ...
     gets all world state data as packets are handled, sends any packets necessary for connection.
@@ -199,15 +208,15 @@ class Bot:
     --------------------------------------------------------------------------------------------
     """
     def _on_packet(self, packet_id, payload):
-        if packet_id == 0x38:
+        if packet_id == self.play_ids["position"]:
             self._handle_position(payload)
-        elif packet_id == 0x1D:
+        elif packet_id == self.play_ids["update_health"]:
             self._handle_health(payload)
-        elif packet_id == 0x01:
+        elif packet_id == self.play_ids["spawn_entity"]:
             self._handle_entity(payload)
-        elif packet_id == 0x26:
+        elif packet_id == self.play_ids["map_chunk"]:
             self._handle_chunk(payload)
-        elif packet_id == 0x40:
+        elif packet_id == self.play_ids["block_change"]:
             self._handle_block_update(payload)
 
     # x, y, z are 8-byte doubles, yaw and pitch are 4-byte floats
@@ -222,10 +231,10 @@ class Bot:
         # must confirm position back to server or it will kick you
         self._confirm_position(payload)
 
-    # server sends a teleport id as a varint at byte 32
+    # server sends a flags byte at offset 32 and a VarInt teleport ID at offset 33
     # we must echo it back with packet 0x00 (confirm teleport)
     def _confirm_position(self, payload):
-        teleport_id = payload[32]
+        teleport_id, _ = Connection._decode_varint_bytes(payload, 33)
         packet_id = self._connection._encode_varint(0x00)
         data = self._connection._encode_varint(teleport_id)
         length = self._connection._encode_varint(len(packet_id + data))
@@ -234,7 +243,7 @@ class Bot:
     # respawn handling goes here later
     def _handle_health(self, payload):
         health = struct.unpack_from(">f", payload, 0)[0]
-        food = struct.unpack_from(">i", payload, 4)[0]
+        food, _ = Connection._decode_varint_bytes(payload, 4)
         self._world_state["health"] = health
         self._world_state["food"] = food
 
@@ -253,13 +262,17 @@ class Bot:
         self._world_state["food"] = 20
         print("Respawn sent")
 
-    # entity id is a varint — for simplicity read first byte
-    # full varint parsing needed for large entity counts
+    # Spawn Entity: VarInt id, 16-byte UUID, VarInt type, then three doubles
     def _handle_entity(self, payload):
-        entity_id = payload[0]
-        entity_type = payload[1]
-        x, y, z = struct.unpack_from(">ddd", payload, 2)
+        entity_id, consumed = Connection._decode_varint_bytes(payload, 0)
+        entity_uuid_offset = consumed
+        entity_uuid_end = entity_uuid_offset + 16
+        entity_uuid = str(uuid.UUID(bytes=payload[entity_uuid_offset:entity_uuid_end]))
+        entity_type, consumed = Connection._decode_varint_bytes(payload, entity_uuid_end)
+        position_offset = entity_uuid_end + consumed
+        x, y, z = struct.unpack_from(">ddd", payload, position_offset)
         self._world_state["entities"][entity_id] = {
+            "uuid": entity_uuid,
             "type": entity_type,
             "x": x, "y": y, "z": z
         }
@@ -277,9 +290,10 @@ class Bot:
         x = packed >> 38
         z = (packed >> 12) & 0x3FFFFFF
         y = packed & 0xFFF
-        # sign-extend x and z from 26-bit signed
+        # sign-extend x/z from 26-bit signed and y from 12-bit signed
         if x >= (1 << 25): x -= (1 << 26)
         if z >= (1 << 25): z -= (1 << 26)
+        if y >= (1 << 11): y -= (1 << 12)
 
         cx = x >> 4
         cz = z >> 4
@@ -288,7 +302,7 @@ class Bot:
         if chunk is None:
             return
         # new state id follows the position long as a varint
-        state_id = payload[8] & 0x7F
+        state_id, _ = Connection._decode_varint_bytes(payload, 8)
         # patch the block into the chunk's section directly
         section_y = (y + 64) >> 4
         if section_y in chunk._sections:
@@ -562,8 +576,8 @@ class Connection:
     --------------------------------------------------------------------------------------------
     """
     play_ids = {
-        "keepalive_in": 0x21,   # clientbound Keep Alive (server -> us)
-        "keepalive_out": 0x21,  # serverbound Keep Alive (us -> server) - verify (often 0x12)
+        "keepalive_in": 0x23,   # clientbound Keep Alive (server -> us)
+        "keepalive_out": 0x12,  # serverbound Keep Alive (us -> server)
     }
 
     def __init__(self, host, port, version, username, on_failure, protocol_version, packet_handler=None):
@@ -724,11 +738,19 @@ class Connection:
 
     @staticmethod
     def _decode_varint_bytes(buf: bytes, offset: int) -> tuple[int, int]:
+        if offset < 0 or offset >= len(buf):
+            raise ValueError("VarInt offset outside buffer")
+
         result = 0
         shift = 0
         consumed = 0
         while True:
+            if offset + consumed >= len(buf):
+                raise ValueError("Truncated VarInt")
+
             byte = buf[offset + consumed]
+            if consumed == 4 and byte & 0xF0:
+                raise ValueError("VarInt exceeds 32 bits")
             result |= (byte & 0b01111111) << shift
             consumed += 1
 
@@ -737,7 +759,7 @@ class Connection:
 
             shift += 7
 
-            if shift >= 32:
+            if consumed >= 5:
                 raise ValueError("VarInt too large")
 
         return result, consumed

@@ -265,7 +265,7 @@ def test_serialize_handshake():
 # 8. Keepalive response structure
 # --------------------------------------------------------------------------------------------
 # _keepalive_response_aux wraps a payload in the correct envelope: VarInt length,
-# packet_id 0x21, then the original payload echoed unchanged.
+# packet_id 0x12, then the original payload echoed unchanged.
 def test_keepalive_response():
     conn = Connection("localhost", 25565, "1.21.4", "TestBot", None, 762)
 
@@ -277,12 +277,12 @@ def test_keepalive_response():
 
     body = packet[idx:]
     assert len(body) == length
-    assert body[0:1] == b"\x21"  # correct packet_id
+    assert body[0:1] == b"\x12"  # correct packet_id for protocol 762
     assert body[1:] == payload  # payload echoed exactly
 
     # Empty payload â€” packet_id still present, length accounts for it
     empty = conn._keepalive_response_aux(b"")
-    assert b"\x21" in empty
+    assert empty == b"\x01\x12"
 
 
 
@@ -419,4 +419,3 @@ def test_live_connection():
 
     except ConnectionError as e:
         pytest.skip(f"server rejected handshake: {e}")
-
