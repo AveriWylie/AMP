@@ -31,11 +31,29 @@ the thread drives execution automatically once _start_execution is called in sta
 --------------------------------------------------------------------------------------------
 """
 class Execute:
+    # Serverbound Play packet IDs for protocols 762 (1.19.4) and 763 (1.20/1.20.1).
+    play_ids = {
+        "chat": 0x05,
+        "position": 0x14,
+        "look": 0x16,
+        "block_dig": 0x1D,
+        "entity_action": 0x1E,
+        "swing": 0x2F,
+        "block_place": 0x31,
+        "use_item": 0x32,
+    }
+
     def __init__(self, connection, game_mode, behavior_mode):
         self._connection = connection
         self._command_queue = deque()
         self._game_mode = game_mode
         self._behavior_mode = behavior_mode
+        self._sequence = 0
+
+    def _next_sequence(self):
+        sequence = self._sequence
+        self._sequence += 1
+        return sequence
 
     """
     --------------------------------------------------------------------------------------------
@@ -108,7 +126,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Movement packet serialization
     --------------------------------------------------------------------------------------------
-    Set Player Position, serverbound packet 0x13 in protocol 762 (1.20.1).
+    Set Player Position, serverbound packet 0x14 in protocol 762 (1.19.4).
     Fields: x (double), y (double), z (double), on_ground (bool).
     All big-endian. Wrapped in the standard length + packet_id envelope.
 
@@ -117,7 +135,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def _create_movement_packet(self, x, y, z, on_ground=True):
-        packet_id = self._connection._encode_varint(0x13)
+        packet_id = self._connection._encode_varint(self.play_ids["position"])
         data = struct.pack(">ddd", x, y, z) + (b"\x01" if on_ground else b"\x00")
         length = self._connection._encode_varint(len(packet_id + data))
         return length + packet_id + data
@@ -126,7 +144,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Chat packet serialization
     --------------------------------------------------------------------------------------------
-    Chat Message, serverbound packet 0x05 in protocol 762 (1.20.1).
+    Chat Message, serverbound packet 0x05 in protocol 762 (1.19.4).
     Fields: message (string, max 256 chars), timestamp (long), salt (long),
     signature (optional bytes), message count (varint), acknowledged (bit set).
 
@@ -136,7 +154,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def _create_chat_packet(self, message):
-        packet_id = self._connection._encode_varint(0x05)
+        packet_id = self._connection._encode_varint(self.play_ids["chat"])
         msg_bytes = message.encode("utf-8")
         msg = self._connection._encode_varint(len(msg_bytes)) + msg_bytes
         # timestamp in milliseconds as a big-endian long
@@ -156,14 +174,14 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Look packet serialization
     --------------------------------------------------------------------------------------------
-    Set Player Rotation, serverbound packet 0x14 in protocol 762 (1.20.1).
+    Set Player Rotation, serverbound packet 0x16 in protocol 762 (1.19.4).
     Fields: yaw (float), pitch (float), on_ground (bool).
     Yaw is degrees clockwise from south (0=south, 90=west, 180=north, 270=east).
     Pitch is degrees from horizontal (-90=up, 90=down).
     --------------------------------------------------------------------------------------------
     """
     def _create_look_packet(self, yaw, pitch, on_ground=True):
-        packet_id = self._connection._encode_varint(0x14)
+        packet_id = self._connection._encode_varint(self.play_ids["look"])
         data = struct.pack(">ff", yaw, pitch) + (b"\x01" if on_ground else b"\x00")
         length = self._connection._encode_varint(len(packet_id + data))
 
@@ -173,13 +191,13 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Swing packet serialization
     --------------------------------------------------------------------------------------------
-    Swing Arm, serverbound packet 0x2F in protocol 762 (1.20.1).
+    Swing Arm, serverbound packet 0x2F in protocol 762 (1.19.4).
     Fields: hand (varint), 0 for main hand, 1 for off hand.
     Triggers the arm swing animation and is required before attack damage registers.
     --------------------------------------------------------------------------------------------
     """
     def _create_swing_packet(self, hand=0):
-        packet_id = self._connection._encode_varint(0x2F)
+        packet_id = self._connection._encode_varint(self.play_ids["swing"])
         data = self._connection._encode_varint(hand)
         length = self._connection._encode_varint(len(packet_id + data))
 
@@ -189,14 +207,14 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Entity action packet serialization
     --------------------------------------------------------------------------------------------
-    Player Command, serverbound packet 0x1B in protocol 762 (1.20.1).
+    Player Command, serverbound packet 0x1E in protocol 762 (1.19.4).
     Fields: entity_id (varint), action_id (varint), jump_boost (varint, always 0).
     Action IDs: 0 = start sneaking, 1 = stop sneaking, 3 = start sprinting, 4 = stop sprinting.
     Entity ID is the bot's own entity ID, set to 0 here as a safe default for offline servers.
     --------------------------------------------------------------------------------------------
     """
     def _create_entity_action_packet(self, action_id, entity_id=0):
-        packet_id = self._connection._encode_varint(0x1B)
+        packet_id = self._connection._encode_varint(self.play_ids["entity_action"])
         data = (self._connection._encode_varint(entity_id) +
                 self._connection._encode_varint(action_id) +
                 self._connection._encode_varint(0))
@@ -208,8 +226,8 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Digging packet serialization
     --------------------------------------------------------------------------------------------
-    Player Action, serverbound packet 0x1A in protocol 762 (1.20.1).
-    Fields: status (varint), location (packed long), face (byte).
+    Player Action, serverbound packet 0x1D in protocol 762 (1.19.4).
+    Fields: status (varint), location (packed long), face (byte), sequence (varint).
     Status 0 = start digging, 1 = cancel digging, 2 = finish digging.
     Location is packed as x<<38 | z<<12 | y matching the block update format.
     Face is the block face being hit: 0=bottom, 1=top, 2=north, 3=south, 4=west, 5=east.
@@ -218,11 +236,12 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def _create_digging_packet(self, status, x, y, z, face=1):
-        packet_id = self._connection._encode_varint(0x1A)
+        packet_id = self._connection._encode_varint(self.play_ids["block_dig"])
         packed = ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF)
         data = (self._connection._encode_varint(status) +
-                struct.pack(">q", packed) +
-                struct.pack(">b", face))
+                struct.pack(">Q", packed) +
+                struct.pack(">b", face) +
+                self._connection._encode_varint(self._next_sequence()))
         length = self._connection._encode_varint(len(packet_id + data))
 
         return length + packet_id + data
@@ -231,21 +250,22 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Place packet serialization
     --------------------------------------------------------------------------------------------
-    Player Block Placement, serverbound packet 0x2E in protocol 762 (1.20.1).
+    Player Block Placement, serverbound packet 0x31 in protocol 762 (1.19.4).
     Fields: hand (varint), location (packed long), face (varint), cursor x/y/z (float), 
-    inside_block (bool).
+    inside_block (bool), sequence (varint).
     Cursor position is the crosshair position on the face being clicked, 0.5 0.5 0.5
     targets the center of the face which is safe for all placement contexts.
     --------------------------------------------------------------------------------------------
     """
     def _create_place_packet(self, x, y, z, face=1, hand=0):
-        packet_id = self._connection._encode_varint(0x2E)
+        packet_id = self._connection._encode_varint(self.play_ids["block_place"])
         packed = ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF)
         data = (self._connection._encode_varint(hand) +
-                struct.pack(">q", packed) +
+                struct.pack(">Q", packed) +
                 self._connection._encode_varint(face) +
                 struct.pack(">fff", 0.5, 0.5, 0.5) +
-                b"\x00")
+                b"\x00" +
+                self._connection._encode_varint(self._next_sequence()))
         length = self._connection._encode_varint(len(packet_id + data))
 
         return length + packet_id + data
@@ -254,14 +274,15 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Use item packet serialization
     --------------------------------------------------------------------------------------------
-    Use Item, serverbound packet 0x32 in protocol 762 (1.20.1).
-    Fields: hand (varint), 0 for main hand, 1 for off hand.
+    Use Item, serverbound packet 0x32 in protocol 762 (1.19.4).
+    Fields: hand (varint), sequence (varint). Hand 0 is main, 1 is off hand.
     Triggers item use for the currently held item, food eating, bow drawing, etc.
     --------------------------------------------------------------------------------------------
     """
     def _create_use_item_packet(self, hand=0):
-        packet_id = self._connection._encode_varint(0x32)
-        data = self._connection._encode_varint(hand)
+        packet_id = self._connection._encode_varint(self.play_ids["use_item"])
+        data = (self._connection._encode_varint(hand) +
+                self._connection._encode_varint(self._next_sequence()))
         length = self._connection._encode_varint(len(packet_id + data))
 
         return length + packet_id + data
