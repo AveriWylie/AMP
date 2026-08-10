@@ -29,7 +29,7 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 import json
 import threading
 import queue
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError
 
 """
 --------------------------------------------------------------------------------------------
@@ -50,11 +50,12 @@ class Planner:
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place"}
 
-    def __init__(self, world_state, api_key=None, client=None):
+    def __init__(self, world_state, api_key=None, client=None, model=None):
         self._world_state = world_state
         # Client injection keeps planning tests offline and allows callers to supply
         # an Anthropic-compatible client without changing the planner interface.
         self._client = client or (Anthropic(api_key=api_key) if api_key else None)
+        self._model = model or self.MODEL
         # conversation history for autonomous agentic loop
         self._history = []
         # thread-safe queue for mid-task prompt injection in autonomous mode
@@ -153,12 +154,19 @@ class Planner:
             "content": user_message
         })
 
-        response = self._client.messages.create(
-            model=self.MODEL,
-            max_tokens=self.MAX_TOKENS,
-            system=system,
-            messages=list(self._history)
-        )
+        try:
+            response = self._client.messages.create(
+                model=self._model,
+                max_tokens=self.MAX_TOKENS,
+                system=system,
+                messages=list(self._history)
+            )
+        except APIError as error:
+            # Do not leave an unmatched user turn in autonomous-mode history. The SDK
+            # already retries transient failures; after those retries, degrade cleanly.
+            self._history.pop()
+            print(f"Planner API error: {error.__class__.__name__}")
+            return "[]"
         reply = "".join(
             block.text for block in response.content
             if getattr(block, "type", None) == "text"

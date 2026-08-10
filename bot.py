@@ -160,7 +160,11 @@ class Bot:
                 api_key = None
                 print("Warning: ANTHROPIC_API_KEY not found, planner will not function")
 
-        self._planner = Planner(self._world_state, api_key)
+        self._planner = Planner(
+            self._world_state,
+            api_key,
+            model=os.environ.get("ANTHROPIC_MODEL"),
+        )
         self._run_thread = None
 
     # entrance for cli

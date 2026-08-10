@@ -26,7 +26,8 @@ The live connection test is skipped automatically when no server is listening on
 
 **Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
 provided by your shell, CI, or deployment take precedence. The old ignored `api_key.txt` file
-remains supported as a compatibility fallback.
+remains supported as a compatibility fallback. Set `ANTHROPIC_MODEL` to override AMP's default
+Claude model.
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
 
