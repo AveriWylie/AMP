@@ -1,0 +1,62 @@
+import json
+
+import pytest
+
+from version_support import load_support_manifest
+
+
+def test_checked_in_manifest_tracks_only_stable_26x_targets():
+    manifest = load_support_manifest()
+
+    assert manifest["target_primary"] == "26.2"
+    assert manifest["primary"] is None
+    assert manifest["legacy_reference"] == "1.20.2"
+    assert {
+        version: (entry["protocol"], entry["family"], entry["status"])
+        for version, entry in manifest["versions"].items()
+    } == {
+        "26.1": (775, "java-26.1", "pending"),
+        "26.1.1": (775, "java-26.1", "pending"),
+        "26.1.2": (775, "java-26.1", "pending"),
+        "26.2": (776, "java-26.2", "pending"),
+    }
+
+
+def test_manifest_rejects_snapshot_targets(tmp_path):
+    path = tmp_path / "support.json"
+    path.write_text(json.dumps({
+        "primary": None,
+        "target_primary": "26.3-snapshot-10",
+        "legacy_reference": "1.20.2",
+        "versions": {
+            "26.3-snapshot-10": {
+                "release_type": "snapshot",
+                "protocol": 1073742156,
+                "family": "java-26.3",
+                "status": "pending",
+            }
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="stable releases"):
+        load_support_manifest(path)
+
+
+def test_manifest_rejects_unverified_primary(tmp_path):
+    path = tmp_path / "support.json"
+    path.write_text(json.dumps({
+        "primary": "26.2",
+        "target_primary": "26.2",
+        "legacy_reference": "1.20.2",
+        "versions": {
+            "26.2": {
+                "release_type": "release",
+                "protocol": 776,
+                "family": "java-26.2",
+                "status": "pending",
+            }
+        },
+    }), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="primary version must be supported"):
+        load_support_manifest(path)

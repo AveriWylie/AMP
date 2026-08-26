@@ -1,0 +1,45 @@
+{
+  "primary": null,
+  "target_primary": "26.2",
+  "legacy_reference": "1.20.2",
+  "sources": {
+    "version_manifest": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+    "protocol_repository": "https://github.com/PrismarineJS/minecraft-data",
+    "protocol_revision": "105097328f99a4f45cb6dca0fbef97db0cbd1cfd",
+    "resolved_at": "2026-08-26"
+  },
+  "versions": {
+    "26.1": {
+      "release_type": "release",
+      "release_time": "2026-03-24T12:11:04+00:00",
+      "protocol": 775,
+      "data_version": 4786,
+      "family": "java-26.1",
+      "status": "pending"
+    },
+    "26.1.1": {
+      "release_type": "release",
+      "release_time": "2026-04-01T09:06:36+00:00",
+      "protocol": 775,
+      "data_version": 4788,
+      "family": "java-26.1",
+      "status": "pending"
+    },
+    "26.1.2": {
+      "release_type": "release",
+      "release_time": "2026-04-09T10:12:23+00:00",
+      "protocol": 775,
+      "data_version": 4790,
+      "family": "java-26.1",
+      "status": "pending"
+    },
+    "26.2": {
+      "release_type": "release",
+      "release_time": "2026-06-16T12:03:33+00:00",
+      "protocol": 776,
+      "data_version": 4903,
+      "family": "java-26.2",
+      "status": "pending"
+    }
+  }
+}
