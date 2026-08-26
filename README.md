@@ -27,6 +27,8 @@ in `MC_RCON_PASSWORD`, and run `python -m tools.check_movement`. The check moves
 one block and asks the server for the authoritative position before and after.
 Creative mining has a matching `python -m tools.check_mining` check; it temporarily places a
 stone block beside the test player and confirms the server changes it to air.
+`python -m tools.check_inventory` gives the test player a diamond pickaxe, confirms AMP decodes
+the slot update, selects that hotbar slot, and verifies the server's selected-slot state.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
@@ -43,7 +45,7 @@ AMP's supported protocol numbers and packet IDs are generated from pinned
 [PrismarineJS minecraft-data](https://github.com/PrismarineJS/minecraft-data) definitions.
 The compact generated table is checked in at `protocol/packet_ids.json`, so running AMP does
 not require Node.js, network access, or the full upstream dataset. The matching 1.20.2 block
-registry is also checked in for the chunk parser.
+and item registries are also checked in for chunk parsing and readable inventory state.
 
 To regenerate the table after intentionally updating the pinned revision in
 `tools/sync_minecraft_data.py`:
@@ -88,6 +90,7 @@ planner.py      - Claude API integration, guided and autonomous planning
 - Keepalive loop with automatic response to prevent server kick
 - Position confirmation to satisfy server teleport requirements
 - Packet handlers for position, health, entities, chunk data, and block updates
+- Inventory snapshots, individual slot updates, and selected-hotbar tracking
 - Reconnection logic with up to 3 retry attempts on connection failure
 
 ## Chunk parsing

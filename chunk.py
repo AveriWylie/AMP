@@ -35,17 +35,27 @@ because here you're reading from a buffer not a socket, same algorithm, differen
 class Chunk:
     _state_to_block_cache = {}
 
+    @staticmethod
+    def _build_state_map(blocks_json):
+        state_map = {}
+        for block in blocks_json:
+            explicit_ids = [
+                state["id"] for state in block.get("states", []) if "id" in state
+            ]
+            if explicit_ids:
+                for state_id in explicit_ids:
+                    state_map[state_id] = block["name"]
+            else:
+                for state_id in range(block["minStateId"], block["maxStateId"] + 1):
+                    state_map[state_id] = block["name"]
+        return state_map
+
     def __init__(self, payload, version="1.20.1"):
+        self._modern_chunk_data = version == "1.20.2"
         if version not in Chunk._state_to_block_cache:
             blocks_path = Path(__file__).parent / "blocks" / f"blocks_{version}.json"
             blocks_json = json.loads(blocks_path.read_text())
-            state_map = {}
-
-            for block in blocks_json:
-                for state in block["states"]:
-                    state_map[state["id"]] = block["name"]
-
-            Chunk._state_to_block_cache[version] = state_map
+            Chunk._state_to_block_cache[version] = self._build_state_map(blocks_json)
 
         self._state_to_block = Chunk._state_to_block_cache[version]
         # sections indexed vertically (by y index)
@@ -76,11 +86,16 @@ class Chunk:
         # need hmap, example "find a tree" benefits from knowing the surface Y so
         # you search near the surface rather than scanning all 24 sections
         self._hmap, offset = self._read_nbt(payload, 0)
+        sections_end = len(payload)
+        if self._modern_chunk_data:
+            chunk_length = self._read_varint(payload, offset)
+            offset += self._varint_size(payload, offset)
+            sections_end = offset + chunk_length
         # standard world is 384 blocks tall (-64 to 320) = 24 sections
         # section_y 0 corresponds to y=-64, section_y 23 corresponds to y=304
         section_y = 0
         # get data for each section y of the chunk for the payload
-        while offset < len(payload):
+        while offset < sections_end and section_y < 24:
             # peek ahead to see if we've reached block entities which
             # start with a varint count, not a section structure, heuristic:
             # remaining bytes too small for a section → break
@@ -172,6 +187,8 @@ class Chunk:
         offset += 1
         if tag_type == TAG_END:
             return None, offset
+        if self._modern_chunk_data:
+            return self._read_nbt_payload(data, offset, tag_type)
         # skip the name, 2 byte length prefix
         name_length = struct.unpack_from(">H", data, offset)[0]
         offset += 2 + name_length

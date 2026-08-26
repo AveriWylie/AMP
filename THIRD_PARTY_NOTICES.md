@@ -2,7 +2,8 @@
 
 ## PrismarineJS minecraft-data
 
-`protocol/packet_ids.json` and `blocks/blocks_1.20.2.json` are generated from selected data in
+`protocol/packet_ids.json`, `blocks/blocks_1.20.2.json`, and `items/items_1.20.2.json` are
+generated from selected data in
 [PrismarineJS minecraft-data](https://github.com/PrismarineJS/minecraft-data), pinned at
 commit `e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d`.
 

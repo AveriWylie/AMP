@@ -108,5 +108,8 @@ def test_play_packet_ids_match_protocol_762():
         "map_chunk": 0x24,
         "position": 0x3C,
         "update_health": 0x57,
+        "window_items": 0x12,
+        "set_slot": 0x14,
+        "held_item_slot": 0x4D,
     }
     assert bot._connection.play_ids["keep_alive"] == 0x12

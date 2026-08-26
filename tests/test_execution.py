@@ -148,6 +148,17 @@ def test_interaction_sequence_increments_across_packets():
     assert second_end == len(second_data)
 
 
+def test_1202_hotbar_selection_packet_and_validation():
+    executor = _executor_1202()
+    packet_id, data = _packet_body(executor._create_held_item_packet(7))
+    assert packet_id == 0x2B
+    assert struct.unpack(">h", data)[0] == 7
+
+    import pytest
+    with pytest.raises(ValueError):
+        executor._create_held_item_packet(9)
+
+
 def test_protocol_762_packet_id_table():
     assert _executor().play_ids == {
         "teleport_confirm": 0x00,
@@ -161,4 +172,5 @@ def test_protocol_762_packet_id_table():
         "arm_animation": 0x2F,
         "block_place": 0x31,
         "use_item": 0x32,
+        "held_item_slot": 0x28,
     }

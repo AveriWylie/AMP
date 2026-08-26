@@ -14,6 +14,9 @@ OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
 BLOCK_OUTPUTS = {
     "1.20.2": Path(__file__).resolve().parents[1] / "blocks" / "blocks_1.20.2.json",
 }
+ITEM_OUTPUTS = {
+    "1.20.2": Path(__file__).resolve().parents[1] / "items" / "items_1.20.2.json",
+}
 
 VERSION_SOURCES = {
     "1.19.4": "1.19.4",
@@ -30,6 +33,9 @@ PLAY_PACKETS = {
         "map_chunk",
         "position",
         "update_health",
+        "window_items",
+        "set_slot",
+        "held_item_slot",
     ),
     "serverbound": (
         "teleport_confirm",
@@ -43,6 +49,7 @@ PLAY_PACKETS = {
         "arm_animation",
         "block_place",
         "use_item",
+        "held_item_slot",
     ),
 }
 
@@ -168,6 +175,10 @@ def main(argv=None):
         version: render_blocks(fetch_json(f"{version}/blocks.json"))
         for version in BLOCK_OUTPUTS
     }
+    rendered_items = {
+        version: render_blocks(fetch_json(f"{version}/items.json"))
+        for version in ITEM_OUTPUTS
+    }
 
     if args.check:
         if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != rendered:
@@ -177,8 +188,13 @@ def main(argv=None):
             if not path.exists() or path.read_text(encoding="utf-8") != rendered_blocks[version]:
                 print(f"Generated block data is stale: {path}", file=sys.stderr)
                 return 1
+        for version, path in ITEM_OUTPUTS.items():
+            if not path.exists() or path.read_text(encoding="utf-8") != rendered_items[version]:
+                print(f"Generated item data is stale: {path}", file=sys.stderr)
+                return 1
         print(f"Protocol data is current: {OUTPUT}")
         print("Block data is current: " + ", ".join(map(str, BLOCK_OUTPUTS.values())))
+        print("Item data is current: " + ", ".join(map(str, ITEM_OUTPUTS.values())))
         return 0
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +206,12 @@ def main(argv=None):
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(rendered_blocks[version], encoding="utf-8", newline="\n")
+        temporary.replace(path)
+        print(f"Wrote {path}")
+    for version, path in ITEM_OUTPUTS.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".json.tmp")
+        temporary.write_text(rendered_items[version], encoding="utf-8", newline="\n")
         temporary.replace(path)
         print(f"Wrote {path}")
     return 0

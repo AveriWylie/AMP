@@ -110,6 +110,12 @@ class Execute:
             packet = self._create_use_item_packet(command.get("hand", 0))
             self._connection._send(packet)
 
+        elif action == "select_hotbar":
+            slot = command["slot"]
+            self._connection._send(self._create_held_item_packet(slot))
+            if self._world_state is not None:
+                self._world_state["inventory"]["selected_hotbar_slot"] = slot
+
         print(f"Executed {command} in {self._game_mode} mode as {self._behavior_mode} bot.")
 
     """
@@ -281,6 +287,14 @@ class Execute:
                 self._connection._encode_varint(self._next_sequence()))
         length = self._connection._encode_varint(len(packet_id + data))
 
+        return length + packet_id + data
+
+    def _create_held_item_packet(self, slot):
+        if slot not in range(9):
+            raise ValueError("Hotbar slot must be between 0 and 8")
+        packet_id = self._connection._encode_varint(self.play_ids["held_item_slot"])
+        data = struct.pack(">h", slot)
+        length = self._connection._encode_varint(len(packet_id + data))
         return length + packet_id + data
 
     # ------------------------------------------------------------------------------------------

@@ -8,11 +8,14 @@
     "1.19.4": {
       "clientbound": {
         "block_change": 10,
+        "held_item_slot": 77,
         "keep_alive": 35,
         "map_chunk": 36,
         "position": 60,
+        "set_slot": 20,
         "spawn_entity": 1,
-        "update_health": 87
+        "update_health": 87,
+        "window_items": 18
       },
       "protocol": 762,
       "serverbound": {
@@ -22,6 +25,7 @@
         "chat_message": 5,
         "client_command": 7,
         "entity_action": 30,
+        "held_item_slot": 40,
         "keep_alive": 18,
         "look": 22,
         "position": 20,
@@ -33,11 +37,14 @@
     "1.20": {
       "clientbound": {
         "block_change": 10,
+        "held_item_slot": 77,
         "keep_alive": 35,
         "map_chunk": 36,
         "position": 60,
+        "set_slot": 20,
         "spawn_entity": 1,
-        "update_health": 87
+        "update_health": 87,
+        "window_items": 18
       },
       "protocol": 763,
       "serverbound": {
@@ -47,6 +54,7 @@
         "chat_message": 5,
         "client_command": 7,
         "entity_action": 30,
+        "held_item_slot": 40,
         "keep_alive": 18,
         "look": 22,
         "position": 20,
@@ -58,11 +66,14 @@
     "1.20.1": {
       "clientbound": {
         "block_change": 10,
+        "held_item_slot": 77,
         "keep_alive": 35,
         "map_chunk": 36,
         "position": 60,
+        "set_slot": 20,
         "spawn_entity": 1,
-        "update_health": 87
+        "update_health": 87,
+        "window_items": 18
       },
       "protocol": 763,
       "serverbound": {
@@ -72,6 +83,7 @@
         "chat_message": 5,
         "client_command": 7,
         "entity_action": 30,
+        "held_item_slot": 40,
         "keep_alive": 18,
         "look": 22,
         "position": 20,
@@ -83,12 +95,15 @@
     "1.20.2": {
       "clientbound": {
         "block_change": 9,
+        "held_item_slot": 79,
         "keep_alive": 36,
         "map_chunk": 37,
         "position": 62,
+        "set_slot": 21,
         "spawn_entity": 1,
         "start_configuration": 101,
-        "update_health": 89
+        "update_health": 89,
+        "window_items": 19
       },
       "protocol": 764,
       "serverbound": {
@@ -99,6 +114,7 @@
         "client_command": 8,
         "configuration_acknowledged": 11,
         "entity_action": 33,
+        "held_item_slot": 43,
         "keep_alive": 20,
         "look": 24,
         "position": 22,

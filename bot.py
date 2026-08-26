@@ -27,6 +27,7 @@ from pathfinder import Pathfinder
 from planner import Planner
 from chunk import Chunk
 from protocol_data import packet_ids_for_protocol, version_protocols
+from inventory_data import item_name
 from dotenv import load_dotenv
 
 """
@@ -125,7 +126,10 @@ class Bot:
             "food": 20,
             "entities": {},
             "map": {},
-            "blocks": {}
+            "blocks": {},
+            "inventory": {
+                "slots": {}, "selected_hotbar_slot": 0, "carried": None, "state_id": 0
+            },
         }
         # implemented with a deqeue or for efficient popping
         self._command_queue = deque()
@@ -227,6 +231,12 @@ class Bot:
             self._handle_chunk(payload)
         elif packet_id == self.play_ids["block_change"]:
             self._handle_block_update(payload)
+        elif packet_id == self.play_ids["window_items"]:
+            self._handle_window_items(payload)
+        elif packet_id == self.play_ids["set_slot"]:
+            self._handle_set_slot(payload)
+        elif packet_id == self.play_ids["held_item_slot"]:
+            self._world_state["inventory"]["selected_hotbar_slot"] = struct.unpack(">b", payload)[0]
 
     # x, y, z are 8-byte doubles, yaw and pitch are 4-byte floats
     # all big-endian
@@ -321,6 +331,90 @@ class Bot:
         if section_y in chunk._sections:
             chunk._sections[section_y]["patched"] = chunk._sections[section_y].get("patched", {})
             chunk._sections[section_y]["patched"][(x & 0xF, y & 0xF, z & 0xF)] = state_id
+
+    @staticmethod
+    def _skip_nbt_payload(data, offset, tag_type):
+        fixed_sizes = {1: 1, 2: 2, 3: 4, 4: 8, 5: 4, 6: 8}
+        if tag_type in fixed_sizes:
+            return offset + fixed_sizes[tag_type]
+        if tag_type == 7:
+            length = struct.unpack_from(">i", data, offset)[0]
+            return offset + 4 + length
+        if tag_type == 8:
+            length = struct.unpack_from(">H", data, offset)[0]
+            return offset + 2 + length
+        if tag_type == 9:
+            child_type = data[offset]
+            length = struct.unpack_from(">i", data, offset + 1)[0]
+            offset += 5
+            for _ in range(length):
+                offset = Bot._skip_nbt_payload(data, offset, child_type)
+            return offset
+        if tag_type == 10:
+            while True:
+                child_type = data[offset]
+                offset += 1
+                if child_type == 0:
+                    return offset
+                name_length = struct.unpack_from(">H", data, offset)[0]
+                offset += 2 + name_length
+                offset = Bot._skip_nbt_payload(data, offset, child_type)
+        if tag_type in (11, 12):
+            length = struct.unpack_from(">i", data, offset)[0]
+            return offset + 4 + length * (4 if tag_type == 11 else 8)
+        raise ValueError(f"Unknown inventory NBT tag type: {tag_type}")
+
+    def _decode_slot(self, payload, offset):
+        present = payload[offset] != 0
+        offset += 1
+        if not present:
+            return None, offset
+        item_id, consumed = Connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        count = struct.unpack_from(">b", payload, offset)[0]
+        offset += 1
+        nbt_type = payload[offset]
+        offset += 1
+        if nbt_type:
+            offset = self._skip_nbt_payload(payload, offset, nbt_type)
+        return {"id": item_id, "name": item_name(self._version, item_id), "count": count}, offset
+
+    def _handle_window_items(self, payload):
+        window_id = payload[0]
+        state_id, consumed = Connection._decode_varint_bytes(payload, 1)
+        offset = 1 + consumed
+        count, consumed = Connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        slots = {}
+        for slot_index in range(count):
+            item, offset = self._decode_slot(payload, offset)
+            if item is not None:
+                slots[slot_index] = item
+        carried, _ = self._decode_slot(payload, offset)
+        if window_id == 0:
+            inventory = self._world_state["inventory"]
+            if state_id >= inventory["state_id"]:
+                inventory.update(
+                    {"slots": slots, "carried": carried, "state_id": state_id}
+                )
+
+    def _handle_set_slot(self, payload):
+        window_id = struct.unpack_from(">b", payload, 0)[0]
+        state_id, consumed = Connection._decode_varint_bytes(payload, 1)
+        offset = 1 + consumed
+        slot_index = struct.unpack_from(">h", payload, offset)[0]
+        item, _ = self._decode_slot(payload, offset + 2)
+        inventory = self._world_state["inventory"]
+        if window_id in (0, -2) and slot_index >= 0:
+            if window_id == 0 and state_id < inventory["state_id"]:
+                return
+            if item is None:
+                inventory["slots"].pop(slot_index, None)
+            else:
+                inventory["slots"][slot_index] = item
+            inventory["state_id"] = state_id
+        elif window_id == -1 and slot_index == -1:
+            inventory["carried"] = item
 
         # --------------------------------------------------------------------------------------
 
