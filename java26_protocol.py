@@ -5,10 +5,12 @@ import uuid
 
 from chunk import Chunk
 from entity_data import entity_name
+from inventory_data import item_name
 from protocol_data import packet_ids_for_protocol
 from protocol_types import (
     BlockChanged, ChunkLoaded, EntitiesRemoved, EntityMoved, EntitySpawned,
     EntityTeleported, HealthChanged, PositionChanged, SelfEntityIdentified,
+    HotbarSelected, InventoryReplaced, SlotChanged,
 )
 
 
@@ -87,7 +89,95 @@ class Java26ProtocolAdapter:
                 offset += consumed
                 entity_ids.append(entity_id)
             return [EntitiesRemoved(tuple(entity_ids))]
+        if packet_id == ids["window_items"]:
+            return [self._decode_window_items(payload)]
+        if packet_id == ids["set_slot"]:
+            return [self._decode_set_slot(payload)]
+        if packet_id == ids["set_player_inventory"]:
+            slot, consumed = self.connection._decode_varint_bytes(payload, 0)
+            item, _ = self._decode_slot(payload, consumed)
+            return [SlotChanged(0, None, slot, item)]
+        if packet_id == ids["set_cursor_item"]:
+            item, _ = self._decode_slot(payload, 0)
+            return [SlotChanged(-1, None, -1, item)]
+        if packet_id == ids["held_item_slot"]:
+            slot, consumed = self.connection._decode_varint_bytes(payload, 0)
+            if consumed != len(payload) or slot not in range(9):
+                raise ConnectionError("Malformed selected-hotbar packet")
+            return [HotbarSelected(slot)]
         return []
+
+    def _decode_slot(self, payload, offset):
+        start = offset
+        count, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        if count == 0:
+            return None, offset
+        item_id, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        added, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        removed, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        components = {}
+        for _ in range(added):
+            component_type, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            if component_type in (1, 2, 3, 12, 19, 31, 41, 43, 46, 48, 63):
+                value, consumed = self.connection._decode_varint_bytes(payload, offset)
+                offset += consumed
+                components[component_type] = value
+            elif component_type in (13, 42):
+                length, consumed = self.connection._decode_varint_bytes(payload, offset)
+                offset += consumed
+                values = []
+                for _ in range(length):
+                    identifier, consumed = self.connection._decode_varint_bytes(payload, offset)
+                    offset += consumed
+                    level, consumed = self.connection._decode_varint_bytes(payload, offset)
+                    offset += consumed
+                    values.append((identifier, level))
+                components[component_type] = values
+            else:
+                raise ConnectionError(
+                    f"Unsupported Java 26 item component {component_type}"
+                )
+        removed_types = []
+        for _ in range(removed):
+            component_type, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            removed_types.append(component_type)
+        return {
+            "id": item_id, "name": item_name(self.version, item_id), "count": count,
+            "components": components, "removed_components": removed_types,
+            "wire": payload[start:offset].hex(),
+        }, offset
+
+    def _decode_window_items(self, payload):
+        window_id, consumed = self.connection._decode_varint_bytes(payload, 0)
+        state_id, state_size = self.connection._decode_varint_bytes(payload, consumed)
+        offset = consumed + state_size
+        count, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        slots = []
+        for slot_index in range(count):
+            item, offset = self._decode_slot(payload, offset)
+            if item is not None:
+                slots.append((slot_index, item))
+        carried, offset = self._decode_slot(payload, offset)
+        if offset != len(payload):
+            raise ConnectionError("Trailing bytes in Java 26 inventory packet")
+        return InventoryReplaced(window_id, state_id, tuple(slots), carried)
+
+    def _decode_set_slot(self, payload):
+        window_id, consumed = self.connection._decode_varint_bytes(payload, 0)
+        state_id, state_size = self.connection._decode_varint_bytes(payload, consumed)
+        offset = consumed + state_size
+        slot = struct.unpack_from(">h", payload, offset)[0]
+        item, offset = self._decode_slot(payload, offset + 2)
+        if offset != len(payload):
+            raise ConnectionError("Trailing bytes in Java 26 slot packet")
+        return SlotChanged(window_id, state_id, slot, item)
 
     def _decode_chunk(self, payload):
         chunk_x, chunk_z = struct.unpack_from(">ii", payload, 0)

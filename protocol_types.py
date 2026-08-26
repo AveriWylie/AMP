@@ -88,7 +88,7 @@ class InventoryReplaced:
 @dataclass(frozen=True)
 class SlotChanged:
     window_id: int
-    state_id: int
+    state_id: int | None
     slot: int
     item: Any
 

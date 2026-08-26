@@ -112,12 +112,14 @@ class WorldStateTracker:
     def _apply_slot_change(self, event):
         inventory = self.state["inventory"]
         if event.window_id in (0, -2) and event.slot >= 0:
-            if event.window_id == 0 and event.state_id < inventory["state_id"]:
+            if (event.window_id == 0 and event.state_id is not None
+                    and event.state_id < inventory["state_id"]):
                 return
             if event.item is None:
                 inventory["slots"].pop(event.slot, None)
             else:
                 inventory["slots"][event.slot] = event.item
-            inventory["state_id"] = event.state_id
+            if event.state_id is not None:
+                inventory["state_id"] = event.state_id
         elif event.window_id == -1 and event.slot == -1:
             inventory["carried"] = event.item
