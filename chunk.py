@@ -230,8 +230,8 @@ class Chunk:
     Because struct.unpack returns a tuple of 256 64 bit signed integer for one heightmap tag 
     type, representing the surface Y coordinate for every column in the 16x16 chunk.
 
-    see thinking.txt for reasoning for compound subtree and nbt blob or lackthereof, and what 
-    recursive tree built dict maps to, and more.
+    Named compound children include their type and name before their payload. Recursive calls
+    therefore decode only the child payload and return nested dictionaries for nested compounds.
     --------------------------------------------------------------------------------------------
     """
     def _read_nbt_payload(self, data, offset, tag_type):
@@ -351,7 +351,7 @@ class Chunk:
     Converts to section-local coordinates first, then unpacks the correct bits from the
     long array.
 
-    see thinking.txt
+    The lookup chain is section coordinates, packed palette index, global state ID, block name.
     --------------------------------------------------------------------------------------------
     """
     def get_block(self, x, y, z):

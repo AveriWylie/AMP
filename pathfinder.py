@@ -155,7 +155,7 @@ class Pathfinder:
     The search is capped at max_nodes to prevent runaway searches in open terrain, 
     if the goal is unreachable or too far the function returns empty rather than hanging.
     
-    see thinking.txt for weighted heuristic design implementation that this code uses
+    weight=1 is standard A*. Higher weights favor faster, potentially suboptimal searches.
     --------------------------------------------------------------------------------------------
     """
     def find_path(self, start, goal, weight=1.0, max_nodes=10000):
