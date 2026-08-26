@@ -2,6 +2,7 @@
   "primary": null,
   "target_primary": "26.2",
   "legacy_reference": "1.20.2",
+  "legacy_protocol": 764,
   "sources": {
     "version_manifest": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
     "protocol_repository": "https://github.com/PrismarineJS/minecraft-data",

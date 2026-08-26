@@ -15,7 +15,7 @@ def _bot():
         "host": "localhost",
         "port": 25565,
         "username": "TestBot",
-        "version": "1.19.4",
+        "version": "1.20.2",
         "game_mode": "survival",
         "behavior_mode": "passive",
     })
@@ -110,25 +110,26 @@ def test_block_change_decodes_multibyte_state_id_and_negative_coordinates():
     assert section["patched"][(15, 15, 14)] == 300
 
 
-def test_play_packet_ids_match_protocol_762():
+def test_play_packet_ids_match_legacy_reference_protocol_764():
     bot = _bot()
     assert bot.play_ids == {
         "spawn_entity": 0x01,
-        "login": 0x28,
-        "rel_entity_move": 0x2B,
-        "entity_move_look": 0x2C,
-        "entity_destroy": 0x3E,
-        "entity_teleport": 0x68,
-        "block_change": 0x0A,
-        "keep_alive": 0x23,
-        "map_chunk": 0x24,
-        "position": 0x3C,
-        "update_health": 0x57,
-        "window_items": 0x12,
-        "set_slot": 0x14,
-        "held_item_slot": 0x4D,
+        "login": 0x29,
+        "rel_entity_move": 0x2C,
+        "entity_move_look": 0x2D,
+        "entity_destroy": 0x40,
+        "entity_teleport": 0x6B,
+        "block_change": 0x09,
+        "keep_alive": 0x24,
+        "map_chunk": 0x25,
+        "position": 0x3E,
+        "start_configuration": 0x65,
+        "update_health": 0x59,
+        "window_items": 0x13,
+        "set_slot": 0x15,
+        "held_item_slot": 0x4F,
     }
-    assert bot._connection.play_ids["keep_alive"] == 0x12
+    assert bot._connection.play_ids["keep_alive"] == 0x14
 
 
 def test_entity_motion_teleport_and_destroy_keep_state_current():

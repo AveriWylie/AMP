@@ -2,7 +2,11 @@ import json
 
 import pytest
 
-from version_support import load_support_manifest
+from version_support import (
+    load_support_manifest,
+    pending_versions,
+    runnable_version_protocols,
+)
 
 
 def test_checked_in_manifest_tracks_only_stable_26x_targets():
@@ -60,3 +64,8 @@ def test_manifest_rejects_unverified_primary(tmp_path):
 
     with pytest.raises(ValueError, match="primary version must be supported"):
         load_support_manifest(path)
+
+
+def test_runtime_versions_exclude_pending_targets():
+    assert runnable_version_protocols() == {"1.20.2": 764}
+    assert pending_versions() == ("26.1", "26.1.1", "26.1.2", "26.2")

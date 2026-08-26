@@ -52,19 +52,17 @@ def _probe_localhost() -> bool:
 # --------------------------------------------------------------------------------------------
 # 1. Validation
 # --------------------------------------------------------------------------------------------
-# Bot correctly accepts good config, rejects bad values with fallback to defaults.
+# Bot correctly accepts good config and applies defaults to non-version fields.
 def test_validation():
     # All valid â€” all flags should be True
     bot_good = _make_bot()
     assert all(bot_good._valid_flags.values()), "Expected all flags True for good config"
 
     # Bad values â€” flags False, fields replaced by defaults
-    bot_bad = _make_bot({"port": 99, "version": "0.0.0", "game_mode": "god_mode"})
+    bot_bad = _make_bot({"port": 99, "game_mode": "god_mode"})
     assert not bot_bad._valid_flags["port"]
-    assert not bot_bad._valid_flags["version"]
     assert not bot_bad._valid_flags["game_mode"]
     assert bot_bad._port == Bot.default_values["port"]
-    assert bot_bad._version == Bot.default_values["version"]
     assert bot_bad._game_mode == Bot.default_values["game_mode"]
 
     # These three fields were passed valid values in the bad config, The assertion is
@@ -86,6 +84,14 @@ def test_validation():
     for key, default in Bot.default_values.items():
         assert getattr(bot_none, f"_{key}") == default, \
             f"Expected default for {key} when None passed"
+
+
+def test_validation_rejects_pending_and_unknown_versions():
+    with pytest.raises(ValueError, match="pending"):
+        _make_bot({"version": "26.2"})
+
+    with pytest.raises(ValueError, match="Unsupported Minecraft version"):
+        _make_bot({"version": "0.0.0"})
 
 
 def test_bot_module_imports_outside_repository_root(tmp_path):

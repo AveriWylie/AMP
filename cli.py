@@ -40,7 +40,9 @@ def collect_config():
 
     username = input("Username (default: Guest): ").strip() or "Guest"
 
-    print("\nSupported versions: 1.19.4 through 1.20.2 (offline-mode / LAN)")
+    print(f"\nRunnable versions: {', '.join(sorted(Bot.allowed_values['version']))}")
+    if Bot.pending_versions:
+        print(f"Pending protocol validation: {', '.join(sorted(Bot.pending_versions))}")
     version = input("Version (default: 1.20.2): ").strip() or "1.20.2"
 
     print("\nGame modes: survival, creative, superflat, adventure, spectator")

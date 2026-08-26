@@ -34,3 +34,23 @@ def load_support_manifest(path=SUPPORT_MANIFEST_PATH):
     ):
         raise ValueError("primary version must be supported")
     return manifest
+
+
+def runnable_version_protocols():
+    """Return versions backed by verified adapters, plus the migration reference."""
+    manifest = load_support_manifest()
+    runnable = {
+        version: entry["protocol"]
+        for version, entry in manifest["versions"].items()
+        if entry["status"] == "supported"
+    }
+    runnable[manifest["legacy_reference"]] = manifest["legacy_protocol"]
+    return runnable
+
+
+def pending_versions():
+    manifest = load_support_manifest()
+    return tuple(
+        version for version, entry in manifest["versions"].items()
+        if entry["status"] == "pending"
+    )

@@ -9,7 +9,8 @@ from lifecycle import LifecycleManager
 from model_clients import build_model_client
 from pathfinder import Pathfinder
 from planner import Planner
-from protocol_data import packet_ids_for_protocol, version_protocols
+from protocol_data import packet_ids_for_protocol
+from version_support import pending_versions, runnable_version_protocols
 from world_state import WorldStateTracker
 from dotenv import load_dotenv
 
@@ -19,7 +20,8 @@ Class Header - Bot initialization
 --------------------------------------------------------------------------------------------
 """
 class Bot:
-    version_protocol = version_protocols()
+    version_protocol = runnable_version_protocols()
+    pending_versions = frozenset(pending_versions())
 
     """
     --------------------------------------------------------------------------------------------
@@ -71,6 +73,15 @@ class Bot:
 
             # we handle param keys that have no restricted range as mentioned above
             # if theres no restricted range then is_valid is true for any none empty input
+            if key == "version" and value is not None and value not in allowed:
+                if value in self.pending_versions:
+                    raise ValueError(
+                        f"Minecraft version '{value}' is pending protocol validation"
+                    )
+                raise ValueError(
+                    f"Unsupported Minecraft version: {value!r}; "
+                    f"runnable versions: {sorted(allowed)}"
+                )
             if allowed is None:
                 is_valid = value is not None
             else:
@@ -98,13 +109,7 @@ class Bot:
         # guarantee the object is always in a valid state immediately after
         # creation with config get
         self._validate_input()
-        # protocol number resolved from the validated version, not hardcoded, so the handshake
-        # and the server agree. Unmapped versions fall back to 762 (see version_protocol above).
-        protocol = self.version_protocol.get(self._version)
-        if protocol is None:
-            print(f"Warning: version '{self._version}' not supported by this base "
-                  f"(supported: {list(self.version_protocol)}). Falling back to protocol 762 (1.19.4).")
-            protocol = 762
+        protocol = self.version_protocol[self._version]
         self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
         self._connection = connection.Connection(
             self._host, self._port, self._version, self._username,
@@ -275,6 +280,16 @@ class Bot:
             value = input(f"Enter new value for '{key}': ")
 
         allowed = self.allowed_values.get(key)
+
+        if key == "version" and value not in allowed:
+            if value in self.pending_versions:
+                raise ValueError(
+                    f"Minecraft version '{value}' is pending protocol validation"
+                )
+            raise ValueError(
+                f"Unsupported Minecraft version: {value!r}; "
+                f"runnable versions: {sorted(allowed)}"
+            )
 
         if allowed is None:
             is_valid = value is not None
