@@ -8,24 +8,39 @@ from pathlib import Path
 
 
 REPOSITORY = "https://github.com/PrismarineJS/minecraft-data"
-REVISION = "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d"
+REVISION = "105097328f99a4f45cb6dca0fbef97db0cbd1cfd"
 RAW_ROOT = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/{REVISION}/data/pc"
 OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
 BLOCK_OUTPUTS = {
     "1.20.2": Path(__file__).resolve().parents[1] / "blocks" / "blocks_1.20.2.json",
+    **{
+        version: Path(__file__).resolve().parents[1] / "blocks" / f"blocks_{version}.json"
+        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
+    },
 }
 ITEM_OUTPUTS = {
     "1.20.2": Path(__file__).resolve().parents[1] / "items" / "items_1.20.2.json",
+    **{
+        version: Path(__file__).resolve().parents[1] / "items" / f"items_{version}.json"
+        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
+    },
 }
 ENTITY_OUTPUTS = {
     "1.20.2": Path(__file__).resolve().parents[1] / "entities" / "entities_1.20.2.json",
+    **{
+        version: Path(__file__).resolve().parents[1] / "entities" / f"entities_{version}.json"
+        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
+    },
 }
 
 VERSION_SOURCES = {
-    "1.19.4": "1.19.4",
-    "1.20": "1.20",
-    "1.20.1": "1.20",
     "1.20.2": "1.20.2",
+    "26.1": "26.1",
+    "26.1.1": "26.1",
+    "26.1.2": "26.1",
+    # The pinned upstream index declares 26.2/protocol 776 but provides no 26.2
+    # data directory. Keep it pending and use 26.1 only as the explicit diff base.
+    "26.2": "26.1",
 }
 
 PLAY_PACKETS = {
@@ -76,6 +91,21 @@ CONFIGURATION_PACKETS = {
     "serverbound": (
         "settings", "custom_payload", "finish_configuration", "keep_alive",
         "pong", "resource_pack_receive",
+    ),
+}
+
+JAVA_26_CONFIGURATION_PACKETS = {
+    "clientbound": (
+        "add_resource_pack", "clear_dialog", "code_of_conduct", "cookie_request",
+        "custom_payload", "custom_report_details", "disconnect", "feature_flags",
+        "finish_configuration", "keep_alive", "ping", "registry_data",
+        "remove_resource_pack", "reset_chat", "select_known_packs", "server_links",
+        "show_dialog", "store_cookie", "tags", "transfer",
+    ),
+    "serverbound": (
+        "accept_code_of_conduct", "cookie_response", "custom_click_action",
+        "custom_payload", "finish_configuration", "keep_alive", "pong",
+        "resource_pack_receive", "select_known_packs", "settings",
     ),
 }
 
@@ -133,17 +163,21 @@ def build_table(fetch=fetch_json):
             "source_version": source_version,
         }
         play_packets = {
-            direction: names + (MODERN_PLAY_PACKETS[direction] if version == "1.20.2" else ())
+            direction: names + MODERN_PLAY_PACKETS[direction]
             for direction, names in PLAY_PACKETS.items()
         }
         for direction, names in play_packets.items():
             mapping = find_packet_mapping(protocol, direction, names, state="play")
             entry[direction] = {name: mapping[name] for name in names}
-        if version == "1.20.2":
+        if version in VERSION_SOURCES:
             entry["states"] = {}
             for state, packets in (
                 ("login", LOGIN_PACKETS),
-                ("configuration", CONFIGURATION_PACKETS),
+                (
+                    "configuration",
+                    CONFIGURATION_PACKETS if version == "1.20.2"
+                    else JAVA_26_CONFIGURATION_PACKETS,
+                ),
             ):
                 entry["states"][state] = {}
                 for direction, names in packets.items():
@@ -182,15 +216,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
     rendered = render_table(build_table())
     rendered_blocks = {
-        version: render_blocks(fetch_json(f"{version}/blocks.json"))
+        version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/blocks.json"))
         for version in BLOCK_OUTPUTS
     }
     rendered_items = {
-        version: render_blocks(fetch_json(f"{version}/items.json"))
+        version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/items.json"))
         for version in ITEM_OUTPUTS
     }
     rendered_entities = {
-        version: render_blocks(fetch_json(f"{version}/entities.json"))
+        version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/entities.json"))
         for version in ENTITY_OUTPUTS
     }
 

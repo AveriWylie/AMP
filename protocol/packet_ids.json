@@ -2,117 +2,9 @@
   "source": {
     "license": "MIT",
     "repository": "https://github.com/PrismarineJS/minecraft-data",
-    "revision": "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d"
+    "revision": "105097328f99a4f45cb6dca0fbef97db0cbd1cfd"
   },
   "versions": {
-    "1.19.4": {
-      "clientbound": {
-        "block_change": 10,
-        "entity_destroy": 62,
-        "entity_move_look": 44,
-        "entity_teleport": 104,
-        "held_item_slot": 77,
-        "keep_alive": 35,
-        "login": 40,
-        "map_chunk": 36,
-        "position": 60,
-        "rel_entity_move": 43,
-        "set_slot": 20,
-        "spawn_entity": 1,
-        "update_health": 87,
-        "window_items": 18
-      },
-      "protocol": 762,
-      "serverbound": {
-        "arm_animation": 47,
-        "block_dig": 29,
-        "block_place": 49,
-        "chat_message": 5,
-        "client_command": 7,
-        "entity_action": 30,
-        "held_item_slot": 40,
-        "keep_alive": 18,
-        "look": 22,
-        "position": 20,
-        "teleport_confirm": 0,
-        "use_entity": 16,
-        "use_item": 50,
-        "window_click": 11
-      },
-      "source_version": "1.19.4"
-    },
-    "1.20": {
-      "clientbound": {
-        "block_change": 10,
-        "entity_destroy": 62,
-        "entity_move_look": 44,
-        "entity_teleport": 104,
-        "held_item_slot": 77,
-        "keep_alive": 35,
-        "login": 40,
-        "map_chunk": 36,
-        "position": 60,
-        "rel_entity_move": 43,
-        "set_slot": 20,
-        "spawn_entity": 1,
-        "update_health": 87,
-        "window_items": 18
-      },
-      "protocol": 763,
-      "serverbound": {
-        "arm_animation": 47,
-        "block_dig": 29,
-        "block_place": 49,
-        "chat_message": 5,
-        "client_command": 7,
-        "entity_action": 30,
-        "held_item_slot": 40,
-        "keep_alive": 18,
-        "look": 22,
-        "position": 20,
-        "teleport_confirm": 0,
-        "use_entity": 16,
-        "use_item": 50,
-        "window_click": 11
-      },
-      "source_version": "1.20"
-    },
-    "1.20.1": {
-      "clientbound": {
-        "block_change": 10,
-        "entity_destroy": 62,
-        "entity_move_look": 44,
-        "entity_teleport": 104,
-        "held_item_slot": 77,
-        "keep_alive": 35,
-        "login": 40,
-        "map_chunk": 36,
-        "position": 60,
-        "rel_entity_move": 43,
-        "set_slot": 20,
-        "spawn_entity": 1,
-        "update_health": 87,
-        "window_items": 18
-      },
-      "protocol": 763,
-      "serverbound": {
-        "arm_animation": 47,
-        "block_dig": 29,
-        "block_place": 49,
-        "chat_message": 5,
-        "client_command": 7,
-        "entity_action": 30,
-        "held_item_slot": 40,
-        "keep_alive": 18,
-        "look": 22,
-        "position": 20,
-        "teleport_confirm": 0,
-        "use_entity": 16,
-        "use_item": 50,
-        "window_click": 11
-      },
-      "source_version": "1.20"
-    },
     "1.20.2": {
       "clientbound": {
         "block_change": 9,
@@ -169,6 +61,330 @@
             "keep_alive": 3,
             "pong": 4,
             "resource_pack_receive": 5,
+            "settings": 0
+          }
+        },
+        "login": {
+          "serverbound": {
+            "login_acknowledged": 3
+          }
+        }
+      }
+    },
+    "26.1": {
+      "clientbound": {
+        "block_change": 8,
+        "entity_destroy": 77,
+        "entity_move_look": 54,
+        "entity_teleport": 125,
+        "held_item_slot": 105,
+        "keep_alive": 44,
+        "login": 49,
+        "map_chunk": 45,
+        "position": 72,
+        "rel_entity_move": 53,
+        "set_slot": 20,
+        "spawn_entity": 1,
+        "start_configuration": 118,
+        "update_health": 104,
+        "window_items": 18
+      },
+      "protocol": 775,
+      "serverbound": {
+        "arm_animation": 63,
+        "block_dig": 41,
+        "block_place": 66,
+        "chat_message": 9,
+        "client_command": 12,
+        "configuration_acknowledged": 16,
+        "entity_action": 42,
+        "held_item_slot": 53,
+        "keep_alive": 28,
+        "look": 32,
+        "position": 30,
+        "teleport_confirm": 0,
+        "use_entity": 26,
+        "use_item": 67,
+        "window_click": 18
+      },
+      "source_version": "26.1",
+      "states": {
+        "configuration": {
+          "clientbound": {
+            "add_resource_pack": 9,
+            "clear_dialog": 17,
+            "code_of_conduct": 19,
+            "cookie_request": 0,
+            "custom_payload": 1,
+            "custom_report_details": 15,
+            "disconnect": 2,
+            "feature_flags": 12,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "ping": 5,
+            "registry_data": 7,
+            "remove_resource_pack": 8,
+            "reset_chat": 6,
+            "select_known_packs": 14,
+            "server_links": 16,
+            "show_dialog": 18,
+            "store_cookie": 10,
+            "tags": 13,
+            "transfer": 11
+          },
+          "serverbound": {
+            "accept_code_of_conduct": 9,
+            "cookie_response": 1,
+            "custom_click_action": 8,
+            "custom_payload": 2,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "pong": 5,
+            "resource_pack_receive": 6,
+            "select_known_packs": 7,
+            "settings": 0
+          }
+        },
+        "login": {
+          "serverbound": {
+            "login_acknowledged": 3
+          }
+        }
+      }
+    },
+    "26.1.1": {
+      "clientbound": {
+        "block_change": 8,
+        "entity_destroy": 77,
+        "entity_move_look": 54,
+        "entity_teleport": 125,
+        "held_item_slot": 105,
+        "keep_alive": 44,
+        "login": 49,
+        "map_chunk": 45,
+        "position": 72,
+        "rel_entity_move": 53,
+        "set_slot": 20,
+        "spawn_entity": 1,
+        "start_configuration": 118,
+        "update_health": 104,
+        "window_items": 18
+      },
+      "protocol": 775,
+      "serverbound": {
+        "arm_animation": 63,
+        "block_dig": 41,
+        "block_place": 66,
+        "chat_message": 9,
+        "client_command": 12,
+        "configuration_acknowledged": 16,
+        "entity_action": 42,
+        "held_item_slot": 53,
+        "keep_alive": 28,
+        "look": 32,
+        "position": 30,
+        "teleport_confirm": 0,
+        "use_entity": 26,
+        "use_item": 67,
+        "window_click": 18
+      },
+      "source_version": "26.1",
+      "states": {
+        "configuration": {
+          "clientbound": {
+            "add_resource_pack": 9,
+            "clear_dialog": 17,
+            "code_of_conduct": 19,
+            "cookie_request": 0,
+            "custom_payload": 1,
+            "custom_report_details": 15,
+            "disconnect": 2,
+            "feature_flags": 12,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "ping": 5,
+            "registry_data": 7,
+            "remove_resource_pack": 8,
+            "reset_chat": 6,
+            "select_known_packs": 14,
+            "server_links": 16,
+            "show_dialog": 18,
+            "store_cookie": 10,
+            "tags": 13,
+            "transfer": 11
+          },
+          "serverbound": {
+            "accept_code_of_conduct": 9,
+            "cookie_response": 1,
+            "custom_click_action": 8,
+            "custom_payload": 2,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "pong": 5,
+            "resource_pack_receive": 6,
+            "select_known_packs": 7,
+            "settings": 0
+          }
+        },
+        "login": {
+          "serverbound": {
+            "login_acknowledged": 3
+          }
+        }
+      }
+    },
+    "26.1.2": {
+      "clientbound": {
+        "block_change": 8,
+        "entity_destroy": 77,
+        "entity_move_look": 54,
+        "entity_teleport": 125,
+        "held_item_slot": 105,
+        "keep_alive": 44,
+        "login": 49,
+        "map_chunk": 45,
+        "position": 72,
+        "rel_entity_move": 53,
+        "set_slot": 20,
+        "spawn_entity": 1,
+        "start_configuration": 118,
+        "update_health": 104,
+        "window_items": 18
+      },
+      "protocol": 775,
+      "serverbound": {
+        "arm_animation": 63,
+        "block_dig": 41,
+        "block_place": 66,
+        "chat_message": 9,
+        "client_command": 12,
+        "configuration_acknowledged": 16,
+        "entity_action": 42,
+        "held_item_slot": 53,
+        "keep_alive": 28,
+        "look": 32,
+        "position": 30,
+        "teleport_confirm": 0,
+        "use_entity": 26,
+        "use_item": 67,
+        "window_click": 18
+      },
+      "source_version": "26.1",
+      "states": {
+        "configuration": {
+          "clientbound": {
+            "add_resource_pack": 9,
+            "clear_dialog": 17,
+            "code_of_conduct": 19,
+            "cookie_request": 0,
+            "custom_payload": 1,
+            "custom_report_details": 15,
+            "disconnect": 2,
+            "feature_flags": 12,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "ping": 5,
+            "registry_data": 7,
+            "remove_resource_pack": 8,
+            "reset_chat": 6,
+            "select_known_packs": 14,
+            "server_links": 16,
+            "show_dialog": 18,
+            "store_cookie": 10,
+            "tags": 13,
+            "transfer": 11
+          },
+          "serverbound": {
+            "accept_code_of_conduct": 9,
+            "cookie_response": 1,
+            "custom_click_action": 8,
+            "custom_payload": 2,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "pong": 5,
+            "resource_pack_receive": 6,
+            "select_known_packs": 7,
+            "settings": 0
+          }
+        },
+        "login": {
+          "serverbound": {
+            "login_acknowledged": 3
+          }
+        }
+      }
+    },
+    "26.2": {
+      "clientbound": {
+        "block_change": 8,
+        "entity_destroy": 77,
+        "entity_move_look": 54,
+        "entity_teleport": 125,
+        "held_item_slot": 105,
+        "keep_alive": 44,
+        "login": 49,
+        "map_chunk": 45,
+        "position": 72,
+        "rel_entity_move": 53,
+        "set_slot": 20,
+        "spawn_entity": 1,
+        "start_configuration": 118,
+        "update_health": 104,
+        "window_items": 18
+      },
+      "protocol": 776,
+      "serverbound": {
+        "arm_animation": 63,
+        "block_dig": 41,
+        "block_place": 66,
+        "chat_message": 9,
+        "client_command": 12,
+        "configuration_acknowledged": 16,
+        "entity_action": 42,
+        "held_item_slot": 53,
+        "keep_alive": 28,
+        "look": 32,
+        "position": 30,
+        "teleport_confirm": 0,
+        "use_entity": 26,
+        "use_item": 67,
+        "window_click": 18
+      },
+      "source_version": "26.1",
+      "states": {
+        "configuration": {
+          "clientbound": {
+            "add_resource_pack": 9,
+            "clear_dialog": 17,
+            "code_of_conduct": 19,
+            "cookie_request": 0,
+            "custom_payload": 1,
+            "custom_report_details": 15,
+            "disconnect": 2,
+            "feature_flags": 12,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "ping": 5,
+            "registry_data": 7,
+            "remove_resource_pack": 8,
+            "reset_chat": 6,
+            "select_known_packs": 14,
+            "server_links": 16,
+            "show_dialog": 18,
+            "store_cookie": 10,
+            "tags": 13,
+            "transfer": 11
+          },
+          "serverbound": {
+            "accept_code_of_conduct": 9,
+            "cookie_response": 1,
+            "custom_click_action": 8,
+            "custom_payload": 2,
+            "finish_configuration": 3,
+            "keep_alive": 4,
+            "pong": 5,
+            "resource_pack_receive": 6,
+            "select_known_packs": 7,
             "settings": 0
           }
         },

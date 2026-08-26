@@ -1,4 +1,4 @@
-"""Byte-level tests for protocol 762 serverbound Play packets."""
+"""Byte-level tests for reference-adapter serverbound Play packets."""
 
 import struct
 

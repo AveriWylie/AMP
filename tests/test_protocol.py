@@ -39,7 +39,7 @@ class _FakeSocket:
 
 
 def _conn():
-    return Connection("localhost", 25565, "1.19.4", "TestBot", None, 762)
+    return Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
 
 
 def _conn_1202():
@@ -141,6 +141,7 @@ def test_1202_login_start_includes_offline_uuid():
 def test_login_flow_with_compression():
     conn = _conn()
     conn._start_func = lambda: None   # stub: don't spawn the listen thread in a unit test
+    conn._configuration = lambda: None
 
     enc = Connection._encode_varint
 

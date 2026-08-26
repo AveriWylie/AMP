@@ -16,20 +16,21 @@ def test_generated_table_records_pinned_source():
     assert source == {
         "license": "MIT",
         "repository": "https://github.com/PrismarineJS/minecraft-data",
-        "revision": "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d",
+        "revision": "105097328f99a4f45cb6dca0fbef97db0cbd1cfd",
     }
 
 
 def test_generated_versions_and_aliases():
     assert version_protocols() == {
-        "1.19.4": 762,
-        "1.20": 763,
-        "1.20.1": 763,
         "1.20.2": 764,
+        "26.1": 775,
+        "26.1.1": 775,
+        "26.1.2": 775,
+        "26.2": 776,
     }
-    assert packet_ids("1.20", "clientbound") == packet_ids("1.20.1", "clientbound")
-    assert packet_ids_for_protocol(763, "serverbound") == packet_ids(
-        "1.20", "serverbound"
+    assert packet_ids("26.1", "clientbound") == packet_ids("26.1.2", "clientbound")
+    assert packet_ids_for_protocol(775, "serverbound") == packet_ids(
+        "26.1", "serverbound"
     )
 
 
@@ -45,21 +46,16 @@ def test_1202_configuration_packet_tables():
     ] == 0x02
 
 
-def test_pre_1202_protocol_has_no_configuration_state():
-    with pytest.raises(ValueError):
-        packet_ids_for_protocol(763, "serverbound", state="configuration")
-
-
 def test_packet_table_results_are_copies():
-    ids = packet_ids("1.19.4", "clientbound")
+    ids = packet_ids("26.1", "clientbound")
     ids["position"] = -1
-    assert packet_ids("1.19.4", "clientbound")["position"] == 0x3C
+    assert packet_ids("26.1", "clientbound")["position"] != -1
 
 
 @pytest.mark.parametrize("direction", ["sideways", ""])
 def test_packet_table_rejects_unknown_direction(direction):
     with pytest.raises(ValueError):
-        packet_ids("1.19.4", direction)
+        packet_ids("26.1", direction)
 
 
 def test_packet_table_rejects_unknown_version_and_protocol():

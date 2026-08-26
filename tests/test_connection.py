@@ -228,7 +228,7 @@ def test_encode_varint():
 # _encode_string produces a VarInt length prefix followed by the UTF-8 bytes of the string,
 # including the multibyte prefix case for strings over 127 bytes.
 def test_encode_string():
-    conn = Connection("localhost", 25565, "1.21.4", "TestBot", None, 762)
+    conn = Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
 
     # "hello" is 5 UTF-8 bytes â€” VarInt(5) = 0x05
     assert conn._encode_string("hello") == b"\x05hello"
@@ -280,7 +280,7 @@ def _decode_packet_length(packet) -> tuple:
 # _serialize_handshake produces a packet with the correct envelope: VarInt length prefix,
 # packet_id 0x00, then data fields containing host and port.
 def test_serialize_handshake():
-    conn = Connection("localhost", 25565, "1.21.4", "TestBot", None, 762)
+    conn = Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
     packet = conn._serialize_handshake()
 
     # Decode the leading VarInt length prefix
@@ -308,7 +308,7 @@ def test_serialize_handshake():
 # _keepalive_response_aux wraps a payload in the correct envelope: VarInt length,
 # packet_id 0x12, then the original payload echoed unchanged.
 def test_keepalive_response():
-    conn = Connection("localhost", 25565, "1.21.4", "TestBot", None, 762)
+    conn = Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
 
     payload = b"\x00\x00\x00\x00\x00\x00\x04\xd2"
     packet = conn._keepalive_response_aux(payload)
@@ -318,12 +318,12 @@ def test_keepalive_response():
 
     body = packet[idx:]
     assert len(body) == length
-    assert body[0:1] == b"\x12"  # correct packet_id for protocol 762
+    assert body[0:1] == b"\x14"  # keep-alive packet ID for protocol 764
     assert body[1:] == payload  # payload echoed exactly
 
     # Empty payload â€” packet_id still present, length accounts for it
     empty = conn._keepalive_response_aux(b"")
-    assert empty == b"\x01\x12"
+    assert empty == b"\x01\x14"
 
 
 
@@ -432,8 +432,8 @@ def test_failure_handler_succeeds_on_retry():
 def test_listener_releases_failed_socket_before_reconnect_callback():
     observed = []
     conn = Connection(
-        "localhost", 25565, "1.19.4", "TestBot",
-        lambda error: observed.append((error, conn._connected, conn._socket)), 762,
+        "localhost", 25565, "1.20.2", "TestBot",
+        lambda error: observed.append((error, conn._connected, conn._socket)), 764,
     )
     conn._socket = type("ClosedSocket", (), {
         "recv": lambda self, size: b"",
