@@ -29,6 +29,8 @@ Creative mining has a matching `python -m tools.check_mining` check; it temporar
 stone block beside the test player and confirms the server changes it to air.
 `python -m tools.check_inventory` gives the test player a diamond pickaxe, confirms AMP decodes
 the slot update, selects that hotbar slot, and verifies the server's selected-slot state.
+`python -m tools.check_survival_mining` puts a pickaxe in main inventory—not the hotbar—and
+verifies AMP swaps, equips, times, and completes a survival stone break.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
@@ -134,6 +136,7 @@ planner.py      - Claude API integration, guided and autonomous planning
 
 ## Project status
 
-Creative-mode mining is supported on Minecraft 1.20.2. Survival mining and block placement
-still need inventory/tool awareness and action timing. The autonomous planning loop is
-functional, but broader live-server testing is still required.
+Creative and base survival mining are supported on Minecraft 1.20.2, including hotbar tool
+selection and hardness-based break timing. Enchantments, status effects, underwater/airborne
+penalties, and block placement remain future work. The autonomous planning loop is functional,
+but broader live-server testing is still required.

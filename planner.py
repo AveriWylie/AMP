@@ -99,9 +99,17 @@ class Planner:
             "position": {"x": bx, "y": by, "z": bz},
             "health": self._world_state["health"],
             "food": self._world_state["food"],
-            "inventory": self._world_state.get("inventory", {
-                "slots": {}, "selected_hotbar_slot": 0
-            }),
+            "inventory": {
+                "selected_hotbar_slot": self._world_state.get("inventory", {}).get(
+                    "selected_hotbar_slot", 0
+                ),
+                "slots": {
+                    str(slot): {"name": item["name"], "count": item["count"]}
+                    for slot, item in self._world_state.get("inventory", {}).get(
+                        "slots", {}
+                    ).items()
+                },
+            },
             "nearby_surface_blocks": nearby,
             "entities": {
                 str(eid): {

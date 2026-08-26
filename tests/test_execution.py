@@ -110,6 +110,23 @@ def test_creative_mining_sends_only_start_digging():
     assert status == 0
 
 
+def test_survival_mining_waits_between_start_and_finish(monkeypatch):
+    executor = _executor_1202()
+    sent = []
+    waits = []
+    executor._connection._send = sent.append
+    monkeypatch.setattr("execution.time.sleep", waits.append)
+
+    executor._execute({
+        "action": "mine", "x": 1, "y": 64, "z": 2, "face": 2, "duration": 0.3
+    })
+
+    assert len(sent) == 2
+    assert waits == [0.3]
+    statuses = [_read_varint(_packet_body(packet)[1])[0] for packet in sent]
+    assert statuses == [0, 2]
+
+
 def test_place_packet_contains_interaction_sequence():
     executor = _executor()
     packet_id, data = _packet_body(executor._create_place_packet(-1, 64, -2, face=1, hand=0))
@@ -159,6 +176,29 @@ def test_1202_hotbar_selection_packet_and_validation():
         executor._create_held_item_packet(9)
 
 
+def test_1202_swaps_main_inventory_tool_into_selected_hotbar():
+    world_state = {
+        "inventory": {
+            "state_id": 7,
+            "selected_hotbar_slot": 2,
+            "slots": {
+                10: {"id": 799, "name": "diamond_pickaxe", "count": 1},
+                38: {"id": 1, "name": "stone", "count": 12},
+            },
+        }
+    }
+    executor = _executor_1202(world_state)
+    packet_id, data = _packet_body(executor._create_hotbar_swap_packet(10, 2))
+
+    assert packet_id == 0x0D
+    assert data[0] == 0  # player inventory window
+    state_id, offset = _read_varint(data, 1)
+    source_slot = struct.unpack_from(">h", data, offset)[0]
+    button = struct.unpack_from(">b", data, offset + 2)[0]
+    mode, _ = _read_varint(data, offset + 3)
+    assert (state_id, source_slot, button, mode) == (7, 10, 2, 2)
+
+
 def test_protocol_762_packet_id_table():
     assert _executor().play_ids == {
         "teleport_confirm": 0x00,
@@ -173,4 +213,5 @@ def test_protocol_762_packet_id_table():
         "block_place": 0x31,
         "use_item": 0x32,
         "held_item_slot": 0x28,
+        "window_click": 0x0B,
     }

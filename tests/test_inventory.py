@@ -28,10 +28,10 @@ def test_window_items_replaces_player_inventory_and_names_items():
 
     inventory = bot._world_state["inventory"]
     assert inventory["state_id"] == 12
-    assert inventory["slots"] == {
-        0: {"id": 1, "name": "stone", "count": 32},
-        2: {"id": 799, "name": "diamond_pickaxe", "count": 1},
-    }
+    assert inventory["slots"][0]["name"] == "stone"
+    assert inventory["slots"][0]["count"] == 32
+    assert inventory["slots"][2]["name"] == "diamond_pickaxe"
+    assert inventory["slots"][2]["count"] == 1
     assert inventory["carried"] is None
 
 
@@ -68,7 +68,9 @@ def test_slot_decoder_skips_compound_nbt_before_next_slot():
     second, offset = bot._decode_slot(payload, offset)
 
     assert first["name"] == "stone"
-    assert second == {"id": 23, "name": "oak_planks", "count": 4}
+    assert {key: second[key] for key in ("id", "name", "count")} == {
+        "id": 23, "name": "oak_planks", "count": 4
+    }
     assert offset == len(payload)
 
 

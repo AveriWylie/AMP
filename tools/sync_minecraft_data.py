@@ -50,6 +50,7 @@ PLAY_PACKETS = {
         "block_place",
         "use_item",
         "held_item_slot",
+        "window_click",
     ),
 }
 

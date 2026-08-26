@@ -28,6 +28,7 @@ from planner import Planner
 from chunk import Chunk
 from protocol_data import packet_ids_for_protocol, version_protocols
 from inventory_data import item_name
+from mining_data import mining_plan
 from dotenv import load_dotenv
 
 """
@@ -365,6 +366,7 @@ class Bot:
         raise ValueError(f"Unknown inventory NBT tag type: {tag_type}")
 
     def _decode_slot(self, payload, offset):
+        slot_start = offset
         present = payload[offset] != 0
         offset += 1
         if not present:
@@ -377,7 +379,10 @@ class Bot:
         offset += 1
         if nbt_type:
             offset = self._skip_nbt_payload(payload, offset, nbt_type)
-        return {"id": item_id, "name": item_name(self._version, item_id), "count": count}, offset
+        return {
+            "id": item_id, "name": item_name(self._version, item_id), "count": count,
+            "wire": payload[slot_start:offset].hex(),
+        }, offset
 
     def _handle_window_items(self, payload):
         window_id = payload[0]
@@ -473,6 +478,13 @@ class Bot:
     def mine_block(self, target):
         """Walk within reach of a block, face it, and enqueue a mining interaction."""
         tx, ty, tz = map(int, target)
+        block_name = self._pathfinder._get_block(tx, ty, tz)
+        plan = None
+        if self._game_mode != "creative":
+            plan = mining_plan(self._version, block_name, self._world_state["inventory"])
+            if plan is None:
+                print(f"Cannot safely mine {block_name} at {(tx, ty, tz)} with current hotbar")
+                return False
         pos = self._world_state["position"]
         start = (pos["x"], pos["y"], pos["z"])
         weight = 1.5 if self._input_mode == "autonomous" else 1.0
@@ -506,6 +518,17 @@ class Bot:
         for x, y, z in path:
             self._executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
 
+        if plan and plan["inventory_slot"] is not None:
+            if plan["inventory_slot"] < 36:
+                self._executor.enque_command({
+                    "action": "swap_hotbar", "source_slot": plan["inventory_slot"],
+                    "hotbar_slot": plan["hotbar_slot"],
+                })
+            if plan["hotbar_slot"] != self._world_state["inventory"]["selected_hotbar_slot"]:
+                self._executor.enque_command({
+                    "action": "select_hotbar", "slot": plan["hotbar_slot"]
+                })
+
         dx = tx + 0.5 - (standing[0] + 0.5)
         dy = ty + 0.5 - (standing[1] + 1.62)
         dz = tz + 0.5 - (standing[2] + 0.5)
@@ -516,7 +539,8 @@ class Bot:
             "pitch": math.degrees(-math.atan2(dy, horizontal)),
         })
         self._executor.enque_command({
-            "action": "mine", "x": tx, "y": ty, "z": tz, "face": face
+            "action": "mine", "x": tx, "y": ty, "z": tz, "face": face,
+            "duration": plan["seconds"] if plan else 0,
         })
         return True
 

@@ -97,6 +97,7 @@ class Execute:
             start = self._create_digging_packet(0, x, y, z, face)
             self._connection._send(start)
             if self._game_mode != "creative":
+                time.sleep(command.get("duration", 0))
                 finish = self._create_digging_packet(2, x, y, z, face)
                 self._connection._send(finish)
 
@@ -115,6 +116,12 @@ class Execute:
             self._connection._send(self._create_held_item_packet(slot))
             if self._world_state is not None:
                 self._world_state["inventory"]["selected_hotbar_slot"] = slot
+
+        elif action == "swap_hotbar":
+            packet = self._create_hotbar_swap_packet(
+                command["source_slot"], command["hotbar_slot"]
+            )
+            self._connection._send(packet)
 
         print(f"Executed {command} in {self._game_mode} mode as {self._behavior_mode} bot.")
 
@@ -294,6 +301,37 @@ class Execute:
             raise ValueError("Hotbar slot must be between 0 and 8")
         packet_id = self._connection._encode_varint(self.play_ids["held_item_slot"])
         data = struct.pack(">h", slot)
+        length = self._connection._encode_varint(len(packet_id + data))
+        return length + packet_id + data
+
+    def _encode_slot(self, item):
+        if item is None:
+            return b"\x00"
+        if "wire" in item:
+            return bytes.fromhex(item["wire"])
+        return (
+            b"\x01" + self._connection._encode_varint(item["id"])
+            + struct.pack(">b", item["count"]) + b"\x00"
+        )
+
+    def _create_hotbar_swap_packet(self, source_slot, hotbar_slot):
+        if source_slot not in range(9, 36):
+            raise ValueError("Source slot must be in the player main inventory (9-35)")
+        if hotbar_slot not in range(9):
+            raise ValueError("Hotbar slot must be between 0 and 8")
+        inventory = self._world_state["inventory"]
+        destination_slot = 36 + hotbar_slot
+        source_item = inventory["slots"].get(source_slot)
+        destination_item = inventory["slots"].get(destination_slot)
+        packet_id = self._connection._encode_varint(self.play_ids["window_click"])
+        data = (
+            b"\x00" + self._connection._encode_varint(inventory["state_id"])
+            + struct.pack(">h", source_slot) + struct.pack(">b", hotbar_slot)
+            + self._connection._encode_varint(2) + self._connection._encode_varint(2)
+            + struct.pack(">h", source_slot) + self._encode_slot(destination_item)
+            + struct.pack(">h", destination_slot) + self._encode_slot(source_item)
+            + b"\x00"
+        )
         length = self._connection._encode_varint(len(packet_id + data))
         return length + packet_id + data
 

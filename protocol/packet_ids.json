@@ -30,7 +30,8 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
-        "use_item": 50
+        "use_item": 50,
+        "window_click": 11
       },
       "source_version": "1.19.4"
     },
@@ -59,7 +60,8 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
-        "use_item": 50
+        "use_item": 50,
+        "window_click": 11
       },
       "source_version": "1.20"
     },
@@ -88,7 +90,8 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
-        "use_item": 50
+        "use_item": 50,
+        "window_click": 11
       },
       "source_version": "1.20"
     },
@@ -119,7 +122,8 @@
         "look": 24,
         "position": 22,
         "teleport_confirm": 0,
-        "use_item": 53
+        "use_item": 53,
+        "window_click": 13
       },
       "source_version": "1.20.2",
       "states": {
