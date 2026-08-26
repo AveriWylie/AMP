@@ -214,8 +214,8 @@ class Planner:
     go_to: calls pathfinder.find_path from current position to target, expands into moves
     find:  scans nearby_surface_blocks from the snapshot for the target block type, then
            resolves as go_to once the coordinate is known
-    mine and place are stubs for now, they resolve to go_to the target coordinate and a
-    placeholder print since block interaction packets are not yet implemented.
+    mine remains a high-level command for Bot.mine_block(), which selects a reachable adjacent
+    standing position before enqueueing the interaction. Place is still a placeholder.
     --------------------------------------------------------------------------------------------
     """
     def _resolve(self, command, snapshot):
@@ -234,9 +234,7 @@ class Planner:
             return []
 
         elif action == "mine":
-            goal = (command["x"], command["y"], command["z"])
-            print(f"Mine at {goal} - block interaction packets not yet implemented")
-            return [{"action": "go_to", "x": command["x"], "y": command["y"], "z": command["z"]}]
+            return [command]
 
         elif action == "place":
             goal = (command["x"], command["y"], command["z"])

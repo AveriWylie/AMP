@@ -21,6 +21,13 @@ class FakeAnthropic:
         self.messages = FakeMessages(content)
 
 
+def test_mine_resolution_preserves_interaction_for_bot():
+    planner = Planner({})
+    command = {"action": "mine", "x": 1, "y": 64, "z": 2}
+
+    assert planner._resolve(command, {}) == [command]
+
+
 def test_call_api_uses_sdk_and_records_history():
     client = FakeAnthropic([
         SimpleNamespace(type="text", text='[{"action":"chat","message":"hi"}]')

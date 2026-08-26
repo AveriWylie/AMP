@@ -95,9 +95,10 @@ class Execute:
             x, y, z = command["x"], command["y"], command["z"]
             face = command.get("face", 1)
             start = self._create_digging_packet(0, x, y, z, face)
-            finish = self._create_digging_packet(2, x, y, z, face)
             self._connection._send(start)
-            self._connection._send(finish)
+            if self._game_mode != "creative":
+                finish = self._create_digging_packet(2, x, y, z, face)
+                self._connection._send(finish)
 
         elif action == "place":
             x, y, z = command["x"], command["y"], command["z"]

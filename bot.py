@@ -15,6 +15,7 @@ bot.start()
 import socket
 import os
 import hashlib
+import math
 import threading
 import struct
 import time
@@ -375,6 +376,56 @@ class Bot:
 
         return True
 
+    def mine_block(self, target):
+        """Walk within reach of a block, face it, and enqueue a mining interaction."""
+        tx, ty, tz = map(int, target)
+        pos = self._world_state["position"]
+        start = (pos["x"], pos["y"], pos["z"])
+        weight = 1.5 if self._input_mode == "autonomous" else 1.0
+        faces = {
+            (-1, 0): 4,
+            (1, 0): 5,
+            (0, -1): 2,
+            (0, 1): 3,
+        }
+        choices = []
+        for dy in (0, 1, -1):
+            for (dx, dz), face in faces.items():
+                standing = (tx + dx, ty + dy, tz + dz)
+                if not self._pathfinder._is_walkable(*standing):
+                    continue
+                eye_distance = math.dist(
+                    (standing[0] + 0.5, standing[1] + 1.62, standing[2] + 0.5),
+                    (tx + 0.5, ty + 0.5, tz + 0.5),
+                )
+                if eye_distance > 4.5:
+                    continue
+                path = self._pathfinder.find_path(start, standing, weight=weight)
+                if path:
+                    choices.append((len(path), path, face, standing))
+
+        if not choices:
+            print(f"No reachable mining position for {(tx, ty, tz)}")
+            return False
+
+        _, path, face, standing = min(choices, key=lambda choice: choice[0])
+        for x, y, z in path:
+            self._executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
+
+        dx = tx + 0.5 - (standing[0] + 0.5)
+        dy = ty + 0.5 - (standing[1] + 1.62)
+        dz = tz + 0.5 - (standing[2] + 0.5)
+        horizontal = math.hypot(dx, dz)
+        self._executor.enque_command({
+            "action": "look",
+            "yaw": math.degrees(math.atan2(-dx, dz)),
+            "pitch": math.degrees(-math.atan2(dy, horizontal)),
+        })
+        self._executor.enque_command({
+            "action": "mine", "x": tx, "y": ty, "z": tz, "face": face
+        })
+        return True
+
     """
     --------------------------------------------------------------------------------------------
     Function Field Header - Execution loop
@@ -439,6 +490,8 @@ class Bot:
         for cmd in commands:
             if cmd.get("action") in ("go_to", "find"):
                 self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+            elif cmd.get("action") == "mine":
+                self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
             else:
                 self._executor.enque_command(cmd)
 
@@ -459,6 +512,8 @@ class Bot:
         for cmd in commands:
             if cmd.get("action") in ("go_to", "find"):
                 self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+            elif cmd.get("action") == "mine":
+                self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
             else:
                 self._executor.enque_command(cmd)
 

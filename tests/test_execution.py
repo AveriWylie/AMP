@@ -95,6 +95,21 @@ def test_digging_packet_supports_negative_positions_and_sequence():
     assert offset == len(data)
 
 
+def test_creative_mining_sends_only_start_digging():
+    executor = _executor_1202()
+    executor._game_mode = "creative"
+    sent = []
+    executor._connection._send = sent.append
+
+    executor._execute({"action": "mine", "x": 1, "y": 64, "z": 2, "face": 2})
+
+    assert len(sent) == 1
+    packet_id, data = _packet_body(sent[0])
+    status, _ = _read_varint(data)
+    assert packet_id == executor.play_ids["block_dig"]
+    assert status == 0
+
+
 def test_place_packet_contains_interaction_sequence():
     executor = _executor()
     packet_id, data = _packet_body(executor._create_place_packet(-1, 64, -2, face=1, hand=0))

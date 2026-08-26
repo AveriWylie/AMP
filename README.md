@@ -25,6 +25,8 @@ The live connection test is skipped automatically when no server is listening on
 To verify movement against a local offline-mode 1.20.2 server, enable RCON, set its password
 in `MC_RCON_PASSWORD`, and run `python -m tools.check_movement`. The check moves its test player
 one block and asks the server for the authoritative position before and after.
+Creative mining has a matching `python -m tools.check_mining` check; it temporarily places a
+stone block beside the test player and confirms the server changes it to air.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
@@ -129,4 +131,6 @@ planner.py      - Claude API integration, guided and autonomous planning
 
 ## Project status
 
-Block interaction (mining and placing) is stubbed. The autonomous planning loop is functional but more testing is in a live server is required.
+Creative-mode mining is supported on Minecraft 1.20.2. Survival mining and block placement
+still need inventory/tool awareness and action timing. The autonomous planning loop is
+functional, but broader live-server testing is still required.
