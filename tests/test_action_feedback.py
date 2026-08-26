@@ -2,7 +2,7 @@
 
 import threading
 
-from bot import Connection
+from connection import Connection
 from execution import Execute
 from planner import Planner
 

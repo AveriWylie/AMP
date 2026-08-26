@@ -18,8 +18,15 @@ def test_bot_delegates_gameplay_actions_to_controller():
     })
 
     assert isinstance(bot._gameplay, GameplayController)
-    assert bot.move_to == bot._gameplay.move_to
-    assert bot.mine_block == bot._gameplay.mine_block
+    bot._gameplay.move_to = lambda goal: ("move", goal)
+    bot._gameplay.mine_block = lambda target: ("mine", target)
+    bot._gameplay.place_block = lambda target, block: ("place", target, block)
+    bot._gameplay.attack_entity = lambda entity_id: ("attack", entity_id)
+
+    assert bot.move_to((1, 2, 3)) == ("move", (1, 2, 3))
+    assert bot.mine_block((4, 5, 6)) == ("mine", (4, 5, 6))
+    assert bot.place_block((7, 8, 9), "stone") == ("place", (7, 8, 9), "stone")
+    assert bot.attack_entity(42) == ("attack", 42)
 
 
 def test_mine_block_selects_reachable_face_and_queues_dig_last():

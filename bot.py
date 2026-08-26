@@ -3,7 +3,7 @@
 import os
 import threading
 import time
-from connection import Connection
+from connection import Connection as _Connection
 from execution import Execute
 from gameplay import GameplayController
 from pathfinder import Pathfinder
@@ -105,7 +105,7 @@ class Bot:
                   f"(supported: {list(self.version_protocol)}). Falling back to protocol 762 (1.19.4).")
             protocol = 762
         self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
-        self._connection = Connection(
+        self._connection = _Connection(
             self._host, self._port, self._version, self._username,
             on_failure=self._handle_failure, protocol_version=protocol,
         )
@@ -113,21 +113,6 @@ class Bot:
             self._version, self._connection, self.play_ids
         )
         self._world_state = self._world_tracker.state
-        self._on_packet = self._world_tracker._on_packet
-        self._handle_position = self._world_tracker._handle_position
-        self._confirm_position = self._world_tracker._confirm_position
-        self._handle_health = self._world_tracker._handle_health
-        self._respawn = self._world_tracker._respawn
-        self._handle_entity = self._world_tracker._handle_entity
-        self._handle_entity_move = self._world_tracker._handle_entity_move
-        self._handle_entity_teleport = self._world_tracker._handle_entity_teleport
-        self._handle_entity_destroy = self._world_tracker._handle_entity_destroy
-        self._handle_chunk = self._world_tracker._handle_chunk
-        self._handle_block_update = self._world_tracker._handle_block_update
-        self._skip_nbt_payload = self._world_tracker._skip_nbt_payload
-        self._decode_slot = self._world_tracker._decode_slot
-        self._handle_window_items = self._world_tracker._handle_window_items
-        self._handle_set_slot = self._world_tracker._handle_set_slot
         self._connection._packet_handler = self._world_tracker._on_packet
         self._input_mode = None
         self._pathfinder = Pathfinder(self._world_state)
@@ -141,10 +126,6 @@ class Bot:
             self._world_state, self._pathfinder, self._executor,
             self._version, self._game_mode,
         )
-        self.move_to = self._gameplay.move_to
-        self.mine_block = self._gameplay.mine_block
-        self.place_block = self._gameplay.place_block
-        self.attack_entity = self._gameplay.attack_entity
         self._execution_started = False
         self._execution_thread = None
         # Load local development credentials without overriding environment variables
@@ -165,6 +146,18 @@ class Bot:
             model=os.environ.get("ANTHROPIC_MODEL"),
         )
         self._run_thread = None
+
+    def move_to(self, goal):
+        return self._gameplay.move_to(goal)
+
+    def mine_block(self, target):
+        return self._gameplay.mine_block(target)
+
+    def place_block(self, target, block_name):
+        return self._gameplay.place_block(target, block_name)
+
+    def attack_entity(self, entity_id):
+        return self._gameplay.attack_entity(entity_id)
 
     # entrance for cli
     def start(self):

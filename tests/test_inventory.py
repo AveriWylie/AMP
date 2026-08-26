@@ -2,7 +2,8 @@
 
 import struct
 
-from bot import Bot, Connection
+from bot import Bot
+from connection import Connection
 from inventory_data import item_name
 
 
@@ -24,7 +25,7 @@ def test_window_items_replaces_player_inventory_and_names_items():
     payload = b"\x00" + Connection._encode_varint(12) + Connection._encode_varint(3)
     payload += _slot(1, 32) + _slot() + _slot(799, 1) + _slot()
 
-    bot._handle_window_items(payload)
+    bot._world_tracker._handle_window_items(payload)
 
     inventory = bot._world_state["inventory"]
     assert inventory["state_id"] == 12
@@ -38,21 +39,21 @@ def test_window_items_replaces_player_inventory_and_names_items():
 def test_set_slot_adds_and_removes_hotbar_item():
     bot = _bot()
     prefix = b"\x00" + Connection._encode_varint(3) + struct.pack(">h", 38)
-    bot._handle_set_slot(prefix + _slot(799))
+    bot._world_tracker._handle_set_slot(prefix + _slot(799))
     assert bot._world_state["inventory"]["slots"][38]["name"] == "diamond_pickaxe"
 
-    bot._handle_set_slot(prefix + _slot())
+    bot._world_tracker._handle_set_slot(prefix + _slot())
     assert 38 not in bot._world_state["inventory"]["slots"]
 
 
 def test_stale_window_snapshot_does_not_overwrite_newer_slot_update():
     bot = _bot()
     update = b"\x00" + Connection._encode_varint(5) + struct.pack(">h", 38) + _slot(799)
-    bot._handle_set_slot(update)
+    bot._world_tracker._handle_set_slot(update)
     stale = b"\x00" + Connection._encode_varint(4) + Connection._encode_varint(1)
     stale += _slot() + _slot()
 
-    bot._handle_window_items(stale)
+    bot._world_tracker._handle_window_items(stale)
 
     assert bot._world_state["inventory"]["state_id"] == 5
     assert bot._world_state["inventory"]["slots"][38]["name"] == "diamond_pickaxe"
@@ -64,8 +65,8 @@ def test_slot_decoder_skips_compound_nbt_before_next_slot():
     nbt = b"\x0a\x08\x00\x03foo\x00\x03bar\x00"
     payload = _slot(1, nbt=nbt) + _slot(23, 4)
 
-    first, offset = bot._decode_slot(payload, 0)
-    second, offset = bot._decode_slot(payload, offset)
+    first, offset = bot._world_tracker._decode_slot(payload, 0)
+    second, offset = bot._world_tracker._decode_slot(payload, offset)
 
     assert first["name"] == "stone"
     assert {key: second[key] for key in ("id", "name", "count")} == {
@@ -76,7 +77,7 @@ def test_slot_decoder_skips_compound_nbt_before_next_slot():
 
 def test_clientbound_held_slot_updates_selected_hotbar():
     bot = _bot()
-    bot._on_packet(bot.play_ids["held_item_slot"], b"\x06")
+    bot._world_tracker._on_packet(bot.play_ids["held_item_slot"], b"\x06")
     assert bot._world_state["inventory"]["selected_hotbar_slot"] == 6
 
 

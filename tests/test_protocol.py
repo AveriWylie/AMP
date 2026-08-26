@@ -8,7 +8,7 @@ server is required; pytest discovers every test in this module directly.
 --------------------------------------------------------------------------------------------
 """
 # imports
-from bot import Connection
+from connection import Connection
 
 """
 --------------------------------------------------------------------------------------------

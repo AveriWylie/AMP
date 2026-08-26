@@ -4,7 +4,7 @@ import struct
 
 import pytest
 
-from bot import Connection
+from connection import Connection
 from execution import Execute
 
 
