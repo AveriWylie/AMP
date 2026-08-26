@@ -1,6 +1,7 @@
 """Login and Configuration state handling for the Java 26 protocol generation."""
 
 import struct
+import time
 import uuid
 
 from chunk import Chunk
@@ -11,6 +12,8 @@ from protocol_types import (
     BlockChanged, ChunkLoaded, EntitiesRemoved, EntityMoved, EntitySpawned,
     EntityTeleported, HealthChanged, PositionChanged, SelfEntityIdentified,
     HotbarSelected, InventoryReplaced, SlotChanged,
+    ChatAction, EncodedAction, LookAction, MoveAction, PacketStep, SneakAction,
+    SwingAction,
 )
 
 
@@ -30,6 +33,29 @@ class Java26ProtocolAdapter:
         )
         self.play_clientbound = packet_ids_for_protocol(protocol, "clientbound")
         self.play_serverbound = packet_ids_for_protocol(protocol, "serverbound")
+
+    def _packet(self, name, data):
+        packet_id = self.connection._encode_varint(self.play_serverbound[name])
+        return self.connection._encode_varint(len(packet_id + data)) + packet_id + data
+
+    def encode_action(self, action, world_state, game_mode):
+        encode = self.connection._encode_varint
+        if isinstance(action, MoveAction):
+            packet = self._packet("position", struct.pack(">dddB", action.x, action.y, action.z, 1))
+        elif isinstance(action, LookAction):
+            packet = self._packet("look", struct.pack(">ffB", action.yaw, action.pitch, 1))
+        elif isinstance(action, ChatAction):
+            message = action.message.encode("utf-8")
+            data = (encode(len(message)) + message + struct.pack(">q", int(time.time() * 1000))
+                    + struct.pack(">q", 0) + b"\x00" + encode(0) + b"\x00" * 3 + b"\x00")
+            packet = self._packet("chat_message", data)
+        elif isinstance(action, SwingAction):
+            packet = self._packet("arm_animation", encode(action.hand))
+        elif isinstance(action, SneakAction):
+            packet = self._packet("player_input", b"\x20" if action.sneaking else b"\x00")
+        else:
+            raise TypeError(f"Unsupported Java 26 action: {type(action).__name__}")
+        return EncodedAction((PacketStep(packet),))
 
     def decode_play(self, packet_id, payload):
         ids = self.play_clientbound
