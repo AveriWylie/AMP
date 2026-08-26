@@ -10,7 +10,7 @@ Minecraft Java Edition 1.20.2 is AMP's primary supported version. Older entries 
 python -m pip install -r requirements.txt
 ```
 
-Requires Python 3.9+.
+Requires Python 3.10+.
 
 ## Tests
 
