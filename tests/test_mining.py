@@ -1,6 +1,7 @@
 """Tests for turning a requested block target into movement and digging commands."""
 
 from bot import Bot
+from gameplay import GameplayController
 
 
 class FlatChunk:
@@ -8,6 +9,17 @@ class FlatChunk:
         if (x, y, z) == (2, 64, 2):
             return "stone"
         return "stone" if y <= 63 else "air"
+
+
+def test_bot_delegates_gameplay_actions_to_controller():
+    bot = Bot({
+        "host": "localhost", "port": 25565, "username": "Miner",
+        "version": "1.20.2", "game_mode": "creative", "behavior_mode": "passive",
+    })
+
+    assert isinstance(bot._gameplay, GameplayController)
+    assert bot.move_to == bot._gameplay.move_to
+    assert bot.mine_block == bot._gameplay.mine_block
 
 
 def test_mine_block_selects_reachable_face_and_queues_dig_last():
