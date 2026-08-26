@@ -39,9 +39,13 @@ class WorldStateTracker:
 
     def apply(self, event):
         if isinstance(event, PositionChanged):
+            previous = self.state["position"]
             self.state["position"] = {
-                "x": event.x, "y": event.y, "z": event.z,
-                "yaw": event.yaw, "pitch": event.pitch,
+                "x": previous["x"] + event.x if event.relative_flags & 1 else event.x,
+                "y": previous["y"] + event.y if event.relative_flags & 2 else event.y,
+                "z": previous["z"] + event.z if event.relative_flags & 4 else event.z,
+                "yaw": previous["yaw"] + event.yaw if event.relative_flags & 8 else event.yaw,
+                "pitch": previous["pitch"] + event.pitch if event.relative_flags & 16 else event.pitch,
             }
         elif isinstance(event, HealthChanged):
             self.state["health"] = event.health

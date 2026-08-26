@@ -50,8 +50,9 @@ class Chunk:
                     state_map[state_id] = block["name"]
         return state_map
 
-    def __init__(self, payload, version="1.20.1"):
+    def __init__(self, payload, version="1.20.1", heightmaps=None):
         self._modern_chunk_data = version == "1.20.2"
+        self._java26_heightmaps = heightmaps
         self._min_y = -64
         self._world_height = 384
         if version not in Chunk._state_to_block_cache:
@@ -86,8 +87,13 @@ class Chunk:
     def _parse(self, payload):
         # need hmap, example "find a tree" benefits from knowing the surface Y so
         # you search near the surface rather than scanning all 24 sections
-        self._hmap, offset = self._read_nbt(payload, 0)
-        sections_end = len(payload)
+        if self._java26_heightmaps is not None:
+            self._hmap = self._java26_heightmaps
+            offset = 0
+            sections_end = len(payload)
+        else:
+            self._hmap, offset = self._read_nbt(payload, 0)
+            sections_end = len(payload)
         if self._modern_chunk_data:
             chunk_length = self._read_varint(payload, offset)
             offset += self._varint_size(payload, offset)

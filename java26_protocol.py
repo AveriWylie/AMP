@@ -1,8 +1,9 @@
 """Login and Configuration state handling for the Java 26 protocol generation."""
 
 import struct
-
+from chunk import Chunk
 from protocol_data import packet_ids_for_protocol
+from protocol_types import BlockChanged, ChunkLoaded, HealthChanged, PositionChanged
 
 
 class Java26ProtocolAdapter:
@@ -18,6 +19,71 @@ class Java26ProtocolAdapter:
         )
         self.configuration_serverbound = packet_ids_for_protocol(
             protocol, "serverbound", "configuration"
+        )
+        self.play_clientbound = packet_ids_for_protocol(protocol, "clientbound")
+        self.play_serverbound = packet_ids_for_protocol(protocol, "serverbound")
+
+    def decode_play(self, packet_id, payload):
+        ids = self.play_clientbound
+        if packet_id == ids["position"]:
+            teleport_id, offset = self.connection._decode_varint_bytes(payload, 0)
+            x, y, z, dx, dy, dz, yaw, pitch, flags = struct.unpack_from(
+                ">ddddddffI", payload, offset
+            )
+            self.connection._send_protocol_packet(
+                self.play_serverbound["teleport_confirm"],
+                self.connection._encode_varint(teleport_id),
+            )
+            return [PositionChanged(x, y, z, yaw, pitch, flags)]
+        if packet_id == ids["update_health"]:
+            health = struct.unpack_from(">f", payload, 0)[0]
+            food, consumed = self.connection._decode_varint_bytes(payload, 4)
+            saturation = struct.unpack_from(">f", payload, 4 + consumed)[0]
+            return [HealthChanged(health, food, saturation)]
+        if packet_id == ids["block_change"]:
+            packed = struct.unpack_from(">q", payload, 0)[0]
+            x = packed >> 38
+            z = (packed >> 12) & 0x3FFFFFF
+            y = packed & 0xFFF
+            if z >= 1 << 25:
+                z -= 1 << 26
+            if y >= 1 << 11:
+                y -= 1 << 12
+            state_id, _ = self.connection._decode_varint_bytes(payload, 8)
+            return [BlockChanged(x, y, z, state_id)]
+        if packet_id == ids["map_chunk"]:
+            return [self._decode_chunk(payload)]
+        return []
+
+    def _decode_chunk(self, payload):
+        chunk_x, chunk_z = struct.unpack_from(">ii", payload, 0)
+        offset = 8
+        heightmap_count, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        heightmap_names = {
+            0: "WORLD_SURFACE_WG", 1: "WORLD_SURFACE", 2: "OCEAN_FLOOR_WG",
+            3: "OCEAN_FLOOR", 4: "MOTION_BLOCKING", 5: "MOTION_BLOCKING_NO_LEAVES",
+        }
+        heightmaps = {}
+        for _ in range(heightmap_count):
+            kind, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            count, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            end = offset + count * 8
+            if end > len(payload):
+                raise ConnectionError("Truncated Java 26 heightmap")
+            heightmaps[heightmap_names.get(kind, f"TYPE_{kind}")] = struct.unpack_from(
+                f">{count}q", payload, offset
+            )
+            offset = end
+        length, consumed = self.connection._decode_varint_bytes(payload, offset)
+        offset += consumed
+        end = offset + length
+        if end > len(payload):
+            raise ConnectionError("Truncated Java 26 chunk data")
+        return ChunkLoaded(
+            chunk_x, chunk_z, Chunk(payload[offset:end], self.version, heightmaps=heightmaps)
         )
 
     def handle_login(self, packet_id, payload, session=None):

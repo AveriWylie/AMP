@@ -11,6 +11,7 @@ class PositionChanged:
     z: float
     yaw: float = 0.0
     pitch: float = 0.0
+    relative_flags: int = 0
 
 
 @dataclass(frozen=True)
