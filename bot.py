@@ -38,12 +38,7 @@ Class Header - Bot initialization
 --------------------------------------------------------------------------------------------
 """
 class Bot:
-    # above all constants, an initialization of version array to define a constant with it.
-    arr = []
-    # flat layout: mc_versions.txt lives beside bot.py, not in a TEXT/ subfolder
-    with open("mc_versions.txt", "r+", encoding="utf-8", errors="ignore") as f:
-        for line in f:
-            arr.append(line.strip())
+    version_protocol = version_protocols()
 
     """
     --------------------------------------------------------------------------------------------
@@ -56,7 +51,7 @@ class Bot:
     """
     allowed_values = {"game_mode": {"survival", "creative", "superflat", "adventure", "spectator"},
                       "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
-                      "version": arr}
+                      "version": set(version_protocol)}
 
     default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.20.2",
         "game_mode": "survival", "behavior_mode": "passive"}
@@ -70,8 +65,6 @@ class Bot:
     and Minecraft 1.20.2's Login -> Configuration -> Play transition.
     --------------------------------------------------------------------------------------------
     """
-    version_protocol = version_protocols()
-
     # ------------------------------------------------------------------------------------------
 
     """

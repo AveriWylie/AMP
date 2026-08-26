@@ -9,7 +9,11 @@ the class that which this test's.
 --------------------------------------------------------------------------------------------
 """
 # imports
+import os
+from pathlib import Path
 import socket
+import subprocess
+import sys
 import threading
 
 import pytest
@@ -80,6 +84,25 @@ def test_validation():
     for key, default in Bot.default_values.items():
         assert getattr(bot_none, f"_{key}") == default, \
             f"Expected default for {key} when None passed"
+
+
+def test_bot_module_imports_outside_repository_root(tmp_path):
+    repository = Path(__file__).resolve().parents[1]
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join(filter(None, (
+        str(repository), environment.get("PYTHONPATH")
+    )))
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import bot"],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 
