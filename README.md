@@ -92,7 +92,10 @@ The CLI prompts for server host, port, username, Minecraft version, game mode, a
 
 ```
 cli.py          - interactive setup and mode selection
-bot.py          - bot lifecycle, gameplay coordination, world state, packet handling, connection
+bot.py          - public façade, dependency composition, lifecycle, planning coordination
+connection.py   - TCP transport, framing, login/configuration protocol, keepalive listener
+world_state.py  - clientbound packet dispatch and live world/inventory/entity state
+gameplay.py     - movement, mining, placement, and combat command coordination
 chunk.py        - binary chunk parser, NBT, palette resolution, block queries
 pathfinder.py   - A* pathfinder over live world data
 execution.py    - command queue, packet serialization

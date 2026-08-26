@@ -11,3 +11,4 @@
 - Added validation for model-produced commands and explicit rejection of unsupported actions.
 - Prevented duplicate execution workers during reconnects.
 - Derived supported versions from generated protocol data and made imports independent of the working directory.
+- Split connection transport, packet-driven world state, and gameplay coordination out of the Bot façade.

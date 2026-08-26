@@ -1,21 +1,8 @@
-"""
---------------------------------------------------------------------------------------------
-Bot Module
---------------------------------------------------------------------------------------------
-TCP connection, varint encoding/decoding, handshake/login, a keepalive loop, validation
-layers for bot configuration, and a singular entry point to start all these processes
-(bot.start()). With this architecture the only external interface / process of an external
-interface is the code blow:
-
-bot = Bot(config)
-bot.start()
---------------------------------------------------------------------------------------------
-"""
+"""Public AMP façade that composes transport, world state, gameplay, planning, and execution."""
 # imports
 import os
 import threading
 import time
-from collections import deque
 from connection import Connection
 from execution import Execute
 from gameplay import GameplayController
@@ -106,8 +93,6 @@ class Bot:
         self._username = config.get("username")
         self._game_mode = config.get("game_mode")
         self._behavior_mode = config.get("behavior_mode")
-        # implemented with a deqeue or for efficient popping
-        self._command_queue = deque()
         self._valid_flags = {}
         # guarantee the object is always in a valid state immediately after
         # creation with config get
