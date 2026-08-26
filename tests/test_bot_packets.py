@@ -58,7 +58,7 @@ def test_position_confirmation_echoes_multibyte_teleport_id():
     payload = struct.pack(">dddffB", 1.0, 64.0, -2.0, 90.0, 10.0, 0)
     payload += Connection._encode_varint(300)
 
-    bot._world_tracker._handle_position(payload)
+    bot._world_tracker._on_packet(bot.play_ids["position"], payload)
 
     assert bot._world_state["position"]["x"] == 1.0
     assert sent == [b"\x03\x00\xac\x02"]
@@ -68,7 +68,7 @@ def test_health_decodes_multibyte_food_varint():
     bot = _bot()
     payload = struct.pack(">f", 18.5) + Connection._encode_varint(300) + struct.pack(">f", 2.0)
 
-    bot._world_tracker._handle_health(payload)
+    bot._world_tracker._on_packet(bot.play_ids["update_health"], payload)
 
     assert bot._world_state["health"] == 18.5
     assert bot._world_state["food"] == 300
@@ -83,7 +83,7 @@ def test_spawn_entity_decodes_varints_uuid_and_coordinates():
     payload += struct.pack(">ddd", 10.5, 64.0, -3.25)
     payload += b"\x00" * 10
 
-    bot._world_tracker._handle_entity(payload)
+    bot._world_tracker._on_packet(bot.play_ids["spawn_entity"], payload)
 
     assert bot._world_state["entities"][300] == {
         "uuid": str(entity_uuid),
@@ -104,7 +104,7 @@ def test_block_change_decodes_multibyte_state_id_and_negative_coordinates():
     bot._world_state["map"][(-1, -1)] = FakeChunk()
     payload = _packed_position(-1, -1, -2) + Connection._encode_varint(300)
 
-    bot._world_tracker._handle_block_update(payload)
+    bot._world_tracker._on_packet(bot.play_ids["block_change"], payload)
 
     section = bot._world_state["map"][(-1, -1)]._sections[3]
     assert section["patched"][(15, 15, 14)] == 300
@@ -140,18 +140,22 @@ def test_entity_motion_teleport_and_destroy_keep_state_current():
     }
     entity_id = Connection._encode_varint(300)
 
-    bot._world_tracker._handle_entity_move(
-        entity_id + struct.pack(">hhh?", 4096, -2048, 8192, True)
+    bot._world_tracker._on_packet(
+        bot.play_ids["rel_entity_move"],
+        entity_id + struct.pack(">hhh?", 4096, -2048, 8192, True),
     )
     assert bot._world_state["entities"][300]["x"] == 2.0
     assert bot._world_state["entities"][300]["y"] == 63.5
     assert bot._world_state["entities"][300]["z"] == 4.0
 
-    bot._world_tracker._handle_entity_teleport(
-        entity_id + struct.pack(">dddbb?", 8.0, 70.0, -4.0, 0, 0, True)
+    bot._world_tracker._on_packet(
+        bot.play_ids["entity_teleport"],
+        entity_id + struct.pack(">dddbb?", 8.0, 70.0, -4.0, 0, 0, True),
     )
     assert bot._world_state["entities"][300]["x"] == 8.0
-    bot._world_tracker._handle_entity_destroy(Connection._encode_varint(1) + entity_id)
+    bot._world_tracker._on_packet(
+        bot.play_ids["entity_destroy"], Connection._encode_varint(1) + entity_id
+    )
     assert 300 not in bot._world_state["entities"]
 
 

@@ -6,9 +6,11 @@ import connection
 from execution import Execute
 from gameplay import GameplayController
 from lifecycle import LifecycleManager
+from legacy_protocol import LegacyProtocolAdapter
 from model_clients import build_model_client
 from pathfinder import Pathfinder
 from planner import Planner
+from protocol_adapters import ProtocolAdapterRegistry
 from protocol_data import packet_ids_for_protocol
 from version_support import pending_versions, runnable_version_protocols
 from world_state import WorldStateTracker
@@ -116,8 +118,13 @@ class Bot:
             on_failure=lambda error: self._lifecycle.handle_failure(error),
             protocol_version=protocol,
         )
+        adapter_registry = ProtocolAdapterRegistry()
+        adapter_registry.register(
+            LegacyProtocolAdapter(self._version, self._connection, self.play_ids)
+        )
+        self._protocol_adapter = adapter_registry.for_version(self._version)
         self._world_tracker = WorldStateTracker(
-            self._version, self._connection, self.play_ids
+            self._protocol_adapter, self._connection
         )
         self._world_state = self._world_tracker.state
         self._connection._packet_handler = self._world_tracker._on_packet

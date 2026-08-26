@@ -9,6 +9,8 @@ class PositionChanged:
     x: float
     y: float
     z: float
+    yaw: float = 0.0
+    pitch: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,11 @@ class HealthChanged:
     health: float
     food: int
     saturation: float
+
+
+@dataclass(frozen=True)
+class SelfEntityIdentified:
+    entity_id: int
 
 
 @dataclass(frozen=True)
@@ -73,7 +80,8 @@ class BlockChanged:
 class InventoryReplaced:
     window_id: int
     state_id: int
-    slots: tuple[Any, ...]
+    slots: tuple[tuple[int, Any], ...]
+    carried: Any = None
 
 
 @dataclass(frozen=True)
