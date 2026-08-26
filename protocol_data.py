@@ -25,24 +25,31 @@ def version_protocols():
     }
 
 
-def packet_ids(version, direction):
+def packet_ids(version, direction, state="play"):
     """Return a copy of the named packet IDs for one version and direction."""
     if direction not in ("clientbound", "serverbound"):
         raise ValueError(f"Unknown packet direction: {direction}")
 
     versions = load_protocol_tables()["versions"]
     try:
-        return dict(versions[version][direction])
+        entry = versions[version]
+        table = entry if state == "play" else entry["states"][state]
+        return dict(table[direction])
     except KeyError as exc:
-        raise ValueError(f"No generated protocol data for Minecraft {version}") from exc
+        raise ValueError(
+            f"No generated {state} protocol data for Minecraft {version}"
+        ) from exc
 
 
-def packet_ids_for_protocol(protocol, direction):
+def packet_ids_for_protocol(protocol, direction, state="play"):
     """Return packet IDs for a numeric protocol, allowing version aliases."""
     if direction not in ("clientbound", "serverbound"):
         raise ValueError(f"Unknown packet direction: {direction}")
 
     for entry in load_protocol_tables()["versions"].values():
         if entry["protocol"] == protocol:
-            return dict(entry[direction])
-    raise ValueError(f"No generated packet data for protocol {protocol}")
+            table = entry if state == "play" else entry.get("states", {}).get(state)
+            if table is None or direction not in table:
+                break
+            return dict(table[direction])
+    raise ValueError(f"No generated {state} packet data for protocol {protocol}")

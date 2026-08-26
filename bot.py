@@ -14,6 +14,7 @@ bot.start()
 # imports
 import socket
 import os
+import hashlib
 import threading
 import struct
 import time
@@ -53,7 +54,7 @@ class Bot:
                       "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
                       "version": arr}
 
-    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.19.4",
+    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.20.2",
         "game_mode": "survival", "behavior_mode": "passive"}
 
     """
@@ -61,9 +62,8 @@ class Bot:
     Function Header - Version to protocol map
     --------------------------------------------------------------------------------------------
     The handshake sends a protocol number, not a version string, and every packet ID is keyed
-    to that number. Only pre-configuration-phase versions are mapped here (1.19.4=762,
-    1.20.1=763). 1.20.2+ adds a Configuration state between Login and Play not yet implemented
-    here, so anything unmapped falls back to 762 (1.19.4) with a warning.
+    to that number. The generated table covers the supported legacy Login -> Play transition
+    and Minecraft 1.20.2's Login -> Configuration -> Play transition.
     --------------------------------------------------------------------------------------------
     """
     version_protocol = version_protocols()
@@ -194,8 +194,8 @@ class Bot:
     handles non-keepalive response packets for world state an other data to flow to the bot. 
     Conventional to minecraft:
     
-    Packet IDs are centralized for the supported pre-configuration protocols: 762
-    (1.19.4) and 763 (1.20/1.20.1).
+    Packet IDs are centralized for protocols 762 (1.19.4), 763 (1.20/1.20.1), and
+    764 (1.20.2), including 1.20.2's Configuration state.
     
     tldr ...
     gets all world state data as packets are handled, sends any packets necessary for connection.
@@ -590,6 +590,17 @@ class Connection:
         self._protocol_version = protocol_version
         self.play_ids = packet_ids_for_protocol(protocol_version, "serverbound")
         self.clientbound_ids = packet_ids_for_protocol(protocol_version, "clientbound")
+        self._modern_configuration = protocol_version >= 764
+        if self._modern_configuration:
+            self.login_ids = packet_ids_for_protocol(
+                protocol_version, "serverbound", state="login"
+            )
+            self.configuration_ids = packet_ids_for_protocol(
+                protocol_version, "serverbound", state="configuration"
+            )
+            self.configuration_clientbound_ids = packet_ids_for_protocol(
+                protocol_version, "clientbound", state="configuration"
+            )
         self._connected = False
         self._username = username
         self._on_failure = on_failure
@@ -681,6 +692,13 @@ class Connection:
     def _serialize_login_start(self, username: str) -> bytes:
         packet_id = self._encode_varint(0x00)  # Login Start packet ID
         data = self._encode_string(username)
+        if self._modern_configuration:
+            # Java's UUID.nameUUIDFromBytes("OfflinePlayer:<name>") algorithm. Modern
+            # Login Start requires these 16 raw bytes even when the server is offline-mode.
+            digest = hashlib.md5(
+                f"OfflinePlayer:{username}".encode("utf-8"), usedforsecurity=False
+            ).digest()
+            data += uuid.UUID(bytes=digest, version=3).bytes
         length = self._encode_varint(len(packet_id + data))
         return length + packet_id + data
 
@@ -875,6 +893,53 @@ class Connection:
         length = self._encode_varint(len(packet_id + payload))
         return length + packet_id + payload
 
+    def _send_protocol_packet(self, packet_id: int, payload: bytes = b""):
+        """Send a packet during Login, Configuration, or Play."""
+        encoded_id = self._encode_varint(packet_id)
+        frame = self._encode_varint(len(encoded_id + payload)) + encoded_id + payload
+        if self._compression_threshold is not None:
+            frame = self._compress_frame(frame)
+        self._socket.sendall(frame)
+
+    def _send_configuration_settings(self):
+        payload = (
+            self._encode_string("en_us")
+            + struct.pack(">b", 10)
+            + self._encode_varint(0)
+            + b"\x01"
+            + b"\x7f"
+            + self._encode_varint(1)
+            + b"\x00"
+            + b"\x01"
+        )
+        self._send_protocol_packet(self.configuration_ids["settings"], payload)
+
+    def _configuration(self):
+        """Process Configuration packets until the server releases us into Play."""
+        self._send_configuration_settings()
+        while True:
+            packet_id, payload = self._read_packet()
+            ids = self.configuration_clientbound_ids
+            if packet_id == ids["finish_configuration"]:
+                self._send_protocol_packet(
+                    self.configuration_ids["finish_configuration"]
+                )
+                return
+            if packet_id == ids["keep_alive"]:
+                self._send_protocol_packet(self.configuration_ids["keep_alive"], payload)
+            elif packet_id == ids["ping"]:
+                self._send_protocol_packet(self.configuration_ids["pong"], payload)
+            elif packet_id == ids["resource_pack_send"]:
+                # 1 = declined. AMP is headless and cannot apply client resource packs.
+                self._send_protocol_packet(
+                    self.configuration_ids["resource_pack_receive"],
+                    self._encode_varint(1),
+                )
+            elif packet_id == ids["disconnect"]:
+                raise ConnectionError("Server disconnected during Configuration")
+            # Registry, feature, tag and custom payload packets are length-framed and
+            # may be safely retained/ignored by this headless base.
+
     # ------------------------------------------------------------------------------------------
 
     """
@@ -898,6 +963,13 @@ class Connection:
                 if packet_id == self.clientbound_ids["keep_alive"]:
                     self._send(self._keepalive_response_aux(payload))
 
+                elif (self._modern_configuration and
+                      packet_id == self.clientbound_ids["start_configuration"]):
+                    self._send_protocol_packet(
+                        self.play_ids["configuration_acknowledged"]
+                    )
+                    self._configuration()
+
                 else:
                     # functions are truthy objects, in bot we initialize this attribute
                     # to a function within bot that will handle world state / data other
@@ -909,11 +981,13 @@ class Connection:
                 self._started = False
                 b = False
 
-                if self._on_failure:
+                # Closing the socket during an intentional disconnect wakes recv() with an
+                # error. That is normal shutdown, not a connection failure to reconnect from.
+                if self._connected and self._on_failure:
                     self._on_failure(e)
 
                 # if we do not pass an error function -> gen case error handling
-                else:
+                elif self._connected:
                     print(f"Error: {e}")
                     self._started = False
                     self.disconnect()
@@ -987,6 +1061,9 @@ class Connection:
                 self._compression_threshold = threshold
 
             elif packet_id == 0x02:
+                if self._modern_configuration:
+                    self._send_protocol_packet(self.login_ids["login_acknowledged"])
+                    self._configuration()
                 # because we (As per design choice) have keepalive handled within connection
                 # we start it when someone connects
                 self._connected = True
@@ -1013,9 +1090,11 @@ class Connection:
 
     def disconnect(self):
         if self._connected:
-            self._socket.close()
+            socket_to_close = self._socket
             self._socket = None
             self._connected = False
+            self._started = False
+            socket_to_close.close()
             print(f"Disconnected from {self._host}:{self._port}")
 
         else:

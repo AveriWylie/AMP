@@ -21,11 +21,33 @@ def test_generated_table_records_pinned_source():
 
 
 def test_generated_versions_and_aliases():
-    assert version_protocols() == {"1.19.4": 762, "1.20": 763, "1.20.1": 763}
+    assert version_protocols() == {
+        "1.19.4": 762,
+        "1.20": 763,
+        "1.20.1": 763,
+        "1.20.2": 764,
+    }
     assert packet_ids("1.20", "clientbound") == packet_ids("1.20.1", "clientbound")
     assert packet_ids_for_protocol(763, "serverbound") == packet_ids(
         "1.20", "serverbound"
     )
+
+
+def test_1202_configuration_packet_tables():
+    assert packet_ids("1.20.2", "clientbound", state="configuration")[
+        "finish_configuration"
+    ] == 0x02
+    assert packet_ids_for_protocol(764, "serverbound", state="login")[
+        "login_acknowledged"
+    ] == 0x03
+    assert packet_ids_for_protocol(764, "serverbound", state="configuration")[
+        "finish_configuration"
+    ] == 0x02
+
+
+def test_legacy_protocol_has_no_configuration_state():
+    with pytest.raises(ValueError):
+        packet_ids_for_protocol(763, "serverbound", state="configuration")
 
 
 def test_packet_table_results_are_copies():

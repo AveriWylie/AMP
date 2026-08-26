@@ -15,11 +15,12 @@ from bot import Connection
 Helpers
 --------------------------------------------------------------------------------------------
 """
-# A socket stand-in that serves a fixed byte buffer to recv() and swallows sends.
+# A socket stand-in that serves a fixed byte buffer to recv() and records sends.
 class _FakeSocket:
     def __init__(self, data: bytes):
         self._data = data
         self._pos = 0
+        self.sent = []
 
     def recv(self, n):
         chunk = self._data[self._pos:self._pos + n]
@@ -27,7 +28,7 @@ class _FakeSocket:
         return chunk
 
     def sendall(self, data):
-        return None
+        self.sent.append(data)
 
     def close(self):
         return None
@@ -37,8 +38,19 @@ def _conn():
     return Connection("localhost", 25565, "1.19.4", "TestBot", None, 762)
 
 
+def _conn_1202():
+    return Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
+
+
 def _uncompressed_frame(body: bytes) -> bytes:
     return Connection._encode_varint(len(body)) + body
+
+
+def _uncompressed_body(frame: bytes) -> bytes:
+    length, offset = Connection._decode_varint_bytes(frame, 0)
+    body = frame[offset:]
+    assert len(body) == length
+    return body
 
 
 # --------------------------------------------------------------------------------------------
@@ -79,6 +91,14 @@ def test_uncompressed_read():
     assert data == b"login-success-fields"
 
 
+def test_1202_login_start_includes_offline_uuid():
+    conn = _conn_1202()
+    body = _uncompressed_body(conn._serialize_login_start("TestBot"))
+
+    assert body[:9] == b"\x00\x07TestBot"
+    assert len(body) == 25  # packet ID + string length/name + 16-byte UUID
+
+
 
 # --------------------------------------------------------------------------------------------
 # 3. Login state machine (Set Compression -> Login Success)
@@ -101,6 +121,33 @@ def test_login_flow_with_compression():
 
     assert conn._connected is True
     assert conn._compression_threshold == 256
+
+
+def test_1202_login_runs_configuration_before_play():
+    conn = _conn_1202()
+    conn._start_func = lambda: None
+    enc = Connection._encode_varint
+
+    incoming = b"".join(
+        (
+            _uncompressed_frame(enc(0x02) + b"uuid+name"),
+            _uncompressed_frame(enc(0x03) + b"12345678"),
+            _uncompressed_frame(enc(0x04) + b"ping"),
+            _uncompressed_frame(enc(0x02)),
+        )
+    )
+    fake_socket = _FakeSocket(incoming)
+    conn._socket = fake_socket
+
+    conn._login()
+
+    assert conn._connected is True
+    sent = [_uncompressed_body(frame) for frame in fake_socket.sent]
+    assert sent[0] == enc(0x03)  # Login Acknowledged
+    assert sent[1].startswith(enc(0x00) + enc(5) + b"en_us")  # Client Information
+    assert sent[2] == enc(0x03) + b"12345678"  # Keep Alive response
+    assert sent[3] == enc(0x04) + b"ping"  # Pong
+    assert sent[4] == enc(0x02)  # Finish Configuration acknowledgement
 
 
 

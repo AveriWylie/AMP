@@ -11,14 +11,18 @@ REPOSITORY = "https://github.com/PrismarineJS/minecraft-data"
 REVISION = "e8ff8ec779a48814c2fc5b8a0ba7c95b9bc05d6d"
 RAW_ROOT = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/{REVISION}/data/pc"
 OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
+BLOCK_OUTPUTS = {
+    "1.20.2": Path(__file__).resolve().parents[1] / "blocks" / "blocks_1.20.2.json",
+}
 
 VERSION_SOURCES = {
     "1.19.4": "1.19.4",
     "1.20": "1.20",
     "1.20.1": "1.20",
+    "1.20.2": "1.20.2",
 }
 
-PACKETS = {
+PLAY_PACKETS = {
     "clientbound": (
         "spawn_entity",
         "block_change",
@@ -42,6 +46,24 @@ PACKETS = {
     ),
 }
 
+MODERN_PLAY_PACKETS = {
+    "clientbound": ("start_configuration",),
+    "serverbound": ("configuration_acknowledged",),
+}
+
+CONFIGURATION_PACKETS = {
+    "clientbound": (
+        "custom_payload", "disconnect", "finish_configuration", "keep_alive",
+        "ping", "registry_data", "resource_pack_send", "feature_flags", "tags",
+    ),
+    "serverbound": (
+        "settings", "custom_payload", "finish_configuration", "keep_alive",
+        "pong", "resource_pack_receive",
+    ),
+}
+
+LOGIN_PACKETS = {"serverbound": ("login_acknowledged",)}
+
 
 def fetch_json(relative_path):
     request = urllib.request.Request(
@@ -52,9 +74,9 @@ def fetch_json(relative_path):
         return json.load(response)
 
 
-def find_packet_mapping(protocol, direction, required_names):
+def find_packet_mapping(protocol, direction, required_names, state="play"):
     """Extract the packet-name mapper from a minecraft-data protocol definition."""
-    root = protocol["play"]["toClient" if direction == "clientbound" else "toServer"]
+    root = protocol[state]["toClient" if direction == "clientbound" else "toServer"]
     candidates = []
 
     def visit(value):
@@ -93,9 +115,25 @@ def build_table(fetch=fetch_json):
             "protocol": version_numbers[version],
             "source_version": source_version,
         }
-        for direction, names in PACKETS.items():
-            mapping = find_packet_mapping(protocol, direction, names)
+        play_packets = {
+            direction: names + (MODERN_PLAY_PACKETS[direction] if version == "1.20.2" else ())
+            for direction, names in PLAY_PACKETS.items()
+        }
+        for direction, names in play_packets.items():
+            mapping = find_packet_mapping(protocol, direction, names, state="play")
             entry[direction] = {name: mapping[name] for name in names}
+        if version == "1.20.2":
+            entry["states"] = {}
+            for state, packets in (
+                ("login", LOGIN_PACKETS),
+                ("configuration", CONFIGURATION_PACKETS),
+            ):
+                entry["states"][state] = {}
+                for direction, names in packets.items():
+                    mapping = find_packet_mapping(protocol, direction, names, state=state)
+                    entry["states"][state][direction] = {
+                        name: mapping[name] for name in names
+                    }
         versions[version] = entry
 
     return {
@@ -112,6 +150,11 @@ def render_table(table):
     return json.dumps(table, indent=2, sort_keys=True) + "\n"
 
 
+def render_blocks(blocks):
+    """Render upstream block registries compactly and deterministically."""
+    return json.dumps(blocks, separators=(",", ":"), sort_keys=True) + "\n"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -121,12 +164,21 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     rendered = render_table(build_table())
+    rendered_blocks = {
+        version: render_blocks(fetch_json(f"{version}/blocks.json"))
+        for version in BLOCK_OUTPUTS
+    }
 
     if args.check:
         if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != rendered:
             print(f"Generated protocol data is stale: {OUTPUT}", file=sys.stderr)
             return 1
+        for version, path in BLOCK_OUTPUTS.items():
+            if not path.exists() or path.read_text(encoding="utf-8") != rendered_blocks[version]:
+                print(f"Generated block data is stale: {path}", file=sys.stderr)
+                return 1
         print(f"Protocol data is current: {OUTPUT}")
+        print("Block data is current: " + ", ".join(map(str, BLOCK_OUTPUTS.values())))
         return 0
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -134,6 +186,12 @@ def main(argv=None):
     temporary.write_text(rendered, encoding="utf-8", newline="\n")
     temporary.replace(OUTPUT)
     print(f"Wrote {OUTPUT}")
+    for version, path in BLOCK_OUTPUTS.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".json.tmp")
+        temporary.write_text(rendered_blocks[version], encoding="utf-8", newline="\n")
+        temporary.replace(path)
+        print(f"Wrote {path}")
     return 0
 
 

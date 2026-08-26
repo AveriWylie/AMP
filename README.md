@@ -22,7 +22,7 @@ python -m pytest
 The live connection test is skipped automatically when no server is listening on
 `localhost:25565`.
 
-**blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.1.json`.
+**blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
 **Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
 provided by your shell, CI, or deployment take precedence. The old ignored `api_key.txt` file
@@ -36,7 +36,8 @@ Claude model.
 AMP's supported protocol numbers and packet IDs are generated from pinned
 [PrismarineJS minecraft-data](https://github.com/PrismarineJS/minecraft-data) definitions.
 The compact generated table is checked in at `protocol/packet_ids.json`, so running AMP does
-not require Node.js, network access, or the full upstream dataset.
+not require Node.js, network access, or the full upstream dataset. The matching 1.20.2 block
+registry is also checked in for the chunk parser.
 
 To regenerate the table after intentionally updating the pinned revision in
 `tools/sync_minecraft_data.py`:
@@ -76,6 +77,8 @@ planner.py      - Claude API integration, guided and autonomous planning
 
 - Raw TCP socket with VarInt encoding and length-prefixed packet framing
 - Minecraft handshake and login sequence
+- Minecraft 1.20.2 Configuration state, including login acknowledgement, client information,
+  keepalive/ping responses, and the transition into Play
 - Keepalive loop with automatic response to prevent server kick
 - Position confirmation to satisfy server teleport requirements
 - Packet handlers for position, health, entities, chunk data, and block updates

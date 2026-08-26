@@ -27,7 +27,7 @@ def _make_bot(overrides=None):
 
     base = {
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "1.21.4", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "1.20.2", "game_mode": "survival", "behavior_mode": "passive",
     }
     base.update(overrides)
     return Bot(base)
@@ -129,7 +129,7 @@ def test_connection_composition():
     assert conn._host == "localhost"
     assert conn._port == 25565
     assert conn._username == "TestBot"
-    assert conn._protocol_version == 762
+    assert conn._protocol_version == 764
     assert conn._connected is False
     assert conn._started is False
     assert conn._socket is None
