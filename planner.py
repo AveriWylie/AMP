@@ -48,7 +48,7 @@ class Planner:
     LOW_LEVEL_ACTIONS = {"move", "chat"}
 
     # commands the planner resolves into move sequences before passing to executor
-    HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place"}
+    HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place", "attack"}
 
     def __init__(self, world_state, api_key=None, client=None, model=None):
         self._world_state = world_state
@@ -113,7 +113,7 @@ class Planner:
             "nearby_surface_blocks": nearby,
             "entities": {
                 str(eid): {
-                    "type": e["type"],
+                    "type": e["type"], "name": e.get("name", f"entity_{e['type']}"),
                     "x": int(e["x"]), "y": int(e["y"]), "z": int(e["z"])
                 }
                 for eid, e in self._world_state["entities"].items()
@@ -155,6 +155,7 @@ class Planner:
             "  {\"action\": \"find\", \"block\": string, \"radius\": int}\n"
             "  {\"action\": \"mine\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"place\", \"x\": int, \"y\": int, \"z\": int, \"block\": string}\n\n"
+            "  {\"action\": \"attack\", \"entity_id\": int}\n\n"
             "Use the world state snapshot to ground your decisions in real coordinates. "
             "Prefer go_to over raw move sequences. Use find when you need to locate a block type. "
             "Keep command lists concise and purposeful."
@@ -249,6 +250,9 @@ class Planner:
             return [command]
 
         elif action == "place":
+            return [command]
+
+        elif action == "attack":
             return [command]
 
         return [command]

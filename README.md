@@ -34,6 +34,8 @@ verifies AMP swaps, equips, times, and completes a survival stone break.
 `python -m tools.check_placement` puts oak planks in main inventory and verifies AMP swaps,
 equips, selects a support face, places the requested block in survival, and reports the
 server-confirmed action result.
+`python -m tools.check_combat` summons a stationary cow, confirms AMP tracks its readable
+type and current position, attacks it, and verifies the server-authoritative health change.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
@@ -94,7 +96,8 @@ planner.py      - Claude API integration, guided and autonomous planning
   keepalive/ping responses, and the transition into Play
 - Keepalive loop with automatic response to prevent server kick
 - Position confirmation to satisfy server teleport requirements
-- Packet handlers for position, health, entities, chunk data, and block updates
+- Packet handlers for position, health, entity spawn/movement/teleport/removal, chunk data,
+  and block updates
 - Inventory snapshots, individual slot updates, and selected-hotbar tracking
 - Reconnection logic with up to 3 retry attempts on connection failure
 
@@ -127,7 +130,8 @@ planner.py      - Claude API integration, guided and autonomous planning
 - Autonomous mode: closed-loop agentic planning where each executed step feeds back as context for the next decision, runs on a dedicated thread so mid-task prompts can be injected without blocking
 - Autonomous steps wait for queued actions and report server-confirmed block outcomes, packet-send
   failures, or timeouts before replanning
-- High level actions (go_to, find, mine, place) resolved through pathfinder before execution
+- High level actions (go_to, find, mine, place, attack) resolved against live world state
+  before execution
 - JSON parse fault tolerance strips markdown fences if model includes them
 - Graceful degradation returns empty command list on parse failure
 
@@ -144,5 +148,6 @@ planner.py      - Claude API integration, guided and autonomous planning
 Creative and base survival mining are supported on Minecraft 1.20.2, including full-inventory
 tool selection and hardness-based break timing. Inventory-aware block placement selects a stack,
 finds a support face, approaches, and places it. Enchantments, status effects, and
-underwater/airborne mining penalties remain future work. The autonomous planning loop is
-functional, but broader live-server testing is still required.
+underwater/airborne mining penalties remain future work. Nearby tracked entities can be
+targeted by ID for attacks. The autonomous planning loop is functional, but broader live-server
+testing is still required.

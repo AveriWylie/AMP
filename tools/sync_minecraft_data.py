@@ -17,6 +17,9 @@ BLOCK_OUTPUTS = {
 ITEM_OUTPUTS = {
     "1.20.2": Path(__file__).resolve().parents[1] / "items" / "items_1.20.2.json",
 }
+ENTITY_OUTPUTS = {
+    "1.20.2": Path(__file__).resolve().parents[1] / "entities" / "entities_1.20.2.json",
+}
 
 VERSION_SOURCES = {
     "1.19.4": "1.19.4",
@@ -28,6 +31,11 @@ VERSION_SOURCES = {
 PLAY_PACKETS = {
     "clientbound": (
         "spawn_entity",
+        "login",
+        "rel_entity_move",
+        "entity_move_look",
+        "entity_destroy",
+        "entity_teleport",
         "block_change",
         "keep_alive",
         "map_chunk",
@@ -51,6 +59,7 @@ PLAY_PACKETS = {
         "use_item",
         "held_item_slot",
         "window_click",
+        "use_entity",
     ),
 }
 
@@ -180,6 +189,10 @@ def main(argv=None):
         version: render_blocks(fetch_json(f"{version}/items.json"))
         for version in ITEM_OUTPUTS
     }
+    rendered_entities = {
+        version: render_blocks(fetch_json(f"{version}/entities.json"))
+        for version in ENTITY_OUTPUTS
+    }
 
     if args.check:
         if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != rendered:
@@ -193,9 +206,14 @@ def main(argv=None):
             if not path.exists() or path.read_text(encoding="utf-8") != rendered_items[version]:
                 print(f"Generated item data is stale: {path}", file=sys.stderr)
                 return 1
+        for version, path in ENTITY_OUTPUTS.items():
+            if not path.exists() or path.read_text(encoding="utf-8") != rendered_entities[version]:
+                print(f"Generated entity data is stale: {path}", file=sys.stderr)
+                return 1
         print(f"Protocol data is current: {OUTPUT}")
         print("Block data is current: " + ", ".join(map(str, BLOCK_OUTPUTS.values())))
         print("Item data is current: " + ", ".join(map(str, ITEM_OUTPUTS.values())))
+        print("Entity data is current: " + ", ".join(map(str, ENTITY_OUTPUTS.values())))
         return 0
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -213,6 +231,12 @@ def main(argv=None):
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(rendered_items[version], encoding="utf-8", newline="\n")
+        temporary.replace(path)
+        print(f"Wrote {path}")
+    for version, path in ENTITY_OUTPUTS.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(".json.tmp")
+        temporary.write_text(rendered_entities[version], encoding="utf-8", newline="\n")
         temporary.replace(path)
         print(f"Wrote {path}")
     return 0

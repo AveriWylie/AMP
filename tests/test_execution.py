@@ -80,6 +80,16 @@ def test_entity_action_packet_uses_player_command_id():
     assert offset == len(data)
 
 
+def test_attack_packet_uses_interact_entity_attack_schema():
+    executor = _executor_1202()
+    packet_id, data = _packet_body(executor._create_attack_packet(300))
+    entity_id, offset = _read_varint(data)
+    interaction, offset = _read_varint(data, offset)
+    assert packet_id == executor.play_ids["use_entity"]
+    assert (entity_id, interaction, data[offset]) == (300, 1, 0)
+    assert offset + 1 == len(data)
+
+
 def test_digging_packet_supports_negative_positions_and_sequence():
     executor = _executor()
     packet_id, data = _packet_body(executor._create_digging_packet(0, -1, -64, -2, face=5))
@@ -214,4 +224,5 @@ def test_protocol_762_packet_id_table():
         "use_item": 0x32,
         "held_item_slot": 0x28,
         "window_click": 0x0B,
+        "use_entity": 0x10,
     }

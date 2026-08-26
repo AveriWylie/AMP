@@ -8,10 +8,15 @@
     "1.19.4": {
       "clientbound": {
         "block_change": 10,
+        "entity_destroy": 62,
+        "entity_move_look": 44,
+        "entity_teleport": 104,
         "held_item_slot": 77,
         "keep_alive": 35,
+        "login": 40,
         "map_chunk": 36,
         "position": 60,
+        "rel_entity_move": 43,
         "set_slot": 20,
         "spawn_entity": 1,
         "update_health": 87,
@@ -30,6 +35,7 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
+        "use_entity": 16,
         "use_item": 50,
         "window_click": 11
       },
@@ -38,10 +44,15 @@
     "1.20": {
       "clientbound": {
         "block_change": 10,
+        "entity_destroy": 62,
+        "entity_move_look": 44,
+        "entity_teleport": 104,
         "held_item_slot": 77,
         "keep_alive": 35,
+        "login": 40,
         "map_chunk": 36,
         "position": 60,
+        "rel_entity_move": 43,
         "set_slot": 20,
         "spawn_entity": 1,
         "update_health": 87,
@@ -60,6 +71,7 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
+        "use_entity": 16,
         "use_item": 50,
         "window_click": 11
       },
@@ -68,10 +80,15 @@
     "1.20.1": {
       "clientbound": {
         "block_change": 10,
+        "entity_destroy": 62,
+        "entity_move_look": 44,
+        "entity_teleport": 104,
         "held_item_slot": 77,
         "keep_alive": 35,
+        "login": 40,
         "map_chunk": 36,
         "position": 60,
+        "rel_entity_move": 43,
         "set_slot": 20,
         "spawn_entity": 1,
         "update_health": 87,
@@ -90,6 +107,7 @@
         "look": 22,
         "position": 20,
         "teleport_confirm": 0,
+        "use_entity": 16,
         "use_item": 50,
         "window_click": 11
       },
@@ -98,10 +116,15 @@
     "1.20.2": {
       "clientbound": {
         "block_change": 9,
+        "entity_destroy": 64,
+        "entity_move_look": 45,
+        "entity_teleport": 107,
         "held_item_slot": 79,
         "keep_alive": 36,
+        "login": 41,
         "map_chunk": 37,
         "position": 62,
+        "rel_entity_move": 44,
         "set_slot": 21,
         "spawn_entity": 1,
         "start_configuration": 101,
@@ -122,6 +145,7 @@
         "look": 24,
         "position": 22,
         "teleport_confirm": 0,
+        "use_entity": 18,
         "use_item": 53,
         "window_click": 13
       },

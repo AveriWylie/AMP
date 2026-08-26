@@ -78,6 +78,7 @@ def test_spawn_entity_decodes_varints_uuid_and_coordinates():
     assert bot._world_state["entities"][300] == {
         "uuid": str(entity_uuid),
         "type": 200,
+        "name": "entity_200",
         "x": 10.5,
         "y": 64.0,
         "z": -3.25,
@@ -103,6 +104,11 @@ def test_play_packet_ids_match_protocol_762():
     bot = _bot()
     assert bot.play_ids == {
         "spawn_entity": 0x01,
+        "login": 0x28,
+        "rel_entity_move": 0x2B,
+        "entity_move_look": 0x2C,
+        "entity_destroy": 0x3E,
+        "entity_teleport": 0x68,
         "block_change": 0x0A,
         "keep_alive": 0x23,
         "map_chunk": 0x24,
@@ -113,3 +119,30 @@ def test_play_packet_ids_match_protocol_762():
         "held_item_slot": 0x4D,
     }
     assert bot._connection.play_ids["keep_alive"] == 0x12
+
+
+def test_entity_motion_teleport_and_destroy_keep_state_current():
+    bot = _bot()
+    bot._world_state["entities"][300] = {
+        "uuid": "test", "type": 118, "name": "zombie",
+        "x": 1.0, "y": 64.0, "z": 2.0,
+    }
+    entity_id = Connection._encode_varint(300)
+
+    bot._handle_entity_move(entity_id + struct.pack(">hhh?", 4096, -2048, 8192, True))
+    assert bot._world_state["entities"][300]["x"] == 2.0
+    assert bot._world_state["entities"][300]["y"] == 63.5
+    assert bot._world_state["entities"][300]["z"] == 4.0
+
+    bot._handle_entity_teleport(
+        entity_id + struct.pack(">dddbb?", 8.0, 70.0, -4.0, 0, 0, True)
+    )
+    assert bot._world_state["entities"][300]["x"] == 8.0
+    bot._handle_entity_destroy(Connection._encode_varint(1) + entity_id)
+    assert 300 not in bot._world_state["entities"]
+
+
+def test_login_packet_records_own_entity_id():
+    bot = _bot()
+    bot._on_packet(bot.play_ids["login"], struct.pack(">i", 1234))
+    assert bot._world_state["self_entity_id"] == 1234

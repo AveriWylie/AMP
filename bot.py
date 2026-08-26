@@ -28,6 +28,7 @@ from planner import Planner
 from chunk import Chunk
 from protocol_data import packet_ids_for_protocol, version_protocols
 from inventory_data import item_name
+from entity_data import entity_name
 from mining_data import mining_plan
 from dotenv import load_dotenv
 
@@ -126,6 +127,7 @@ class Bot:
             "health": 20.0,
             "food": 20,
             "entities": {},
+            "self_entity_id": None,
             "map": {},
             "blocks": {},
             "inventory": {
@@ -228,6 +230,16 @@ class Bot:
             self._handle_health(payload)
         elif packet_id == self.play_ids["spawn_entity"]:
             self._handle_entity(payload)
+        elif packet_id == self.play_ids["login"]:
+            self._world_state["self_entity_id"] = struct.unpack_from(">i", payload, 0)[0]
+        elif packet_id in (
+            self.play_ids["rel_entity_move"], self.play_ids["entity_move_look"]
+        ):
+            self._handle_entity_move(payload)
+        elif packet_id == self.play_ids["entity_teleport"]:
+            self._handle_entity_teleport(payload)
+        elif packet_id == self.play_ids["entity_destroy"]:
+            self._handle_entity_destroy(payload)
         elif packet_id == self.play_ids["map_chunk"]:
             self._handle_chunk(payload)
         elif packet_id == self.play_ids["block_change"]:
@@ -298,8 +310,34 @@ class Bot:
         self._world_state["entities"][entity_id] = {
             "uuid": entity_uuid,
             "type": entity_type,
+            "name": entity_name(self._version, entity_type),
             "x": x, "y": y, "z": z
         }
+
+    def _handle_entity_move(self, payload):
+        entity_id, consumed = Connection._decode_varint_bytes(payload, 0)
+        entity = self._world_state["entities"].get(entity_id)
+        if entity is None:
+            return
+        dx, dy, dz = struct.unpack_from(">hhh", payload, consumed)
+        entity["x"] += dx / 4096
+        entity["y"] += dy / 4096
+        entity["z"] += dz / 4096
+
+    def _handle_entity_teleport(self, payload):
+        entity_id, consumed = Connection._decode_varint_bytes(payload, 0)
+        entity = self._world_state["entities"].get(entity_id)
+        if entity is None:
+            return
+        entity["x"], entity["y"], entity["z"] = struct.unpack_from(">ddd", payload, consumed)
+
+    def _handle_entity_destroy(self, payload):
+        count, consumed = Connection._decode_varint_bytes(payload, 0)
+        offset = consumed
+        for _ in range(count):
+            entity_id, consumed = Connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            self._world_state["entities"].pop(entity_id, None)
 
     def _handle_chunk(self, payload):
         cx = struct.unpack_from(">i", payload, 0)[0]
@@ -626,6 +664,27 @@ class Bot:
         })
         return True
 
+    def attack_entity(self, entity_id):
+        """Face and attack a tracked entity when it is within normal survival reach."""
+        entity = self._world_state["entities"].get(int(entity_id))
+        if entity is None:
+            print(f"Entity {entity_id} is not currently tracked")
+            return False
+        position = self._world_state["position"]
+        eye = (position["x"], position["y"] + 1.62, position["z"])
+        target = (entity["x"], entity["y"] + 0.9, entity["z"])
+        if math.dist(eye, target) > 3.0:
+            print(f"Entity {entity_id} is outside attack reach")
+            return False
+        dx, dy, dz = (target[index] - eye[index] for index in range(3))
+        self._executor.enque_command({
+            "action": "look", "yaw": math.degrees(math.atan2(-dx, dz)),
+            "pitch": math.degrees(-math.atan2(dy, math.hypot(dx, dz))),
+        })
+        self._executor.enque_command({"action": "swing", "hand": 0})
+        self._executor.enque_command({"action": "attack", "entity_id": int(entity_id)})
+        return True
+
     """
     --------------------------------------------------------------------------------------------
     Function Field Header - Execution loop
@@ -696,6 +755,8 @@ class Bot:
                 self.place_block(
                     (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
                 )
+            elif cmd.get("action") == "attack":
+                self.attack_entity(cmd["entity_id"])
             else:
                 self._executor.enque_command(cmd)
 
@@ -729,6 +790,9 @@ class Bot:
                     planning_results.append(
                         f"Could not plan placing {cmd['block']} at {(cmd['x'], cmd['y'], cmd['z'])}"
                     )
+            elif cmd.get("action") == "attack":
+                if not self.attack_entity(cmd["entity_id"]):
+                    planning_results.append(f"Could not attack entity {cmd['entity_id']}")
             else:
                 self._executor.enque_command(cmd)
         results = self._executor.wait_until_idle(result_start=result_start)

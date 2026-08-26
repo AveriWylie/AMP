@@ -149,8 +149,15 @@ class Execute:
             self._connection._send(packet)
 
         elif action == "sneak":
-            packet = self._create_entity_action_packet(0 if command.get("sneaking") else 1)
+            entity_id = self._world_state.get("self_entity_id", 0) if self._world_state else 0
+            packet = self._create_entity_action_packet(
+                0 if command.get("sneaking") else 1, entity_id=entity_id or 0
+            )
             self._connection._send(packet)
+
+        elif action == "attack":
+            self._connection._send(self._create_attack_packet(command["entity_id"]))
+            message = f"Attack sent to entity {command['entity_id']}"
 
         elif action == "mine":
             x, y, z = command["x"], command["y"], command["z"]
@@ -289,6 +296,15 @@ class Execute:
         length = self._connection._encode_varint(len(packet_id + data))
 
         return length + packet_id + data
+
+    def _create_attack_packet(self, entity_id):
+        packet_id = self._connection._encode_varint(self.play_ids["use_entity"])
+        data = (
+            self._connection._encode_varint(entity_id)
+            + self._connection._encode_varint(1)
+            + b"\x00"
+        )
+        return self._connection._encode_varint(len(packet_id + data)) + packet_id + data
 
     """
     --------------------------------------------------------------------------------------------

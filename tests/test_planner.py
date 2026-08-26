@@ -34,6 +34,12 @@ def test_place_resolution_preserves_interaction_for_bot():
     assert planner._resolve(command, {}) == [command]
 
 
+def test_attack_resolution_preserves_tracked_entity_id():
+    planner = Planner({})
+    command = {"action": "attack", "entity_id": 42}
+    assert planner._resolve(command, {}) == [command]
+
+
 def test_call_api_uses_sdk_and_records_history():
     client = FakeAnthropic([
         SimpleNamespace(type="text", text='[{"action":"chat","message":"hi"}]')
