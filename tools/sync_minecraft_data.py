@@ -109,7 +109,14 @@ JAVA_26_CONFIGURATION_PACKETS = {
     ),
 }
 
-LOGIN_PACKETS = {"serverbound": ("login_acknowledged",)}
+LOGIN_PACKETS = {
+    "clientbound": (
+        "compress", "disconnect", "encryption_begin", "login_plugin_request", "success",
+    ),
+    "serverbound": (
+        "encryption_begin", "login_acknowledged", "login_plugin_response", "login_start",
+    ),
+}
 
 
 def fetch_json(relative_path):

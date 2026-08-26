@@ -65,8 +65,18 @@
           }
         },
         "login": {
+          "clientbound": {
+            "compress": 3,
+            "disconnect": 0,
+            "encryption_begin": 1,
+            "login_plugin_request": 4,
+            "success": 2
+          },
           "serverbound": {
-            "login_acknowledged": 3
+            "encryption_begin": 1,
+            "login_acknowledged": 3,
+            "login_plugin_response": 2,
+            "login_start": 0
           }
         }
       }
@@ -146,8 +156,18 @@
           }
         },
         "login": {
+          "clientbound": {
+            "compress": 3,
+            "disconnect": 0,
+            "encryption_begin": 1,
+            "login_plugin_request": 4,
+            "success": 2
+          },
           "serverbound": {
-            "login_acknowledged": 3
+            "encryption_begin": 1,
+            "login_acknowledged": 3,
+            "login_plugin_response": 2,
+            "login_start": 0
           }
         }
       }
@@ -227,8 +247,18 @@
           }
         },
         "login": {
+          "clientbound": {
+            "compress": 3,
+            "disconnect": 0,
+            "encryption_begin": 1,
+            "login_plugin_request": 4,
+            "success": 2
+          },
           "serverbound": {
-            "login_acknowledged": 3
+            "encryption_begin": 1,
+            "login_acknowledged": 3,
+            "login_plugin_response": 2,
+            "login_start": 0
           }
         }
       }
@@ -308,8 +338,18 @@
           }
         },
         "login": {
+          "clientbound": {
+            "compress": 3,
+            "disconnect": 0,
+            "encryption_begin": 1,
+            "login_plugin_request": 4,
+            "success": 2
+          },
           "serverbound": {
-            "login_acknowledged": 3
+            "encryption_begin": 1,
+            "login_acknowledged": 3,
+            "login_plugin_response": 2,
+            "login_start": 0
           }
         }
       }
@@ -389,8 +429,18 @@
           }
         },
         "login": {
+          "clientbound": {
+            "compress": 3,
+            "disconnect": 0,
+            "encryption_begin": 1,
+            "login_plugin_request": 4,
+            "success": 2
+          },
           "serverbound": {
-            "login_acknowledged": 3
+            "encryption_begin": 1,
+            "login_acknowledged": 3,
+            "login_plugin_response": 2,
+            "login_start": 0
           }
         }
       }
