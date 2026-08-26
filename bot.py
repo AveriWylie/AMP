@@ -123,6 +123,7 @@ class Bot:
             LegacyProtocolAdapter(self._version, self._connection, self.play_ids)
         )
         self._protocol_adapter = adapter_registry.for_version(self._version)
+        self._connection.set_protocol_adapter(self._protocol_adapter)
         self._world_tracker = WorldStateTracker(
             self._protocol_adapter, self._connection
         )

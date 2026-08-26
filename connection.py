@@ -50,6 +50,10 @@ class Connection:
         # None until the server sends Set Compression during login. Once set to a threshold,
         # every read and every send uses the compressed frame envelope (see _read_packet/_send).
         self._compression_threshold = None
+        self._protocol_adapter = None
+
+    def set_protocol_adapter(self, adapter):
+        self._protocol_adapter = adapter
 
     """
     --------------------------------------------------------------------------------------------
@@ -522,6 +526,14 @@ class Connection:
     def _login(self):
         while True:
             packet_id, payload = self._read_packet()
+
+            if callable(getattr(self._protocol_adapter, "handle_login", None)):
+                if self._protocol_adapter.handle_login(packet_id, payload):
+                    self._connected = True
+                    self._start_func()
+                    print(f"Connected to {self._host}:{self._port}")
+                    break
+                continue
 
             if packet_id == 0x03:
                 threshold, _ = self._decode_varint_bytes(payload, 0)

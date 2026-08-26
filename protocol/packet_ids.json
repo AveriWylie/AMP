@@ -158,12 +158,14 @@
         "login": {
           "clientbound": {
             "compress": 3,
+            "cookie_request": 5,
             "disconnect": 0,
             "encryption_begin": 1,
             "login_plugin_request": 4,
             "success": 2
           },
           "serverbound": {
+            "cookie_response": 4,
             "encryption_begin": 1,
             "login_acknowledged": 3,
             "login_plugin_response": 2,
@@ -249,12 +251,14 @@
         "login": {
           "clientbound": {
             "compress": 3,
+            "cookie_request": 5,
             "disconnect": 0,
             "encryption_begin": 1,
             "login_plugin_request": 4,
             "success": 2
           },
           "serverbound": {
+            "cookie_response": 4,
             "encryption_begin": 1,
             "login_acknowledged": 3,
             "login_plugin_response": 2,
@@ -340,12 +344,14 @@
         "login": {
           "clientbound": {
             "compress": 3,
+            "cookie_request": 5,
             "disconnect": 0,
             "encryption_begin": 1,
             "login_plugin_request": 4,
             "success": 2
           },
           "serverbound": {
+            "cookie_response": 4,
             "encryption_begin": 1,
             "login_acknowledged": 3,
             "login_plugin_response": 2,
@@ -431,12 +437,14 @@
         "login": {
           "clientbound": {
             "compress": 3,
+            "cookie_request": 5,
             "disconnect": 0,
             "encryption_begin": 1,
             "login_plugin_request": 4,
             "success": 2
           },
           "serverbound": {
+            "cookie_response": 4,
             "encryption_begin": 1,
             "login_acknowledged": 3,
             "login_plugin_response": 2,

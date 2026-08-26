@@ -118,6 +118,11 @@ LOGIN_PACKETS = {
     ),
 }
 
+JAVA_26_LOGIN_PACKETS = {
+    "clientbound": LOGIN_PACKETS["clientbound"] + ("cookie_request",),
+    "serverbound": LOGIN_PACKETS["serverbound"] + ("cookie_response",),
+}
+
 
 def fetch_json(relative_path):
     request = urllib.request.Request(
@@ -179,7 +184,7 @@ def build_table(fetch=fetch_json):
         if version in VERSION_SOURCES:
             entry["states"] = {}
             for state, packets in (
-                ("login", LOGIN_PACKETS),
+                ("login", LOGIN_PACKETS if version == "1.20.2" else JAVA_26_LOGIN_PACKETS),
                 (
                     "configuration",
                     CONFIGURATION_PACKETS if version == "1.20.2"
