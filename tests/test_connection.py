@@ -10,6 +10,7 @@ the class that which this test's.
 """
 # imports
 import socket
+import threading
 
 import pytest
 from bot import Bot, Connection
@@ -419,3 +420,28 @@ def test_live_connection():
 
     except ConnectionError as e:
         pytest.skip(f"server rejected handshake: {e}")
+
+
+def test_start_execution_does_not_duplicate_live_worker():
+    bot = Bot.__new__(Bot)
+    bot._connection = type("Connected", (), {"_connected": True})()
+    bot._execution_started = False
+    release = threading.Event()
+    started = []
+
+    def execution_loop():
+        started.append(threading.current_thread())
+        release.wait(1)
+
+    bot._execution_loop = execution_loop
+    try:
+        bot._start_execution()
+        first_worker = bot._execution_thread
+        bot._start_execution()
+
+        assert bot._execution_thread is first_worker
+        assert len(started) == 1
+    finally:
+        release.set()
+        for worker in started:
+            worker.join(1)

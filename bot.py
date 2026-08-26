@@ -160,6 +160,7 @@ class Bot:
             world_state=self._world_state,
         )
         self._execution_started = False
+        self._execution_thread = None
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform.
         load_dotenv()
@@ -698,29 +699,12 @@ class Bot:
     """
 
     def _start_execution(self):
-        """
-        if not self._execution_started:
-        """
-        if self._connection._connected:
-            self._execution_thread = threading.Thread(target=self._execution_loop, daemon=True)
-            self._execution_thread.start()
-            self._execution_started = True
-
-        """
-        else:
-            print("Execution already started")
-
-        ...
-
-        _start_execution is only called in two places
-        start() on initial connection, and _handle_failure 
-        on reconnect where _execution_started is explicitly 
-        reset to False first. So by the time _start_execution is 
-        called it's always False. The else print is dead code
-
-        -> now this else msg isnt printed for every 
-        connection error
-        """
+        current = getattr(self, "_execution_thread", None)
+        if not self._connection._connected or (current and current.is_alive()):
+            return
+        self._execution_thread = threading.Thread(target=self._execution_loop, daemon=True)
+        self._execution_thread.start()
+        self._execution_started = True
 
     def _execution_loop(self):
         while True:
@@ -879,7 +863,6 @@ class Bot:
             i = 1
             while i <= 3:
                 try:
-                    self._execution_started = False
                     self._connection.connect()
                     self._start_execution()
                     break
