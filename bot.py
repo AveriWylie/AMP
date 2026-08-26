@@ -713,17 +713,30 @@ class Bot:
     --------------------------------------------------------------------------------------------
     """
     def _on_step(self, commands):
+        result_start = self._executor.result_count()
+        planning_results = []
         for cmd in commands:
             if cmd.get("action") in ("go_to", "find"):
-                self.move_to((cmd["x"], cmd["y"], cmd["z"]))
+                if not self.move_to((cmd["x"], cmd["y"], cmd["z"])):
+                    planning_results.append(f"No path to {(cmd['x'], cmd['y'], cmd['z'])}")
             elif cmd.get("action") == "mine":
-                self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
+                if not self.mine_block((cmd["x"], cmd["y"], cmd["z"])):
+                    planning_results.append(f"Could not plan mining at {(cmd['x'], cmd['y'], cmd['z'])}")
             elif cmd.get("action") == "place":
-                self.place_block(
+                if not self.place_block(
                     (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
-                )
+                ):
+                    planning_results.append(
+                        f"Could not plan placing {cmd['block']} at {(cmd['x'], cmd['y'], cmd['z'])}"
+                    )
             else:
                 self._executor.enque_command(cmd)
+        results = self._executor.wait_until_idle(result_start=result_start)
+        summaries = planning_results + [
+            ("Succeeded: " if result["success"] else "Failed: ") + result["message"]
+            for result in results
+        ]
+        return "; ".join(summaries) or "No actions were queued"
 
     def run(self, goal, max_steps=20):
         self._run_thread = threading.Thread(
@@ -1119,8 +1132,7 @@ class Connection:
 
     def _send(self, data: bytes):
         if not self._connected:
-            # ""b is base None return case for bytes
-            return b""
+            raise ConnectionError("Cannot send packet while disconnected")
 
         # Callers hand us the uncompressed frame (length + packet_id + data). Once the server
         # has enabled compression, every Play-state packet must be re-framed into the compressed

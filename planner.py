@@ -336,9 +336,9 @@ class Planner:
                     resolved.extend(self._resolve(cmd, snapshot))
 
             if on_step:
-                on_step(resolved)
-
-            last_result = f"Executed {len(resolved)} commands: {[c.get('action') for c in resolved]}"
+                last_result = on_step(resolved)
+            else:
+                last_result = f"Planned {len(resolved)} commands without an executor"
             print(f"Step {step + 1}: {last_result}")
 
         else:

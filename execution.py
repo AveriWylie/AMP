@@ -18,6 +18,7 @@ mode, but the action is decided with the behavior in mind before the command is 
 """
 # imports
 import struct
+import threading
 from collections import deque
 import time
 from protocol_data import packet_ids_for_protocol
@@ -42,6 +43,9 @@ class Execute:
             connection._protocol_version, "serverbound"
         )
         self._sequence = 0
+        self._condition = threading.Condition()
+        self._active = False
+        self._results = []
 
     def _next_sequence(self):
         sequence = self._sequence
@@ -58,15 +62,72 @@ class Execute:
     --------------------------------------------------------------------------------------------
     """
     def enque_command(self, command):
-        self._command_queue.append(command)
+        with self._condition:
+            self._command_queue.append(command)
+            self._condition.notify_all()
+
+    def result_count(self):
+        with self._condition:
+            return len(self._results)
+
+    def wait_until_idle(self, result_start=0, timeout=30):
+        """Wait for queued and active work, returning results added since result_start."""
+        deadline = time.monotonic() + timeout
+        with self._condition:
+            while self._command_queue or self._active:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return self._results[result_start:] + [{
+                        "action": "batch", "success": False,
+                        "message": "Timed out waiting for queued actions",
+                    }]
+                self._condition.wait(remaining)
+            return list(self._results[result_start:])
 
     def execute_queue(self):
         """Execute at most one command; the Bot loop calls this once per 50 ms tick."""
-        if self._command_queue:
-            self._execute(self._command_queue.popleft())
+        with self._condition:
+            if not self._command_queue:
+                return None
+            command = self._command_queue.popleft()
+            self._active = True
+        try:
+            result = self._execute(command)
+        except Exception as error:
+            result = {
+                "action": command.get("action"), "success": False,
+                "message": f"{type(error).__name__}: {error}",
+            }
+            raise
+        finally:
+            with self._condition:
+                self._results.append(result)
+                self._active = False
+                self._condition.notify_all()
+        return result
+
+    def _world_block(self, position):
+        if self._world_state is None:
+            return None
+        x, y, z = position
+        chunk = self._world_state["map"].get((x >> 4, z >> 4))
+        return chunk.get_block(x, y, z) if chunk else None
+
+    def _wait_for_block(self, position, expected, timeout=2):
+        if self._world_state is None:
+            return True
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            block = self._world_block(position)
+            if expected(block):
+                return True
+            time.sleep(0.05)
+        return False
 
     def _execute(self, command):
         action = command.get("action")
+        success = True
+        message = f"{action} packet sent"
 
         if action == "move":
             x, y, z = command["x"], command["y"], command["z"]
@@ -100,12 +161,28 @@ class Execute:
                 time.sleep(command.get("duration", 0))
                 finish = self._create_digging_packet(2, x, y, z, face)
                 self._connection._send(finish)
+            success = self._wait_for_block(
+                (x, y, z), lambda block: block in ("air", "cave_air", "void_air")
+            )
+            message = (
+                f"Mined block at {(x, y, z)}" if success
+                else f"Block at {(x, y, z)} did not disappear"
+            )
 
         elif action == "place":
             x, y, z = command["x"], command["y"], command["z"]
             face = command.get("face", 1)
             packet = self._create_place_packet(x, y, z, face)
             self._connection._send(packet)
+            target = tuple(command.get("target", ()))
+            if len(target) == 3 and command.get("block"):
+                success = self._wait_for_block(
+                    target, lambda block: block == command["block"]
+                )
+                message = (
+                    f"Placed {command['block']} at {target}" if success
+                    else f"Expected {command['block']} did not appear at {target}"
+                )
 
         elif action == "use_item":
             packet = self._create_use_item_packet(command.get("hand", 0))
@@ -124,6 +201,7 @@ class Execute:
             self._connection._send(packet)
 
         print(f"Executed {command} in {self._game_mode} mode as {self._behavior_mode} bot.")
+        return {"action": action, "success": success, "message": message}
 
     """
     --------------------------------------------------------------------------------------------

@@ -32,7 +32,8 @@ the slot update, selects that hotbar slot, and verifies the server's selected-sl
 `python -m tools.check_survival_mining` puts a pickaxe in main inventory—not the hotbar—and
 verifies AMP swaps, equips, times, and completes a survival stone break.
 `python -m tools.check_placement` puts oak planks in main inventory and verifies AMP swaps,
-equips, selects a support face, and places the requested block in survival.
+equips, selects a support face, places the requested block in survival, and reports the
+server-confirmed action result.
 
 **blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
 
@@ -124,6 +125,8 @@ planner.py      - Claude API integration, guided and autonomous planning
 - World state snapshot passed as context: position, health, food, nearby surface blocks sampled in 8-block radius, entity positions
 - Guided mode: single API call per prompt, history cleared between prompts
 - Autonomous mode: closed-loop agentic planning where each executed step feeds back as context for the next decision, runs on a dedicated thread so mid-task prompts can be injected without blocking
+- Autonomous steps wait for queued actions and report server-confirmed block outcomes, packet-send
+  failures, or timeouts before replanning
 - High level actions (go_to, find, mine, place) resolved through pathfinder before execution
 - JSON parse fault tolerance strips markdown fences if model includes them
 - Graceful degradation returns empty command list on parse failure

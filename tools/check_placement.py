@@ -65,8 +65,9 @@ def main(argv=None):
 
         if not bot.place_block(target, "oak_planks"):
             raise AssertionError("AMP could not plan a reachable placement action")
+        results = []
         while bot._executor._command_queue:
-            bot._executor.execute_queue()
+            results.append(bot._executor.execute_queue())
             time.sleep(0.05)
         time.sleep(0.3)
 
@@ -76,8 +77,14 @@ def main(argv=None):
         selected = command(f"data get entity {args.username} SelectedItem.id")
         if "Seed" not in placed or "oak_planks" not in selected:
             raise AssertionError(f"placement failed: block={placed!r}, item={selected!r}")
+        placement_result = next(
+            result for result in results if result["action"] == "place"
+        )
+        if not placement_result["success"]:
+            raise AssertionError(f"executor reported failure: {placement_result}")
         print(f"Full inventory accepted: oak_planks moved from slot {source_slot}")
         print(f"Placement accepted: oak_planks appeared at {target}")
+        print(f"Action feedback accepted: {placement_result['message']}")
     finally:
         if bot._connection._connected:
             command(f"clear {args.username}")
