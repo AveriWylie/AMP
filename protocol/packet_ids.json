@@ -96,6 +96,7 @@
         "set_slot": 20,
         "spawn_entity": 1,
         "start_configuration": 118,
+        "sync_entity_position": 35,
         "update_health": 104,
         "window_items": 18
       },
@@ -189,6 +190,7 @@
         "set_slot": 20,
         "spawn_entity": 1,
         "start_configuration": 118,
+        "sync_entity_position": 35,
         "update_health": 104,
         "window_items": 18
       },
@@ -282,6 +284,7 @@
         "set_slot": 20,
         "spawn_entity": 1,
         "start_configuration": 118,
+        "sync_entity_position": 35,
         "update_health": 104,
         "window_items": 18
       },
@@ -375,6 +378,7 @@
         "set_slot": 20,
         "spawn_entity": 1,
         "start_configuration": 118,
+        "sync_entity_position": 35,
         "update_health": 104,
         "window_items": 18
       },

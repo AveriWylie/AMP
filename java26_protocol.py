@@ -1,9 +1,15 @@
 """Login and Configuration state handling for the Java 26 protocol generation."""
 
 import struct
+import uuid
+
 from chunk import Chunk
+from entity_data import entity_name
 from protocol_data import packet_ids_for_protocol
-from protocol_types import BlockChanged, ChunkLoaded, HealthChanged, PositionChanged
+from protocol_types import (
+    BlockChanged, ChunkLoaded, EntitiesRemoved, EntityMoved, EntitySpawned,
+    EntityTeleported, HealthChanged, PositionChanged, SelfEntityIdentified,
+)
 
 
 class Java26ProtocolAdapter:
@@ -53,6 +59,34 @@ class Java26ProtocolAdapter:
             return [BlockChanged(x, y, z, state_id)]
         if packet_id == ids["map_chunk"]:
             return [self._decode_chunk(payload)]
+        if packet_id == ids["login"]:
+            return [SelfEntityIdentified(struct.unpack_from(">i", payload, 0)[0])]
+        if packet_id == ids["spawn_entity"]:
+            entity_id, consumed = self.connection._decode_varint_bytes(payload, 0)
+            entity_uuid = str(uuid.UUID(bytes=payload[consumed:consumed + 16]))
+            entity_type, type_size = self.connection._decode_varint_bytes(payload, consumed + 16)
+            x, y, z = struct.unpack_from(">ddd", payload, consumed + 16 + type_size)
+            return [EntitySpawned(
+                entity_id, entity_uuid, entity_type,
+                entity_name(self.version, entity_type), x, y, z,
+            )]
+        if packet_id in (ids["rel_entity_move"], ids["entity_move_look"]):
+            entity_id, consumed = self.connection._decode_varint_bytes(payload, 0)
+            dx, dy, dz = struct.unpack_from(">hhh", payload, consumed)
+            return [EntityMoved(entity_id, dx / 4096, dy / 4096, dz / 4096)]
+        if packet_id in (ids["entity_teleport"], ids["sync_entity_position"]):
+            entity_id, consumed = self.connection._decode_varint_bytes(payload, 0)
+            x, y, z = struct.unpack_from(">ddd", payload, consumed)
+            return [EntityTeleported(entity_id, x, y, z)]
+        if packet_id == ids["entity_destroy"]:
+            count, consumed = self.connection._decode_varint_bytes(payload, 0)
+            offset = consumed
+            entity_ids = []
+            for _ in range(count):
+                entity_id, consumed = self.connection._decode_varint_bytes(payload, offset)
+                offset += consumed
+                entity_ids.append(entity_id)
+            return [EntitiesRemoved(tuple(entity_ids))]
         return []
 
     def _decode_chunk(self, payload):

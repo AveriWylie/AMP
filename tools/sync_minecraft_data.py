@@ -94,6 +94,11 @@ CONFIGURATION_PACKETS = {
     ),
 }
 
+JAVA_26_PLAY_PACKETS = {
+    "clientbound": MODERN_PLAY_PACKETS["clientbound"] + ("sync_entity_position",),
+    "serverbound": MODERN_PLAY_PACKETS["serverbound"],
+}
+
 JAVA_26_CONFIGURATION_PACKETS = {
     "clientbound": (
         "add_resource_pack", "clear_dialog", "code_of_conduct", "cookie_request",
@@ -174,8 +179,9 @@ def build_table(fetch=fetch_json):
             "protocol": version_numbers[version],
             "source_version": source_version,
         }
+        extras = MODERN_PLAY_PACKETS if version == "1.20.2" else JAVA_26_PLAY_PACKETS
         play_packets = {
-            direction: names + MODERN_PLAY_PACKETS[direction]
+            direction: names + extras[direction]
             for direction, names in PLAY_PACKETS.items()
         }
         for direction, names in play_packets.items():
