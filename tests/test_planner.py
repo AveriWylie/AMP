@@ -1,24 +1,18 @@
-from types import SimpleNamespace
-
-import httpx
-from anthropic import APIConnectionError
-
+from model_clients import ModelClientError
 from planner import Planner
 
 
-class FakeMessages:
-    def __init__(self, content):
-        self.content = content
+class FakeModelClient:
+    def __init__(self, reply="[]", error=None):
+        self.reply = reply
+        self.error = error
         self.calls = []
 
-    def create(self, **kwargs):
-        self.calls.append(kwargs)
-        return SimpleNamespace(content=self.content)
-
-
-class FakeAnthropic:
-    def __init__(self, content):
-        self.messages = FakeMessages(content)
+    def complete(self, system, messages, max_tokens):
+        self.calls.append((system, messages, max_tokens))
+        if self.error:
+            raise self.error
+        return self.reply
 
 
 def test_mine_resolution_preserves_interaction_for_bot():
@@ -40,32 +34,19 @@ def test_attack_resolution_preserves_tracked_entity_id():
     assert planner._resolve(command, {}) == [command]
 
 
-def test_call_api_uses_sdk_and_records_history():
-    client = FakeAnthropic([
-        SimpleNamespace(type="text", text='[{"action":"chat","message":"hi"}]')
-    ])
-    planner = Planner({}, client=client)
+def test_call_api_uses_model_client_and_records_history():
+    client = FakeModelClient('[{"action":"chat","message":"hi"}]')
+    planner = Planner({}, model_client=client)
 
     reply = planner._call_api("Say hi")
 
     assert reply == '[{"action":"chat","message":"hi"}]'
-    assert client.messages.calls[0]["model"] == Planner.MODEL
-    assert client.messages.calls[0]["max_tokens"] == Planner.MAX_TOKENS
-    assert client.messages.calls[0]["messages"] == [
+    system, messages, max_tokens = client.calls[0]
+    assert max_tokens == Planner.MAX_TOKENS
+    assert messages == [
         {"role": "user", "content": "Say hi"},
     ]
-    assert "Minecraft bot" in client.messages.calls[0]["system"]
-
-
-def test_call_api_combines_only_text_content_blocks():
-    client = FakeAnthropic([
-        SimpleNamespace(type="text", text="["),
-        SimpleNamespace(type="tool_use", name="ignored"),
-        SimpleNamespace(type="text", text="]"),
-    ])
-    planner = Planner({}, client=client)
-
-    assert planner._call_api("Done?") == "[]"
+    assert "Minecraft bot" in system
 
 
 def test_call_api_without_credentials_degrades_gracefully(capsys):
@@ -76,29 +57,14 @@ def test_call_api_without_credentials_degrades_gracefully(capsys):
     assert "Planner unavailable" in capsys.readouterr().out
 
 
-def test_call_api_uses_configured_model():
-    client = FakeAnthropic([SimpleNamespace(type="text", text="[]")])
-    planner = Planner({}, client=client, model="claude-test-model")
-
-    planner._call_api("Done?")
-
-    assert client.messages.calls[0]["model"] == "claude-test-model"
-
-
-def test_call_api_handles_sdk_errors_without_poisoning_history(capsys):
-    class FailingMessages:
-        @staticmethod
-        def create(**kwargs):
-            request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
-            raise APIConnectionError(request=request)
-
-    client = SimpleNamespace(messages=FailingMessages())
-    planner = Planner({}, client=client)
+def test_call_api_handles_model_errors_without_poisoning_history(capsys):
+    client = FakeModelClient(error=ModelClientError("provider unavailable"))
+    planner = Planner({}, model_client=client)
     planner._history = [{"role": "user", "content": "Earlier context"}]
 
     assert planner._call_api("Try this") == "[]"
     assert planner._history == [{"role": "user", "content": "Earlier context"}]
-    assert "APIConnectionError" in capsys.readouterr().out
+    assert "provider unavailable" in capsys.readouterr().out
 
 
 def test_parse_commands_rejects_unknown_or_malformed_actions(capsys):

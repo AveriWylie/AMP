@@ -6,6 +6,7 @@ import connection
 from execution import Execute
 from gameplay import GameplayController
 from lifecycle import LifecycleManager
+from model_clients import build_model_client
 from pathfinder import Pathfinder
 from planner import Planner
 from protocol_data import packet_ids_for_protocol, version_protocols
@@ -135,15 +136,11 @@ class Bot:
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform.
         load_dotenv()
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            print("Warning: ANTHROPIC_API_KEY not found, planner will not function")
+        model_client = build_model_client(os.environ)
+        if model_client is None:
+            print("Warning: model provider is not configured, planner will not function")
 
-        self._planner = Planner(
-            self._world_state,
-            api_key,
-            model=os.environ.get("ANTHROPIC_MODEL"),
-        )
+        self._planner = Planner(self._world_state, model_client)
         self._run_thread = None
 
     def move_to(self, goal):

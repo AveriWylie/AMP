@@ -3,7 +3,7 @@
 Planner Module
 --------------------------------------------------------------------------------------------
 AI reasoning layer that sits between CLI input and the command queue. Takes a natural
-language prompt and a snapshot of world state, calls the Claude API, and returns a list
+language prompt and a snapshot of world state, calls the configured model, and returns a list
 of structured commands that bot feeds into the executor.
 
 The two input modes differ here in a meaningful way:
@@ -29,20 +29,18 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 import json
 import threading
 import queue
-from anthropic import Anthropic, APIError
 from command_data import planner_command_error
+from model_clients import ModelClientError
 
 """
 --------------------------------------------------------------------------------------------
 Class Header - Planner
 --------------------------------------------------------------------------------------------
 Takes world_state and pathfinder by reference so it always reasons over live data.
-The API key is supplied by the composition root so it is never hardcoded.
+The provider client is supplied by the composition root.
 --------------------------------------------------------------------------------------------
 """
 class Planner:
-
-    MODEL = "claude-opus-4-6"
     MAX_TOKENS = 1024
 
     # commands the executor handles directly, no planner resolution needed
@@ -51,11 +49,9 @@ class Planner:
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place", "attack"}
 
-    def __init__(self, world_state, api_key=None, client=None, model=None):
+    def __init__(self, world_state, model_client=None):
         self._world_state = world_state
-        # Client injection keeps planning tests offline and supports alternate SDK clients.
-        self._client = client or (Anthropic(api_key=api_key) if api_key else None)
-        self._model = model or self.MODEL
+        self._model_client = model_client
         # conversation history for autonomous agentic loop
         self._history = []
         # thread-safe queue for mid-task prompt injection in autonomous mode
@@ -124,7 +120,7 @@ class Planner:
     --------------------------------------------------------------------------------------------
     Function Header - API call
     --------------------------------------------------------------------------------------------
-    Sends the conversation history plus the current user message to the Claude API.
+    Sends the conversation history plus the current user message to the configured model.
     System prompt grounds the model in its role and defines the exact JSON output format.
     The model must return only a JSON array of command objects and nothing else so the
     response can be parsed directly without stripping markdown fences.
@@ -139,8 +135,8 @@ class Planner:
     --------------------------------------------------------------------------------------------
     """
     def _call_api(self, user_message):
-        if self._client is None:
-            print("Planner unavailable: set ANTHROPIC_API_KEY")
+        if self._model_client is None:
+            print("Planner unavailable: configure a model provider")
             return "[]"
 
         system = (
@@ -167,22 +163,15 @@ class Planner:
         })
 
         try:
-            response = self._client.messages.create(
-                model=self._model,
-                max_tokens=self.MAX_TOKENS,
-                system=system,
-                messages=list(self._history)
+            reply = self._model_client.complete(
+                system,
+                list(self._history),
+                self.MAX_TOKENS,
             )
-        except APIError as error:
-            # Do not leave an unmatched user turn in autonomous-mode history. The SDK
-            # already retries transient failures; after those retries, degrade cleanly.
+        except ModelClientError as error:
             self._history.pop()
-            print(f"Planner API error: {error.__class__.__name__}")
+            print(f"Planner model error: {error}")
             return "[]"
-        reply = "".join(
-            block.text for block in response.content
-            if getattr(block, "type", None) == "text"
-        ).strip()
 
         self._history.append({
             "role": "assistant",

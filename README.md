@@ -1,6 +1,6 @@
 # AMP - Agentic Minecraft Player
 
-AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data (to do this I created a chunk parser available on my page in the [mc-chunk-parser](https://github.com/AveriWylie/mc-chunk-parser) repository), and uses Claude as an AI planning layer to translate natural language into in-game actions.
+AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data (to do this I created a chunk parser available on my page in the [mc-chunk-parser](https://github.com/AveriWylie/mc-chunk-parser) repository), and uses a configurable language model to translate natural language into in-game actions.
 
 Minecraft Java Edition 1.20.2 is AMP's primary supported version. The generated protocol table covers 1.19.4 through 1.20.2; the complete gameplay path and live-server checks target 1.20.2.
 
@@ -44,9 +44,7 @@ They are regenerated together from the pinned
 [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) revision; no
 manual registry download is required for Minecraft 1.20.2.
 
-**Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
-provided by your shell, CI, or deployment take precedence. Set `ANTHROPIC_MODEL` to override
-AMP's default Claude model.
+**Model provider** - copy `.env.example` to `.env`. The default `anthropic` provider uses `ANTHROPIC_API_KEY` and accepts an optional `ANTHROPIC_MODEL`. Set `AMP_MODEL_PROVIDER=openai-compatible` to use an OpenAI-compatible `/chat/completions` endpoint, then configure `OPENAI_BASE_URL`, `OPENAI_MODEL`, and an optional `OPENAI_API_KEY`. This supports local servers such as Ollama, LM Studio, and vLLM without an Anthropic key. Remote endpoints must use HTTPS; HTTP is accepted only for loopback development servers. Environment variables supplied by the shell, CI, or deployment take precedence.
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
 
@@ -99,7 +97,8 @@ lifecycle.py    - connection recovery and execution-worker lifecycle
 chunk.py        - binary chunk parser, NBT, palette resolution, block queries
 pathfinder.py   - A* pathfinder over live world data
 execution.py    - command queue, packet serialization
-planner.py      - Claude API integration, guided and autonomous planning
+planner.py      - provider-neutral guided and autonomous planning
+model_clients.py - provider-neutral client contract and Anthropic/OpenAI-compatible adapters
 command_data.py - shared validation contract for planner and executor actions
 ```
 
@@ -139,7 +138,9 @@ command_data.py - shared validation contract for planner and executor actions
 
 ## AI planning
 
-- Official [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) integration for natural language to structured command translation
+- Provider-neutral completion contract isolates planning from SDK and HTTP response formats
+- Anthropic adapter uses the official [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python)
+- OpenAI-compatible adapter uses the documented [`/chat/completions`](https://developers.openai.com/api/reference/cli/resources/chat/subresources/completions) message and response shape without another SDK dependency
 - World state snapshot passed as context: position, health, food, nearby surface blocks sampled in 8-block radius, entity positions
 - Guided mode: single API call per prompt, history cleared between prompts
 - Autonomous mode: closed-loop agentic planning where each executed step feeds back as context for the next decision, runs on a dedicated thread so mid-task prompts can be injected without blocking
