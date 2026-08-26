@@ -444,18 +444,21 @@ class Connection:
             except Exception as e:
                 self._started = False
                 b = False
+                was_connected = self._connected
+                failed_socket = self._socket
+                self._connected = False
+                self._socket = None
+                if failed_socket is not None:
+                    failed_socket.close()
 
                 # Closing the socket during an intentional disconnect wakes recv() with an
                 # error. That is normal shutdown, not a connection failure to reconnect from.
-                if self._connected and self._on_failure:
+                if was_connected and self._on_failure:
                     self._on_failure(e)
 
                 # if we do not pass an error function -> gen case error handling
-                elif self._connected:
+                elif was_connected:
                     print(f"Error: {e}")
-                    self._started = False
-                    self.disconnect()
-                    b = False
 
     """
     --------------------------------------------------------------------------------------------

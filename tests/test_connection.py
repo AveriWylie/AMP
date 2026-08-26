@@ -19,6 +19,7 @@ import threading
 import pytest
 from bot import Bot
 from connection import Connection
+from lifecycle import LifecycleManager
 
 """
 --------------------------------------------------------------------------------------------
@@ -171,15 +172,15 @@ def test_connection_composition():
     assert conn._started is False
     assert conn._socket is None
     assert conn._thread_a is None
-    # == not is: each access to bot._handle_failure builds a fresh bound-method object, so `is`
-    # is always False. == compares __self__ and __func__, the identity we actually mean.
-    assert conn._on_failure == bot._handle_failure
+    assert conn._on_failure is not None
 
 
 def test_bot_disconnect_uses_public_connection_lifecycle():
     bot = Bot.__new__(Bot)
     calls = []
-    bot._connection = type("ConnectionSpy", (), {"disconnect": lambda self: calls.append("disconnect")})()
+    bot._lifecycle = type(
+        "LifecycleSpy", (), {"disconnect": lambda self: calls.append("disconnect")}
+    )()
 
     bot.disconnect()
 
@@ -386,7 +387,7 @@ def test_double_connect_guard():
 # --------------------------------------------------------------------------------------------
 # 11. Failure handler
 # --------------------------------------------------------------------------------------------
-# _handle_failure fires the reconnect loop exactly 3 times when connect() always raises
+# handle_failure fires the reconnect loop exactly 3 times when connect() always raises
 # ConnectionError
 def test_failure_handler():
     bot = _make_bot()
@@ -397,12 +398,12 @@ def test_failure_handler():
         raise ConnectionError("Simulated server unreachable")
 
     bot._connection.connect = fake_connect
-    bot._handle_failure(ConnectionError("Simulated drop"))
+    bot._lifecycle.handle_failure(ConnectionError("Simulated drop"))
 
     assert len(attempts) == 3, f"Expected 3 reconnect attempts, got {len(attempts)}"
 
 
-# _handle_failure with a non-ConnectionError does not enter the reconnect loop, the loop
+# handle_failure with a non-ConnectionError does not enter the reconnect loop, the loop
 # is gated on isinstance(e, ConnectionError)
 def test_failure_handler_non_connection_error():
     bot = _make_bot()
@@ -412,12 +413,12 @@ def test_failure_handler_non_connection_error():
         attempts.append(1)
 
     bot._connection.connect = fake_connect
-    bot._handle_failure(ValueError("some protocol error"))
+    bot._lifecycle.handle_failure(ValueError("some protocol error"))
 
     assert len(attempts) == 0, "Reconnect loop should not fire for non-ConnectionError"
 
 
-# _handle_failure stops retrying as soon as connect() succeeds, before exhausting all 3
+# handle_failure stops retrying as soon as connect() succeeds, before exhausting all 3
 # attempts.
 def test_failure_handler_succeeds_on_retry():
     bot = _make_bot()
@@ -430,9 +431,27 @@ def test_failure_handler_succeeds_on_retry():
         # succeeds silently on attempt 2
 
     bot._connection.connect = fake_connect
-    bot._handle_failure(ConnectionError("Simulated drop"))
+    bot._lifecycle.handle_failure(ConnectionError("Simulated drop"))
 
     assert len(attempts) == 2, f"Expected 2 attempts before success, got {len(attempts)}"
+
+
+def test_listener_releases_failed_socket_before_reconnect_callback():
+    observed = []
+    conn = Connection(
+        "localhost", 25565, "1.19.4", "TestBot",
+        lambda error: observed.append((error, conn._connected, conn._socket)), 762,
+    )
+    conn._socket = type("ClosedSocket", (), {
+        "recv": lambda self, size: b"",
+        "close": lambda self: None,
+    })()
+    conn._connected = True
+
+    conn._listen()
+
+    assert isinstance(observed[0][0], ConnectionError)
+    assert observed[0][1:] == (False, None)
 
 
 
@@ -469,9 +488,8 @@ def test_live_connection():
 
 
 def test_start_execution_does_not_duplicate_live_worker():
-    bot = Bot.__new__(Bot)
-    bot._connection = type("Connected", (), {"_connected": True})()
-    bot._execution_started = False
+    connection = type("Connected", (), {"_connected": True})()
+    lifecycle = LifecycleManager(connection, None, ("TestBot", "localhost", 25565))
     release = threading.Event()
     started = []
 
@@ -479,13 +497,13 @@ def test_start_execution_does_not_duplicate_live_worker():
         started.append(threading.current_thread())
         release.wait(1)
 
-    bot._execution_loop = execution_loop
+    lifecycle._execution_loop = execution_loop
     try:
-        bot._start_execution()
-        first_worker = bot._execution_thread
-        bot._start_execution()
+        lifecycle.start_execution()
+        first_worker = lifecycle._execution_thread
+        lifecycle.start_execution()
 
-        assert bot._execution_thread is first_worker
+        assert lifecycle._execution_thread is first_worker
         assert len(started) == 1
     finally:
         release.set()

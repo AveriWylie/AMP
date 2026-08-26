@@ -2,10 +2,10 @@
 # imports
 import os
 import threading
-import time
 from connection import Connection as _Connection
 from execution import Execute
 from gameplay import GameplayController
+from lifecycle import LifecycleManager
 from pathfinder import Pathfinder
 from planner import Planner
 from protocol_data import packet_ids_for_protocol, version_protocols
@@ -107,7 +107,8 @@ class Bot:
         self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
         self._connection = _Connection(
             self._host, self._port, self._version, self._username,
-            on_failure=self._handle_failure, protocol_version=protocol,
+            on_failure=lambda error: self._lifecycle.handle_failure(error),
+            protocol_version=protocol,
         )
         self._world_tracker = WorldStateTracker(
             self._version, self._connection, self.play_ids
@@ -126,8 +127,11 @@ class Bot:
             self._world_state, self._pathfinder, self._executor,
             self._version, self._game_mode,
         )
-        self._execution_started = False
-        self._execution_thread = None
+        self._lifecycle = LifecycleManager(
+            self._connection,
+            self._executor,
+            (self._username, self._host, self._port),
+        )
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform.
         load_dotenv()
@@ -160,60 +164,15 @@ class Bot:
             invalid = [k for k, v in self._valid_flags.items() if not v]
             print(f"Warning: fields fell back to defaults: {invalid}")
 
-        try:
-            # rather then call bot.start as this is post validation -> less overhead
-            self._connection.connect()
-            self._start_execution()
-            print(f"Bot '{self._username}' started on {self._host}:{self._port}")
-
-        except ConnectionError as e:
-            print(f"Failed to start: {e}")
-            self._handle_failure(e)
-
-        except Exception as e:
-            print(f"Unexpected error during start: {e}")
-            self._connection.disconnect()
+        self._lifecycle.start()
 
     def disconnect(self):
         """Disconnect through the Bot lifecycle boundary."""
-        self._connection.disconnect()
+        self._lifecycle.disconnect()
 
     def set_mode(self, mode):
         self._input_mode = mode
         self._gameplay.set_mode(mode)
-
-    """
-    --------------------------------------------------------------------------------------------
-    Function Field Header - Execution loop
-    --------------------------------------------------------------------------------------------
-    Runs on its own daemon thread, draining the command queue at 20 ticks per second to match
-    Minecraft's expected packet rate. Started after connection is established so packets are
-    never sent before the server is ready. Mirrors the listen thread pattern I created above
-    exactly, best architectrue to achieve this, so it is safe to call on reconnect without 
-    double starting.
-    --------------------------------------------------------------------------------------------
-    """
-
-    def _start_execution(self):
-        current = getattr(self, "_execution_thread", None)
-        if not self._connection._connected or (current and current.is_alive()):
-            return
-        self._execution_thread = threading.Thread(target=self._execution_loop, daemon=True)
-        self._execution_thread.start()
-        self._execution_started = True
-
-    def _execution_loop(self):
-        while True:
-            try:
-                self._executor.execute_queue()
-                time.sleep(0.05)
-
-            except Exception as e:
-                self._execution_started = False
-                print(f"Execution error: {e}")
-                break
-
-        # ------------------------------------------------------------------------------------------
 
     """
     --------------------------------------------------------------------------------------------
@@ -334,51 +293,3 @@ class Bot:
             self._valid_flags[key] = is_valid
 
         setattr(self, f"_{key}", value)
-
-    """
-    --------------------------------------------------------------------------------------------
-    Function Header - Failure Handling
-    --------------------------------------------------------------------------------------------
-    define a general handler in Bot that takes the exception and decides what to do based on 
-    it's type. Everytime there is a connection error that propagates to this function, we pass 
-    e and try to connect again, with a loop of connection attempts (3 iterations). Same for
-    execution thread however:
-    
-     he break exits the while True loop which returns from _execution_loop, ending the thread 
-     naturally. The thread function returning is what terminates the thread in Python, there's 
-     no explicit thread stop needed. In connection we do it explicitely because _listen was 
-     written with an explicit boolean flag b before you had the execution loop as a reference. 
-     The b = False pattern is slightly more verbose but functionally identical to break.
-    --------------------------------------------------------------------------------------------
-    """
-    def _handle_failure(self, e):
-        if isinstance(e, ConnectionError):
-            print(f"Connection failure: {e}, attempting reconnect (3 attempts before "
-                  f"system shutdown")
-
-            i = 1
-            while i <= 3:
-                try:
-                    self._connection.connect()
-                    self._start_execution()
-                    break
-
-                except Exception as e:
-
-                    if isinstance(e, ConnectionError):
-                        print(f"protocol error: {e}.\nDISCONNECTING.")
-                        self._connection.disconnect()
-
-                    # bad data from server, maybe log and disconnect cleanly
-                    elif isinstance(e, ValueError):
-                        print(f"Protocol error: {e}.\nDISCONNECTING.")
-                        self._connection.disconnect()
-
-                    else:
-                        print(f"Unexpected error: {e}, shutting down")
-                        self._connection.disconnect()
-
-                    if (i == 3):
-                        break
-
-                i += 1
