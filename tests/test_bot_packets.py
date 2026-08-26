@@ -6,6 +6,7 @@ import uuid
 import pytest
 
 from bot import Bot, Connection
+from world_state import WorldStateTracker
 
 
 def _bot():
@@ -17,6 +18,14 @@ def _bot():
         "game_mode": "survival",
         "behavior_mode": "passive",
     })
+
+
+def test_bot_delegates_packet_state_to_world_tracker():
+    bot = _bot()
+
+    assert isinstance(bot._world_tracker, WorldStateTracker)
+    assert bot._world_state is bot._world_tracker.state
+    assert bot._connection._packet_handler == bot._world_tracker._on_packet
 
 
 def _packed_position(x, y, z):
