@@ -2,6 +2,8 @@
 
 AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data (to do this I created a chunk parser available on my page in the [mc-chunk-parser](https://github.com/AveriWylie/mc-chunk-parser) repository), and uses Claude as an AI planning layer to translate natural language into in-game actions.
 
+Minecraft Java Edition 1.20.2 is AMP's primary supported version. Older entries remain in the generated protocol table, but the complete gameplay path and live-server checks target 1.20.2.
+
 ## How to build
 
 ```bash
@@ -45,6 +47,12 @@ remains supported as a compatibility fallback. Set `ANTHROPIC_MODEL` to override
 Claude model.
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
+
+## Limitations
+
+- Servers must run in offline mode; authenticated online-mode login is not implemented.
+- Combat targets must already be tracked and within normal attack reach; AMP does not yet chase moving or distant entities.
+- Crafting and container interactions are not implemented.
 
 ## Protocol data
 
