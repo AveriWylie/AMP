@@ -99,3 +99,19 @@ def test_call_api_handles_sdk_errors_without_poisoning_history(capsys):
     assert planner._call_api("Try this") == "[]"
     assert planner._history == [{"role": "user", "content": "Earlier context"}]
     assert "APIConnectionError" in capsys.readouterr().out
+
+
+def test_parse_commands_rejects_unknown_or_malformed_actions(capsys):
+    raw = """[
+        {"action": "chat", "message": "hello"},
+        {"action": "dance"},
+        {"action": "move", "x": 1, "y": 64},
+        {"action": "attack", "entity_id": true}
+    ]"""
+
+    assert Planner._parse_commands(raw) == [
+        {"action": "chat", "message": "hello"}
+    ]
+    output = capsys.readouterr().out
+    assert "unknown action" in output
+    assert "invalid fields" in output

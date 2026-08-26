@@ -2,6 +2,8 @@
 
 import struct
 
+import pytest
+
 from bot import Connection
 from execution import Execute
 
@@ -62,6 +64,11 @@ def test_execute_queue_sends_one_movement_per_tick_and_updates_position():
     assert len(sent) == 2
     assert not executor._command_queue
     assert world_state["position"]["x"] == 2.0
+
+
+def test_executor_rejects_unknown_action():
+    with pytest.raises(ValueError, match="Unsupported action"):
+        _executor()._execute({"action": "dance"})
 
 
 def test_look_packet_uses_rotation_id_and_schema():
@@ -181,7 +188,6 @@ def test_1202_hotbar_selection_packet_and_validation():
     assert packet_id == 0x2B
     assert struct.unpack(">h", data)[0] == 7
 
-    import pytest
     with pytest.raises(ValueError):
         executor._create_held_item_packet(9)
 

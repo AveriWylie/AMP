@@ -30,6 +30,7 @@ import json
 import threading
 import queue
 from anthropic import Anthropic, APIError
+from command_data import planner_command_error
 
 """
 --------------------------------------------------------------------------------------------
@@ -208,9 +209,16 @@ class Planner:
             clean = clean.rsplit("```", 1)[0]
         try:
             commands = json.loads(clean)
-            if isinstance(commands, list):
-                return commands
-            return []
+            if not isinstance(commands, list):
+                return []
+            valid = []
+            for command in commands:
+                error = planner_command_error(command)
+                if error:
+                    print(f"Planner command rejected: {error}")
+                else:
+                    valid.append(command)
+            return valid
         except json.JSONDecodeError:
             print(f"Planner parse error: {raw}")
             return []

@@ -21,6 +21,7 @@ import struct
 import threading
 from collections import deque
 import time
+from command_data import EXECUTOR_ACTIONS
 from protocol_data import packet_ids_for_protocol
 
 """
@@ -126,6 +127,8 @@ class Execute:
 
     def _execute(self, command):
         action = command.get("action")
+        if action not in EXECUTOR_ACTIONS:
+            raise ValueError(f"Unsupported action: {action!r}")
         success = True
         message = f"{action} packet sent"
 
