@@ -45,9 +45,8 @@ They are regenerated together from the pinned
 manual registry download is required for Minecraft 1.20.2.
 
 **Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
-provided by your shell, CI, or deployment take precedence. The old ignored `api_key.txt` file
-remains supported as a compatibility fallback. Set `ANTHROPIC_MODEL` to override AMP's default
-Claude model.
+provided by your shell, CI, or deployment take precedence. Set `ANTHROPIC_MODEL` to override
+AMP's default Claude model.
 
 **Server** - a Minecraft server running in offline mode at the version you specify, reachable over TCP.
 

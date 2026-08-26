@@ -37,7 +37,7 @@ from command_data import planner_command_error
 Class Header - Planner
 --------------------------------------------------------------------------------------------
 Takes world_state and pathfinder by reference so it always reasons over live data.
-The API key is read from a local file at init time so it is never hardcoded.
+The API key is supplied by the composition root so it is never hardcoded.
 --------------------------------------------------------------------------------------------
 """
 class Planner:
@@ -141,7 +141,7 @@ class Planner:
     """
     def _call_api(self, user_message):
         if self._client is None:
-            print("Planner unavailable: set ANTHROPIC_API_KEY or create api_key.txt")
+            print("Planner unavailable: set ANTHROPIC_API_KEY")
             return "[]"
 
         system = (

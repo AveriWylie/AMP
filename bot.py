@@ -133,12 +133,7 @@ class Bot:
         load_dotenv()
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
-            try:
-                with open("api_key.txt", "r", encoding="utf-8") as f:
-                    api_key = f.read().strip()
-            except FileNotFoundError:
-                api_key = None
-                print("Warning: ANTHROPIC_API_KEY not found, planner will not function")
+            print("Warning: ANTHROPIC_API_KEY not found, planner will not function")
 
         self._planner = Planner(
             self._world_state,
