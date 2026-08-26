@@ -7,11 +7,14 @@ From this point (May 6th 2026), the bot is ready to test its pathfinder and move
 --------------------------------------------------------------------------------------------
 TEST RUN - Iteration 01 (2026-07-22)
 --------------------------------------------------------------------------------------------
+Historical snapshot; current results are reported by `python -m pytest` and CI.
+
 Command: python -m pytest
 Result:  20 passed, 1 skipped (live connection - no server on localhost:25565)
 
 Fixed this iteration (were blockers to ever connecting):
-  - bot.py: mc_versions.txt path corrected to flat layout (was "TEXT/mc_versions.txt")
+  - bot.py: mc_versions.txt path corrected to flat layout (later replaced by the generated
+    protocol registry as the supported-version source of truth)
   - bot.py: _read_packet no longer required _connected, which made login's own read
     raise "not connected" before login could ever finish
   - bot.py: login state machine (_login) added - handles Set Compression (0x03) before

@@ -39,7 +39,10 @@ server-confirmed action result.
 `python -m tools.check_combat` summons a stationary cow, confirms AMP tracks its readable
 type and current position, attacks it, and verifies the server-authoritative health change.
 
-**blocks.json** - download for your target version from [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) at `data/pc/<version>/blocks.json`. Place it in a `blocks/` folder in the project root named `blocks_<version>.json`, for example `blocks_1.20.2.json`.
+The supported block, item, entity, and protocol registries are checked into the repository.
+They are regenerated together from the pinned
+[PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) revision; no
+manual registry download is required for Minecraft 1.20.2.
 
 **Anthropic API key** - copy `.env.example` to `.env` and add your key. Environment variables
 provided by your shell, CI, or deployment take precedence. The old ignored `api_key.txt` file
@@ -89,11 +92,12 @@ The CLI prompts for server host, port, username, Minecraft version, game mode, a
 
 ```
 cli.py          - interactive setup and mode selection
-bot.py          - connection, world state, packet handling, execution thread
+bot.py          - bot lifecycle, gameplay coordination, world state, packet handling, connection
 chunk.py        - binary chunk parser, NBT, palette resolution, block queries
 pathfinder.py   - A* pathfinder over live world data
 execution.py    - command queue, packet serialization
 planner.py      - Claude API integration, guided and autonomous planning
+command_data.py - shared validation contract for planner and executor actions
 ```
 
 ## Connection and protocol
