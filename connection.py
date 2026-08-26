@@ -11,6 +11,7 @@ from protocol_data import packet_ids_for_protocol
 
 
 class Connection:
+    MAX_PACKET_SIZE = 2_097_151
 
     """
     --------------------------------------------------------------------------------------------
@@ -171,7 +172,10 @@ class Connection:
             # you call _read_exact(1) it asks for exactly 1 byte from the os buffer,
             # returning it as a single byte chunk. You then index with [0] to get the
             # integer value of that byte, which is what you actually check the high bit on
-            byte = self._socket.recv(1)[0]
+            raw = self._socket.recv(1)
+            if not raw:
+                raise ConnectionError("Socket closed while reading VarInt")
+            byte = raw[0]
             # so for each socket in read_var_int we check high bit and shift it if bytes
             # high is 0 then break otherwise read more
             result |= (byte & 0b01111111) << shift
@@ -260,6 +264,8 @@ class Connection:
         # Set Compression / Login Success, and again in Play. The live socket is the real
         # precondition.
         length = self._read_varint_from_socket()
+        if not 0 < length <= self.MAX_PACKET_SIZE:
+            raise ValueError(f"Invalid packet length: {length}")
         frame = self._read_exact(length)
 
         # Uncompressed framing: the frame is packet_id + data directly.
@@ -272,7 +278,27 @@ class Connection:
         else:
             data_length, consumed = self._decode_varint_bytes(frame, 0)
             body = frame[consumed:]
-            payload = body if data_length == 0 else zlib.decompress(body)
+            if data_length == 0:
+                payload = body
+            else:
+                if not 0 < data_length <= self.MAX_PACKET_SIZE:
+                    raise ValueError(
+                        f"Invalid decompressed packet length: {data_length}"
+                    )
+                if data_length < self._compression_threshold:
+                    raise ValueError("Compressed packet is below compression threshold")
+                inflater = zlib.decompressobj()
+                payload = inflater.decompress(body, self.MAX_PACKET_SIZE + 1)
+                if (
+                    len(payload) != data_length
+                    or not inflater.eof
+                    or inflater.unconsumed_tail
+                    or inflater.unused_data
+                ):
+                    raise ValueError("Invalid decompressed packet size or stream")
+
+        if not payload:
+            raise ValueError("Packet payload is empty")
 
         packet_id = payload[0]
         return packet_id, payload[1:]

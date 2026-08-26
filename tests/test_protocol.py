@@ -8,6 +8,10 @@ server is required; pytest discovers every test in this module directly.
 --------------------------------------------------------------------------------------------
 """
 # imports
+import zlib
+
+import pytest
+
 from connection import Connection
 
 """
@@ -89,6 +93,37 @@ def test_uncompressed_read():
     pid, data = conn._read_packet()
     assert pid == 0x02
     assert data == b"login-success-fields"
+
+
+def test_read_packet_rejects_oversized_outer_frame_before_reading_body():
+    conn = _conn()
+    conn._socket = _FakeSocket(
+        Connection._encode_varint(Connection.MAX_PACKET_SIZE + 1)
+    )
+
+    with pytest.raises(ValueError, match="packet length"):
+        conn._read_packet()
+
+
+def test_read_packet_rejects_oversized_advertised_decompressed_body():
+    conn = _conn()
+    conn._compression_threshold = 1
+    advertised = Connection._encode_varint(Connection.MAX_PACKET_SIZE + 1)
+    conn._socket = _FakeSocket(_uncompressed_frame(advertised + zlib.compress(b"\x01")))
+
+    with pytest.raises(ValueError, match="decompressed packet length"):
+        conn._read_packet()
+
+
+def test_read_packet_rejects_compressed_size_mismatch():
+    conn = _conn()
+    conn._compression_threshold = 1
+    body = zlib.compress(b"\x01abc")
+    payload = Connection._encode_varint(100) + body
+    conn._socket = _FakeSocket(_uncompressed_frame(payload))
+
+    with pytest.raises(ValueError, match="decompressed packet size"):
+        conn._read_packet()
 
 
 def test_1202_login_start_includes_offline_uuid():
