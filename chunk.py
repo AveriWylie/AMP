@@ -52,6 +52,8 @@ class Chunk:
 
     def __init__(self, payload, version="1.20.1"):
         self._modern_chunk_data = version == "1.20.2"
+        self._min_y = -64 if self._modern_chunk_data else 0
+        self._world_height = 384 if self._modern_chunk_data else 256
         if version not in Chunk._state_to_block_cache:
             blocks_path = Path(__file__).parent / "blocks" / f"blocks_{version}.json"
             blocks_json = json.loads(blocks_path.read_text())
@@ -61,7 +63,6 @@ class Chunk:
         # sections indexed vertically (by y index)
         self._sections = {}
         self._parse(payload)
-        self._hmap = {}
 
     """
     --------------------------------------------------------------------------------------------
@@ -458,6 +459,18 @@ class Chunk:
         lx = x & 0xF
         lz = z & 0xF
         if self._hmap and "WORLD_SURFACE" in self._hmap:
-            return self._hmap["WORLD_SURFACE"][lx + lz * 16]
+            values = self._hmap["WORLD_SURFACE"]
+            bits = self._world_height.bit_length()
+            entries_per_long = 64 // bits
+            index = lx + lz * 16
+            long_index = index // entries_per_long
+            if long_index >= len(values):
+                return None
+            bit_offset = (index % entries_per_long) * bits
+            packed = values[long_index] & ((1 << 64) - 1)
+            first_available = (packed >> bit_offset) & ((1 << bits) - 1)
+            if first_available == 0:
+                return None
+            return self._min_y + first_available - 1
 
         return None
