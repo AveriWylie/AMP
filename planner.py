@@ -226,7 +226,8 @@ class Planner:
     find:  scans nearby_surface_blocks from the snapshot for the target block type, then
            resolves as go_to once the coordinate is known
     mine remains a high-level command for Bot.mine_block(), which selects a reachable adjacent
-    standing position before enqueueing the interaction. Place is still a placeholder.
+    standing position before enqueueing the interaction. Place remains high-level for
+    Bot.place_block(), which selects inventory and a valid support face.
     --------------------------------------------------------------------------------------------
     """
     def _resolve(self, command, snapshot):
@@ -248,9 +249,7 @@ class Planner:
             return [command]
 
         elif action == "place":
-            goal = (command["x"], command["y"], command["z"])
-            print(f"Place {command.get('block')} at {goal} - block interaction packets not yet implemented")
-            return [{"action": "go_to", "x": command["x"], "y": command["y"], "z": command["z"]}]
+            return [command]
 
         return [command]
 

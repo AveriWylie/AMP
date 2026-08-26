@@ -28,6 +28,12 @@ def test_mine_resolution_preserves_interaction_for_bot():
     assert planner._resolve(command, {}) == [command]
 
 
+def test_place_resolution_preserves_interaction_for_bot():
+    planner = Planner({})
+    command = {"action": "place", "x": 1, "y": 64, "z": 2, "block": "oak_planks"}
+    assert planner._resolve(command, {}) == [command]
+
+
 def test_call_api_uses_sdk_and_records_history():
     client = FakeAnthropic([
         SimpleNamespace(type="text", text='[{"action":"chat","message":"hi"}]')

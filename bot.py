@@ -23,7 +23,7 @@ import uuid
 import zlib
 from collections import deque
 from execution import Execute
-from pathfinder import Pathfinder
+from pathfinder import PASSABLE, Pathfinder
 from planner import Planner
 from chunk import Chunk
 from protocol_data import packet_ids_for_protocol, version_protocols
@@ -544,6 +544,88 @@ class Bot:
         })
         return True
 
+    def place_block(self, target, block_name):
+        """Walk within reach, equip a block stack, and place against a solid support."""
+        tx, ty, tz = map(int, target)
+        if self._pathfinder._get_block(tx, ty, tz) not in PASSABLE:
+            print(f"Placement target {(tx, ty, tz)} is occupied")
+            return False
+
+        inventory = self._world_state["inventory"]
+        matching = [
+            (slot, item) for slot, item in inventory["slots"].items()
+            if 9 <= slot <= 44 and item["name"] == block_name and item["count"] > 0
+        ]
+        if not matching:
+            print(f"No {block_name} in player inventory")
+            return False
+        source_slot, _ = max(matching, key=lambda entry: entry[1]["count"])
+        hotbar_slot = (
+            source_slot - 36 if source_slot >= 36 else inventory["selected_hotbar_slot"]
+        )
+
+        # Each tuple is support offset plus the face of that support clicked toward target.
+        supports = (
+            ((0, -1, 0), 1), ((0, 1, 0), 0),
+            ((0, 0, -1), 3), ((0, 0, 1), 2),
+            ((-1, 0, 0), 5), ((1, 0, 0), 4),
+        )
+        solid_supports = []
+        for (sx, sy, sz), face in supports:
+            support = (tx + sx, ty + sy, tz + sz)
+            if self._pathfinder._get_block(*support) not in PASSABLE:
+                solid_supports.append((support, face))
+        if not solid_supports:
+            print(f"No solid support beside placement target {(tx, ty, tz)}")
+            return False
+
+        pos = self._world_state["position"]
+        start = (pos["x"], pos["y"], pos["z"])
+        weight = 1.5 if self._input_mode == "autonomous" else 1.0
+        choices = []
+        for support, face in solid_supports:
+            for dy in (0, 1, -1):
+                for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    standing = (tx + dx, ty + dy, tz + dz)
+                    if standing == (tx, ty, tz) or not self._pathfinder._is_walkable(*standing):
+                        continue
+                    distance = math.dist(
+                        (standing[0] + 0.5, standing[1] + 1.62, standing[2] + 0.5),
+                        (support[0] + 0.5, support[1] + 0.5, support[2] + 0.5),
+                    )
+                    if distance > 4.5:
+                        continue
+                    path = self._pathfinder.find_path(start, standing, weight=weight)
+                    if path:
+                        choices.append((len(path), path, standing, support, face))
+        if not choices:
+            print(f"No reachable placement position for {(tx, ty, tz)}")
+            return False
+
+        _, path, standing, support, face = min(choices, key=lambda choice: choice[0])
+        for x, y, z in path:
+            self._executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
+        if source_slot < 36:
+            self._executor.enque_command({
+                "action": "swap_hotbar", "source_slot": source_slot,
+                "hotbar_slot": hotbar_slot,
+            })
+        if hotbar_slot != inventory["selected_hotbar_slot"]:
+            self._executor.enque_command({"action": "select_hotbar", "slot": hotbar_slot})
+
+        dx = support[0] + 0.5 - (standing[0] + 0.5)
+        dy = support[1] + 0.5 - (standing[1] + 1.62)
+        dz = support[2] + 0.5 - (standing[2] + 0.5)
+        self._executor.enque_command({
+            "action": "look", "yaw": math.degrees(math.atan2(-dx, dz)),
+            "pitch": math.degrees(-math.atan2(dy, math.hypot(dx, dz))),
+        })
+        self._executor.enque_command({
+            "action": "place", "x": support[0], "y": support[1], "z": support[2],
+            "face": face, "target": (tx, ty, tz), "block": block_name,
+        })
+        return True
+
     """
     --------------------------------------------------------------------------------------------
     Function Field Header - Execution loop
@@ -610,6 +692,10 @@ class Bot:
                 self.move_to((cmd["x"], cmd["y"], cmd["z"]))
             elif cmd.get("action") == "mine":
                 self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
+            elif cmd.get("action") == "place":
+                self.place_block(
+                    (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
+                )
             else:
                 self._executor.enque_command(cmd)
 
@@ -632,6 +718,10 @@ class Bot:
                 self.move_to((cmd["x"], cmd["y"], cmd["z"]))
             elif cmd.get("action") == "mine":
                 self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
+            elif cmd.get("action") == "place":
+                self.place_block(
+                    (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
+                )
             else:
                 self._executor.enque_command(cmd)
 
