@@ -11,6 +11,11 @@ def _executor():
     return Execute(connection, "survival", "passive")
 
 
+def _executor_1202(world_state=None):
+    connection = Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
+    return Execute(connection, "survival", "passive", world_state=world_state)
+
+
 def _packet_body(packet):
     length, consumed = Connection._decode_varint_bytes(packet, 0)
     body = packet[consumed:]
@@ -28,6 +33,35 @@ def test_movement_packet_uses_position_id_and_schema():
     packet_id, data = _packet_body(_executor()._create_movement_packet(1.5, 64.0, -2.25))
     assert packet_id == 0x14
     assert struct.unpack(">ddd?", data) == (1.5, 64.0, -2.25, True)
+
+
+def test_1202_movement_packet_uses_generated_id_and_unchanged_schema():
+    packet_id, data = _packet_body(
+        _executor_1202()._create_movement_packet(1.5, 64.0, -2.25)
+    )
+    assert packet_id == 0x16
+    assert struct.unpack(">ddd?", data) == (1.5, 64.0, -2.25, True)
+
+
+def test_execute_queue_sends_one_movement_per_tick_and_updates_position():
+    world_state = {
+        "position": {"x": 0.0, "y": 64.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0}
+    }
+    executor = _executor_1202(world_state)
+    sent = []
+    executor._connection._send = sent.append
+    executor.enque_command({"action": "move", "x": 1.0, "y": 64.0, "z": 0.0})
+    executor.enque_command({"action": "move", "x": 2.0, "y": 64.0, "z": 0.0})
+
+    executor.execute_queue()
+    assert len(sent) == 1
+    assert len(executor._command_queue) == 1
+    assert world_state["position"]["x"] == 1.0
+
+    executor.execute_queue()
+    assert len(sent) == 2
+    assert not executor._command_queue
+    assert world_state["position"]["x"] == 2.0
 
 
 def test_look_packet_uses_rotation_id_and_schema():

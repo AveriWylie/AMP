@@ -145,8 +145,12 @@ class Bot:
                                       on_failure=self._handle_failure, protocol_version=protocol, packet_handler = self._on_packet)
         self._input_mode = None
         self._pathfinder = Pathfinder(self._world_state)
-        self._executor = Execute(self._connection, game_mode=config.get("game_mode","survival"),
-                                 behavior_mode=config.get("behavior_mode", "neutral"))
+        self._executor = Execute(
+            self._connection,
+            game_mode=config.get("game_mode", "survival"),
+            behavior_mode=config.get("behavior_mode", "neutral"),
+            world_state=self._world_state,
+        )
         self._execution_started = False
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform.

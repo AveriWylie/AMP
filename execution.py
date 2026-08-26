@@ -32,11 +32,12 @@ the thread drives execution automatically once _start_execution is called in sta
 --------------------------------------------------------------------------------------------
 """
 class Execute:
-    def __init__(self, connection, game_mode, behavior_mode):
+    def __init__(self, connection, game_mode, behavior_mode, world_state=None):
         self._connection = connection
         self._command_queue = deque()
         self._game_mode = game_mode
         self._behavior_mode = behavior_mode
+        self._world_state = world_state
         self.play_ids = packet_ids_for_protocol(
             connection._protocol_version, "serverbound"
         )
@@ -60,9 +61,9 @@ class Execute:
         self._command_queue.append(command)
 
     def execute_queue(self):
-        while self._command_queue:
-            cmd = self._command_queue.popleft()
-            self._execute(cmd)
+        """Execute at most one command; the Bot loop calls this once per 50 ms tick."""
+        if self._command_queue:
+            self._execute(self._command_queue.popleft())
 
     def _execute(self, command):
         action = command.get("action")
@@ -71,6 +72,8 @@ class Execute:
             x, y, z = command["x"], command["y"], command["z"]
             packet = self._create_movement_packet(x, y, z)
             self._connection._send(packet)
+            if self._world_state is not None:
+                self._world_state["position"].update({"x": x, "y": y, "z": z})
 
         elif action == "chat":
             packet = self._create_chat_packet(command["message"])
@@ -118,7 +121,7 @@ class Execute:
     --------------------------------------------------------------------------------------------
     Function Header - Movement packet serialization
     --------------------------------------------------------------------------------------------
-    Set Player Position, serverbound packet 0x14 in protocol 762 (1.19.4).
+    Set Player Position, using the generated packet ID for the selected protocol.
     Fields: x (double), y (double), z (double), on_ground (bool).
     All big-endian. Wrapped in the standard length + packet_id envelope.
 
