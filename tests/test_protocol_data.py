@@ -45,7 +45,7 @@ def test_1202_configuration_packet_tables():
     ] == 0x02
 
 
-def test_legacy_protocol_has_no_configuration_state():
+def test_pre_1202_protocol_has_no_configuration_state():
     with pytest.raises(ValueError):
         packet_ids_for_protocol(763, "serverbound", state="configuration")
 

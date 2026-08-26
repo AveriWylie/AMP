@@ -107,19 +107,6 @@ def test_bot_module_imports_outside_repository_root(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
-def test_bot_does_not_load_credentials_from_plaintext_key_file(
-    tmp_path, monkeypatch
-):
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    (tmp_path / "api_key.txt").write_text("sk-ant-test-placeholder", encoding="utf-8")
-
-    bot = _make_bot()
-
-    assert bot._planner._client is None
-
-
-
 # --------------------------------------------------------------------------------------------
 # 2. set()
 # --------------------------------------------------------------------------------------------

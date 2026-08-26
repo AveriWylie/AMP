@@ -29,7 +29,7 @@ def test_modern_chunk_exposes_decoded_surface_height():
     assert chunk.get_surface_y(7, 0) == 136
 
 
-def test_legacy_network_nbt_uses_post_118_overworld_bounds():
+def test_pre_1202_network_nbt_uses_post_118_overworld_bounds():
     chunk = Chunk(_chunk_with_heightmap(modern=False), "1.19.4")
 
     assert chunk.get_surface_y(1, 0) == 70

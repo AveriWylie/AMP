@@ -53,8 +53,7 @@ class Planner:
 
     def __init__(self, world_state, api_key=None, client=None, model=None):
         self._world_state = world_state
-        # Client injection keeps planning tests offline and allows callers to supply
-        # an Anthropic-compatible client without changing the planner interface.
+        # Client injection keeps planning tests offline and supports alternate SDK clients.
         self._client = client or (Anthropic(api_key=api_key) if api_key else None)
         self._model = model or self.MODEL
         # conversation history for autonomous agentic loop

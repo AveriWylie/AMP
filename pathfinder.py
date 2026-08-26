@@ -84,10 +84,7 @@ class Pathfinder:
         feet = self._get_block(x, y, z)
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
-        # feet and head must be passable (2-block hitbox fits) and floor must be solid
-        # (something to stand on). The old `(feet and head and floor) in PASSABLE` collapsed
-        # to `floor in PASSABLE` because block names are truthy strings, dropping the feet/head
-        # checks and inverting the floor check.
+        # The 2-block hitbox needs passable feet and head positions plus a solid floor.
         return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
 
     """

@@ -3,5 +3,4 @@ __pycache__/
 .codex-python-deps/
 .tmp/
 *.py[cod]
-api_key.txt
 .env

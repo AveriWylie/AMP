@@ -2,7 +2,7 @@
 
 AMP is a Python-based Minecraft bot with guided and fully autonomous execution modes. It connects to a Minecraft server over raw TCP, decodes the binary protocol from scratch, builds a live world state from parsed chunk data (to do this I created a chunk parser available on my page in the [mc-chunk-parser](https://github.com/AveriWylie/mc-chunk-parser) repository), and uses Claude as an AI planning layer to translate natural language into in-game actions.
 
-Minecraft Java Edition 1.20.2 is AMP's primary supported version. Older entries remain in the generated protocol table, but the complete gameplay path and live-server checks target 1.20.2.
+Minecraft Java Edition 1.20.2 is AMP's primary supported version. The generated protocol table covers 1.19.4 through 1.20.2; the complete gameplay path and live-server checks target 1.20.2.
 
 ## How to build
 

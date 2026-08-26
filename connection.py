@@ -310,8 +310,8 @@ class Connection:
     Function Field Header - Send and packet sent builder auxiliary functions
     --------------------------------------------------------------------------------------------
     Builds the message as convened by minecraft so to remain connected. Also a aux to send this
-    message, we only check for connection here before sendall, as previously we used this socket
-    function to connect.
+    message, we check for connection here before sendall because login packets are sent before
+    the connection enters Play state.
     --------------------------------------------------------------------------------------------
     """
 
@@ -334,7 +334,7 @@ class Connection:
     Re-frames an already-built uncompressed packet (length_varint + body) into the compressed
     envelope: Packet Length, then Data Length, then the body. Body at/above threshold is
     zlib-compressed with Data Length = uncompressed size; below threshold sent raw with Data
-    Length 0. The old length prefix is stripped first since the compressed envelope recomputes
+    Length 0. The input length prefix is stripped because the compressed envelope recomputes
     its own outer length.
     --------------------------------------------------------------------------------------------
     """

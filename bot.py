@@ -2,7 +2,7 @@
 # imports
 import os
 import threading
-from connection import Connection as _Connection
+import connection
 from execution import Execute
 from gameplay import GameplayController
 from lifecycle import LifecycleManager
@@ -41,7 +41,7 @@ class Bot:
     Function Header - Version to protocol map
     --------------------------------------------------------------------------------------------
     The handshake sends a protocol number, not a version string, and every packet ID is keyed
-    to that number. The generated table covers the supported legacy Login -> Play transition
+    to that number. The generated table covers the pre-1.20.2 Login -> Play transition
     and Minecraft 1.20.2's Login -> Configuration -> Play transition.
     --------------------------------------------------------------------------------------------
     """
@@ -105,7 +105,7 @@ class Bot:
                   f"(supported: {list(self.version_protocol)}). Falling back to protocol 762 (1.19.4).")
             protocol = 762
         self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
-        self._connection = _Connection(
+        self._connection = connection.Connection(
             self._host, self._port, self._version, self._username,
             on_failure=lambda error: self._lifecycle.handle_failure(error),
             protocol_version=protocol,
