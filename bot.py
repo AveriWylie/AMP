@@ -134,6 +134,7 @@ class Bot:
             self._connection,
             game_mode=config.get("game_mode", "survival"),
             behavior_mode=config.get("behavior_mode", "neutral"),
+            protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )
         self._gameplay = GameplayController(

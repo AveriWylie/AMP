@@ -4,13 +4,18 @@ import threading
 
 from connection import Connection
 from execution import Execute
+from legacy_protocol import LegacyProtocolAdapter
 from planner import Planner
+from protocol_data import packet_ids_for_protocol
 
 
 def _executor(world_state=None):
     connection = Connection("localhost", 25565, "1.20.2", "Feedback", None, 764)
     connection._send = lambda packet: None
-    return Execute(connection, "survival", "passive", world_state=world_state)
+    adapter = LegacyProtocolAdapter(
+        "1.20.2", connection, packet_ids_for_protocol(764, "clientbound")
+    )
+    return Execute(connection, "survival", "passive", adapter, world_state=world_state)
 
 
 def test_wait_until_idle_returns_completed_command_result():
@@ -40,7 +45,10 @@ def test_wait_until_idle_reports_timeout_when_queue_is_not_drained():
 
 def test_disconnected_send_is_reported_as_a_failed_result():
     connection = Connection("localhost", 25565, "1.20.2", "Feedback", None, 764)
-    executor = Execute(connection, "survival", "passive")
+    adapter = LegacyProtocolAdapter(
+        "1.20.2", connection, packet_ids_for_protocol(764, "clientbound")
+    )
+    executor = Execute(connection, "survival", "passive", adapter)
     executor.enque_command({"action": "chat", "message": "not sent"})
 
     try:

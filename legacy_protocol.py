@@ -1,12 +1,14 @@
 """Temporary 1.20.2 protocol adapter used to characterize the migration baseline."""
 
 import struct
+import time
 import uuid
 
 from chunk import Chunk
 from connection import Connection
 from entity_data import entity_name
 from inventory_data import item_name
+from protocol_data import packet_ids_for_protocol
 from protocol_types import (
     BlockChanged,
     ChunkLoaded,
@@ -20,6 +22,19 @@ from protocol_types import (
     PositionChanged,
     SelfEntityIdentified,
     SlotChanged,
+    AttackAction,
+    ChatAction,
+    EncodedAction,
+    LookAction,
+    MineAction,
+    MoveAction,
+    PacketStep,
+    PlaceAction,
+    SelectHotbarAction,
+    SneakAction,
+    SwapHotbarAction,
+    SwingAction,
+    UseItemAction,
 )
 
 
@@ -30,6 +45,93 @@ class LegacyProtocolAdapter:
         self.version = version
         self.connection = connection
         self.play_ids = play_ids
+        self.serverbound_ids = packet_ids_for_protocol(
+            connection._protocol_version, "serverbound"
+        )
+        self._sequence = 0
+
+    def _packet(self, name, data):
+        packet_id = self.connection._encode_varint(self.serverbound_ids[name])
+        return self.connection._encode_varint(len(packet_id + data)) + packet_id + data
+
+    def _next_sequence(self):
+        value = self._sequence
+        self._sequence += 1
+        return value
+
+    @staticmethod
+    def _packed_position(x, y, z):
+        return ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF)
+
+    def encode_action(self, action, world_state, game_mode):
+        encode = self.connection._encode_varint
+        if isinstance(action, MoveAction):
+            packet = self._packet("position", struct.pack(">ddd?", action.x, action.y, action.z, True))
+        elif isinstance(action, ChatAction):
+            message = action.message.encode("utf-8")
+            data = (encode(len(message)) + message + struct.pack(">q", int(time.time() * 1000))
+                    + struct.pack(">q", 0) + encode(0) + encode(0) + b"\x00" * 3)
+            packet = self._packet("chat_message", data)
+        elif isinstance(action, LookAction):
+            packet = self._packet("look", struct.pack(">ff?", action.yaw, action.pitch, True))
+        elif isinstance(action, SwingAction):
+            packet = self._packet("arm_animation", encode(action.hand))
+        elif isinstance(action, SneakAction):
+            entity_id = (world_state or {}).get("self_entity_id") or 0
+            data = encode(entity_id) + encode(0 if action.sneaking else 1) + encode(0)
+            packet = self._packet("entity_action", data)
+        elif isinstance(action, AttackAction):
+            packet = self._packet("use_entity", encode(action.entity_id) + encode(1) + b"\x00")
+        elif isinstance(action, MineAction):
+            def digging(status):
+                data = (encode(status) + struct.pack(">Q", self._packed_position(action.x, action.y, action.z))
+                        + struct.pack(">b", action.face) + encode(self._next_sequence()))
+                return self._packet("block_dig", data)
+            steps = [PacketStep(digging(0))]
+            if game_mode != "creative":
+                steps.append(PacketStep(digging(2), action.duration))
+            return EncodedAction(tuple(steps))
+        elif isinstance(action, PlaceAction):
+            data = (encode(0) + struct.pack(">Q", self._packed_position(action.x, action.y, action.z))
+                    + encode(action.face) + struct.pack(">fff", .5, .5, .5) + b"\x00"
+                    + encode(self._next_sequence()))
+            packet = self._packet("block_place", data)
+        elif isinstance(action, UseItemAction):
+            packet = self._packet("use_item", encode(action.hand) + encode(self._next_sequence()))
+        elif isinstance(action, SelectHotbarAction):
+            if action.slot not in range(9):
+                raise ValueError("Hotbar slot must be between 0 and 8")
+            packet = self._packet("held_item_slot", struct.pack(">h", action.slot))
+        elif isinstance(action, SwapHotbarAction):
+            packet = self._encode_hotbar_swap(action, world_state)
+        else:
+            raise TypeError(f"Unsupported action value: {type(action).__name__}")
+        return EncodedAction((PacketStep(packet),))
+
+    def _encode_slot(self, item):
+        if item is None:
+            return b"\x00"
+        if "wire" in item:
+            return bytes.fromhex(item["wire"])
+        return (b"\x01" + self.connection._encode_varint(item["id"])
+                + struct.pack(">b", item["count"]) + b"\x00")
+
+    def _encode_hotbar_swap(self, action, world_state):
+        if action.source_slot not in range(9, 36):
+            raise ValueError("Source slot must be in the player main inventory (9-35)")
+        if action.hotbar_slot not in range(9):
+            raise ValueError("Hotbar slot must be between 0 and 8")
+        inventory = world_state["inventory"]
+        destination_slot = 36 + action.hotbar_slot
+        source_item = inventory["slots"].get(action.source_slot)
+        destination_item = inventory["slots"].get(destination_slot)
+        encode = self.connection._encode_varint
+        data = (b"\x00" + encode(inventory["state_id"])
+                + struct.pack(">h", action.source_slot) + struct.pack(">b", action.hotbar_slot)
+                + encode(2) + encode(2)
+                + struct.pack(">h", action.source_slot) + self._encode_slot(destination_item)
+                + struct.pack(">h", destination_slot) + self._encode_slot(source_item) + b"\x00")
+        return self._packet("window_click", data)
 
     def decode_play(self, packet_id, payload):
         if packet_id == self.play_ids["position"]:

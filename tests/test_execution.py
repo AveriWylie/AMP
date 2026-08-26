@@ -6,16 +6,27 @@ import pytest
 
 from connection import Connection
 from execution import Execute
+from legacy_protocol import LegacyProtocolAdapter
+from protocol_data import packet_ids_for_protocol
+from protocol_types import action_from_command
 
 
 def _executor():
-    connection = Connection("localhost", 25565, "1.19.4", "TestBot", None, 762)
-    return Execute(connection, "survival", "passive")
+    return _executor_1202()
 
 
 def _executor_1202(world_state=None):
     connection = Connection("localhost", 25565, "1.20.2", "TestBot", None, 764)
-    return Execute(connection, "survival", "passive", world_state=world_state)
+    adapter = LegacyProtocolAdapter(
+        "1.20.2", connection, packet_ids_for_protocol(764, "clientbound")
+    )
+    return Execute(connection, "survival", "passive", adapter, world_state=world_state)
+
+
+def _encode(executor, command):
+    return executor._protocol_adapter.encode_action(
+        action_from_command(command), executor._world_state, executor._game_mode
+    ).steps
 
 
 def _packet_body(packet):
@@ -32,14 +43,14 @@ def _read_varint(data, offset=0):
 
 
 def test_movement_packet_uses_position_id_and_schema():
-    packet_id, data = _packet_body(_executor()._create_movement_packet(1.5, 64.0, -2.25))
-    assert packet_id == 0x14
+    packet_id, data = _packet_body(_encode(_executor(), {"action": "move", "x": 1.5, "y": 64.0, "z": -2.25})[0].packet)
+    assert packet_id == 0x16
     assert struct.unpack(">ddd?", data) == (1.5, 64.0, -2.25, True)
 
 
 def test_1202_movement_packet_uses_generated_id_and_unchanged_schema():
     packet_id, data = _packet_body(
-        _executor_1202()._create_movement_packet(1.5, 64.0, -2.25)
+        _encode(_executor_1202(), {"action": "move", "x": 1.5, "y": 64.0, "z": -2.25})[0].packet
     )
     assert packet_id == 0x16
     assert struct.unpack(">ddd?", data) == (1.5, 64.0, -2.25, True)
@@ -72,34 +83,35 @@ def test_executor_rejects_unknown_action():
 
 
 def test_look_packet_uses_rotation_id_and_schema():
-    packet_id, data = _packet_body(_executor()._create_look_packet(90.0, -15.5))
-    assert packet_id == 0x16
+    packet_id, data = _packet_body(_encode(_executor(), {"action": "look", "yaw": 90.0, "pitch": -15.5})[0].packet)
+    assert packet_id == 0x18
     assert struct.unpack(">ff?", data) == (90.0, -15.5, True)
 
 
 def test_entity_action_packet_uses_player_command_id():
-    packet_id, data = _packet_body(_executor()._create_entity_action_packet(3, entity_id=300))
+    executor = _executor_1202({"self_entity_id": 300})
+    packet_id, data = _packet_body(_encode(executor, {"action": "sneak", "sneaking": True})[0].packet)
     entity_id, offset = _read_varint(data)
     action_id, offset = _read_varint(data, offset)
     jump_boost, offset = _read_varint(data, offset)
-    assert packet_id == 0x1E
-    assert (entity_id, action_id, jump_boost) == (300, 3, 0)
+    assert packet_id == 0x21
+    assert (entity_id, action_id, jump_boost) == (300, 0, 0)
     assert offset == len(data)
 
 
 def test_attack_packet_uses_interact_entity_attack_schema():
     executor = _executor_1202()
-    packet_id, data = _packet_body(executor._create_attack_packet(300))
+    packet_id, data = _packet_body(_encode(executor, {"action": "attack", "entity_id": 300})[0].packet)
     entity_id, offset = _read_varint(data)
     interaction, offset = _read_varint(data, offset)
-    assert packet_id == executor.play_ids["use_entity"]
+    assert packet_id == executor._protocol_adapter.serverbound_ids["use_entity"]
     assert (entity_id, interaction, data[offset]) == (300, 1, 0)
     assert offset + 1 == len(data)
 
 
 def test_digging_packet_supports_negative_positions_and_sequence():
     executor = _executor()
-    packet_id, data = _packet_body(executor._create_digging_packet(0, -1, -64, -2, face=5))
+    packet_id, data = _packet_body(_encode(executor, {"action": "mine", "x": -1, "y": -64, "z": -2, "face": 5})[0].packet)
     status, offset = _read_varint(data)
     packed = struct.unpack_from(">Q", data, offset)[0]
     offset += 8
@@ -107,7 +119,7 @@ def test_digging_packet_supports_negative_positions_and_sequence():
     sequence, offset = _read_varint(data, offset + 1)
 
     expected = ((-1 & 0x3FFFFFF) << 38) | ((-2 & 0x3FFFFFF) << 12) | (-64 & 0xFFF)
-    assert packet_id == 0x1D
+    assert packet_id == 0x20
     assert (status, packed, face, sequence) == (0, expected, 5, 0)
     assert offset == len(data)
 
@@ -123,7 +135,7 @@ def test_creative_mining_sends_only_start_digging():
     assert len(sent) == 1
     packet_id, data = _packet_body(sent[0])
     status, _ = _read_varint(data)
-    assert packet_id == executor.play_ids["block_dig"]
+    assert packet_id == executor._protocol_adapter.serverbound_ids["block_dig"]
     assert status == 0
 
 
@@ -146,7 +158,7 @@ def test_survival_mining_waits_between_start_and_finish(monkeypatch):
 
 def test_place_packet_contains_interaction_sequence():
     executor = _executor()
-    packet_id, data = _packet_body(executor._create_place_packet(-1, 64, -2, face=1, hand=0))
+    packet_id, data = _packet_body(_encode(executor, {"action": "place", "x": -1, "y": 64, "z": -2, "face": 1})[0].packet)
     hand, offset = _read_varint(data)
     packed = struct.unpack_from(">Q", data, offset)[0]
     offset += 8
@@ -157,7 +169,7 @@ def test_place_packet_contains_interaction_sequence():
     sequence, offset = _read_varint(data, offset + 1)
 
     expected = ((-1 & 0x3FFFFFF) << 38) | ((-2 & 0x3FFFFFF) << 12) | 64
-    assert packet_id == 0x31
+    assert packet_id == 0x34
     assert (hand, packed, face) == (0, expected, 1)
     assert cursor == (0.5, 0.5, 0.5)
     assert inside_block == 0
@@ -167,15 +179,15 @@ def test_place_packet_contains_interaction_sequence():
 
 def test_interaction_sequence_increments_across_packets():
     executor = _executor()
-    first_id, first_data = _packet_body(executor._create_use_item_packet(hand=0))
-    second_id, second_data = _packet_body(executor._create_use_item_packet(hand=1))
+    first_id, first_data = _packet_body(_encode(executor, {"action": "use_item", "hand": 0})[0].packet)
+    second_id, second_data = _packet_body(_encode(executor, {"action": "use_item", "hand": 1})[0].packet)
 
     first_hand, offset = _read_varint(first_data)
     first_sequence, first_end = _read_varint(first_data, offset)
     second_hand, offset = _read_varint(second_data)
     second_sequence, second_end = _read_varint(second_data, offset)
 
-    assert first_id == second_id == 0x32
+    assert first_id == second_id == 0x35
     assert (first_hand, first_sequence) == (0, 0)
     assert (second_hand, second_sequence) == (1, 1)
     assert first_end == len(first_data)
@@ -184,12 +196,12 @@ def test_interaction_sequence_increments_across_packets():
 
 def test_1202_hotbar_selection_packet_and_validation():
     executor = _executor_1202()
-    packet_id, data = _packet_body(executor._create_held_item_packet(7))
+    packet_id, data = _packet_body(_encode(executor, {"action": "select_hotbar", "slot": 7})[0].packet)
     assert packet_id == 0x2B
     assert struct.unpack(">h", data)[0] == 7
 
     with pytest.raises(ValueError):
-        executor._create_held_item_packet(9)
+        _encode(executor, {"action": "select_hotbar", "slot": 9})
 
 
 def test_1202_swaps_main_inventory_tool_into_selected_hotbar():
@@ -204,7 +216,7 @@ def test_1202_swaps_main_inventory_tool_into_selected_hotbar():
         }
     }
     executor = _executor_1202(world_state)
-    packet_id, data = _packet_body(executor._create_hotbar_swap_packet(10, 2))
+    packet_id, data = _packet_body(_encode(executor, {"action": "swap_hotbar", "source_slot": 10, "hotbar_slot": 2})[0].packet)
 
     assert packet_id == 0x0D
     assert data[0] == 0  # player inventory window
@@ -214,21 +226,3 @@ def test_1202_swaps_main_inventory_tool_into_selected_hotbar():
     mode, _ = _read_varint(data, offset + 3)
     assert (state_id, source_slot, button, mode) == (7, 10, 2, 2)
 
-
-def test_protocol_762_packet_id_table():
-    assert _executor().play_ids == {
-        "teleport_confirm": 0x00,
-        "chat_message": 0x05,
-        "client_command": 0x07,
-        "keep_alive": 0x12,
-        "position": 0x14,
-        "look": 0x16,
-        "block_dig": 0x1D,
-        "entity_action": 0x1E,
-        "arm_animation": 0x2F,
-        "block_place": 0x31,
-        "use_item": 0x32,
-        "held_item_slot": 0x28,
-        "window_click": 0x0B,
-        "use_entity": 0x10,
-    }

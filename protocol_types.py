@@ -165,6 +165,17 @@ class SwapHotbarAction:
     hotbar_slot: int
 
 
+@dataclass(frozen=True)
+class PacketStep:
+    packet: bytes
+    delay_before: float = 0
+
+
+@dataclass(frozen=True)
+class EncodedAction:
+    steps: tuple[PacketStep, ...]
+
+
 def action_from_command(command):
     action = command.get("action")
     if action == "move":
