@@ -52,8 +52,8 @@ class Chunk:
 
     def __init__(self, payload, version="1.20.1"):
         self._modern_chunk_data = version == "1.20.2"
-        self._min_y = -64 if self._modern_chunk_data else 0
-        self._world_height = 384 if self._modern_chunk_data else 256
+        self._min_y = -64
+        self._world_height = 384
         if version not in Chunk._state_to_block_cache:
             blocks_path = Path(__file__).parent / "blocks" / f"blocks_{version}.json"
             blocks_json = json.loads(blocks_path.read_text())

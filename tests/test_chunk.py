@@ -5,7 +5,7 @@ import struct
 from chunk import Chunk
 
 
-def _modern_chunk_with_heightmap():
+def _chunk_with_heightmap(modern=True):
     # 1.20.2 overworld heightmaps contain 256 nine-bit values packed seven per long.
     # Stored values are the first available Y relative to the dimension minimum (-64).
     longs = [0] * 37
@@ -13,17 +13,23 @@ def _modern_chunk_with_heightmap():
     longs[1] = 201       # column (7, 0): highest block is 201 - 64 - 1 = 136
     name = b"WORLD_SURFACE"
     heightmap = (
-        b"\x0a"  # unnamed root compound in network NBT
+        b"\x0a" + (b"" if modern else b"\x00\x00")
         + b"\x0c" + struct.pack(">H", len(name)) + name
         + struct.pack(">i", len(longs))
         + struct.pack(f">{len(longs)}q", *longs)
         + b"\x00"
     )
-    return heightmap + b"\x00"  # zero-length section-data byte array
+    return heightmap + (b"\x00" if modern else b"")
 
 
 def test_modern_chunk_exposes_decoded_surface_height():
-    chunk = Chunk(_modern_chunk_with_heightmap(), "1.20.2")
+    chunk = Chunk(_chunk_with_heightmap(), "1.20.2")
 
     assert chunk.get_surface_y(1, 0) == 70
     assert chunk.get_surface_y(7, 0) == 136
+
+
+def test_legacy_network_nbt_uses_post_118_overworld_bounds():
+    chunk = Chunk(_chunk_with_heightmap(modern=False), "1.19.4")
+
+    assert chunk.get_surface_y(1, 0) == 70
