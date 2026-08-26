@@ -17,6 +17,7 @@ import sys
 import threading
 
 import pytest
+import bot as bot_module
 from bot import Bot, Connection
 
 """
@@ -161,6 +162,12 @@ def test_connection_composition():
     # == not is: each access to bot._handle_failure builds a fresh bound-method object, so `is`
     # is always False. == compares __self__ and __func__, the identity we actually mean.
     assert conn._on_failure == bot._handle_failure
+
+
+def test_connection_has_canonical_transport_module():
+    from connection import Connection as TransportConnection
+
+    assert bot_module.Connection is TransportConnection
 
 
 def test_bot_disconnect_uses_public_connection_lifecycle():
