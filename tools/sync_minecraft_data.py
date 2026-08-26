@@ -98,7 +98,7 @@ JAVA_26_PLAY_PACKETS = {
     "clientbound": MODERN_PLAY_PACKETS["clientbound"] + (
         "sync_entity_position", "set_player_inventory", "set_cursor_item",
     ),
-    "serverbound": MODERN_PLAY_PACKETS["serverbound"] + ("player_input",),
+    "serverbound": MODERN_PLAY_PACKETS["serverbound"] + ("player_input", "attack"),
 }
 
 JAVA_26_CONFIGURATION_PACKETS = {

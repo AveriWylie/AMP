@@ -105,6 +105,7 @@
       "protocol": 775,
       "serverbound": {
         "arm_animation": 63,
+        "attack": 1,
         "block_dig": 41,
         "block_place": 66,
         "chat_message": 9,
@@ -202,6 +203,7 @@
       "protocol": 775,
       "serverbound": {
         "arm_animation": 63,
+        "attack": 1,
         "block_dig": 41,
         "block_place": 66,
         "chat_message": 9,
@@ -299,6 +301,7 @@
       "protocol": 775,
       "serverbound": {
         "arm_animation": 63,
+        "attack": 1,
         "block_dig": 41,
         "block_place": 66,
         "chat_message": 9,
@@ -396,6 +399,7 @@
       "protocol": 776,
       "serverbound": {
         "arm_animation": 63,
+        "attack": 1,
         "block_dig": 41,
         "block_place": 66,
         "chat_message": 9,

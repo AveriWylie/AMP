@@ -20,7 +20,7 @@
     "look": "look",
     "swing": "arm_animation",
     "sneak": "entity_action",
-    "attack": "use_entity",
+    "attack": "attack",
     "mine": "block_dig",
     "place": "block_place",
     "use_item": "use_item",

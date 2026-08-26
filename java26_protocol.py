@@ -14,6 +14,8 @@ from protocol_types import (
     HotbarSelected, InventoryReplaced, SlotChanged,
     ChatAction, EncodedAction, LookAction, MoveAction, PacketStep, SneakAction,
     SwingAction,
+    AttackAction, MineAction, PlaceAction, SelectHotbarAction, SwapHotbarAction,
+    UseItemAction,
 )
 
 
@@ -33,6 +35,16 @@ class Java26ProtocolAdapter:
         )
         self.play_clientbound = packet_ids_for_protocol(protocol, "clientbound")
         self.play_serverbound = packet_ids_for_protocol(protocol, "serverbound")
+        self._sequence = 0
+
+    def _next_sequence(self):
+        sequence = self._sequence
+        self._sequence += 1
+        return sequence
+
+    @staticmethod
+    def _packed_position(x, y, z):
+        return ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF)
 
     def _packet(self, name, data):
         packet_id = self.connection._encode_varint(self.play_serverbound[name])
@@ -53,9 +65,69 @@ class Java26ProtocolAdapter:
             packet = self._packet("arm_animation", encode(action.hand))
         elif isinstance(action, SneakAction):
             packet = self._packet("player_input", b"\x20" if action.sneaking else b"\x00")
+        elif isinstance(action, AttackAction):
+            packet = self._packet("attack", encode(action.entity_id))
+        elif isinstance(action, MineAction):
+            def digging(status):
+                return self._packet(
+                    "block_dig",
+                    encode(status)
+                    + struct.pack(">Qb", self._packed_position(action.x, action.y, action.z), action.face)
+                    + encode(self._next_sequence()),
+                )
+            steps = [PacketStep(digging(0))]
+            if game_mode != "creative":
+                steps.append(PacketStep(digging(2), action.duration))
+            return EncodedAction(tuple(steps))
+        elif isinstance(action, PlaceAction):
+            data = (encode(0) + struct.pack(">Q", self._packed_position(action.x, action.y, action.z))
+                    + encode(action.face) + struct.pack(">fff??", .5, .5, .5, False, False)
+                    + encode(self._next_sequence()))
+            packet = self._packet("block_place", data)
+        elif isinstance(action, UseItemAction):
+            position = (world_state or {}).get("position", {})
+            data = (encode(action.hand) + encode(self._next_sequence())
+                    + struct.pack(">ff", position.get("yaw", 0), position.get("pitch", 0)))
+            packet = self._packet("use_item", data)
+        elif isinstance(action, SelectHotbarAction):
+            if action.slot not in range(9):
+                raise ValueError("Hotbar slot must be between 0 and 8")
+            packet = self._packet("held_item_slot", struct.pack(">h", action.slot))
+        elif isinstance(action, SwapHotbarAction):
+            packet = self._encode_hotbar_swap(action, world_state)
         else:
             raise TypeError(f"Unsupported Java 26 action: {type(action).__name__}")
         return EncodedAction((PacketStep(packet),))
+
+    def _hashed_slot(self, item):
+        if item is None:
+            return b"\x00"
+        encode = self.connection._encode_varint
+        components = item.get("components", {})
+        removed = item.get("removed_components", ())
+        if components:
+            raise ValueError("Cannot hash modified item components for inventory swap")
+        return (b"\x01" + encode(item["id"]) + encode(item["count"])
+                + encode(0) + encode(len(removed))
+                + b"".join(encode(component) for component in removed))
+
+    def _encode_hotbar_swap(self, action, world_state):
+        if action.source_slot not in range(9, 36):
+            raise ValueError("Source slot must be in the player main inventory (9-35)")
+        if action.hotbar_slot not in range(9):
+            raise ValueError("Hotbar slot must be between 0 and 8")
+        inventory = world_state["inventory"]
+        destination = 36 + action.hotbar_slot
+        source_item = inventory["slots"].get(action.source_slot)
+        destination_item = inventory["slots"].get(destination)
+        encode = self.connection._encode_varint
+        data = (encode(0) + encode(inventory["state_id"])
+                + struct.pack(">hb", action.source_slot, action.hotbar_slot)
+                + encode(2) + encode(2)
+                + struct.pack(">h", action.source_slot) + self._hashed_slot(destination_item)
+                + struct.pack(">h", destination) + self._hashed_slot(source_item)
+                + b"\x00")
+        return self._packet("window_click", data)
 
     def decode_play(self, packet_id, payload):
         ids = self.play_clientbound
