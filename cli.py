@@ -80,7 +80,7 @@ def guided_loop(bot):
             continue
 
         if user_prompt.lower() == "quit":
-            bot._connection.disconnect()
+            bot.disconnect()
             print("Disconnected.")
             break
 
@@ -106,7 +106,7 @@ def autonomous_loop(bot):
                 continue
 
             if user_input.lower() == "quit":
-                bot._connection.disconnect()
+                bot.disconnect()
                 print("Disconnected.")
                 break
 
@@ -119,7 +119,7 @@ def autonomous_loop(bot):
             print(f"Injected: '{user_input}'")
 
     except KeyboardInterrupt:
-        bot._connection.disconnect()
+        bot.disconnect()
         print("\nDisconnected.")
 
 def main():

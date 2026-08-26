@@ -163,6 +163,16 @@ def test_connection_composition():
     assert conn._on_failure == bot._handle_failure
 
 
+def test_bot_disconnect_uses_public_connection_lifecycle():
+    bot = Bot.__new__(Bot)
+    calls = []
+    bot._connection = type("ConnectionSpy", (), {"disconnect": lambda self: calls.append("disconnect")})()
+
+    bot.disconnect()
+
+    assert calls == ["disconnect"]
+
+
 
 # --------------------------------------------------------------------------------------------
 # 4. Encode varint

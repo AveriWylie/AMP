@@ -193,6 +193,10 @@ class Bot:
             print(f"Unexpected error during start: {e}")
             self._connection.disconnect()
 
+    def disconnect(self):
+        """Disconnect through the Bot lifecycle boundary."""
+        self._connection.disconnect()
+
     """
     --------------------------------------------------------------------------------------------
     Function Field Header - packet handler
