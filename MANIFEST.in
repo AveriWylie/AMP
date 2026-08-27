@@ -4,10 +4,7 @@ include pytest.ini
 include requirements.txt
 include requirements-dev.txt
 include requirements-lock.txt
-recursive-include amp/blocks *.json
+recursive-include amp *.json
 recursive-include docs *.md
-recursive-include amp/entities *.json
-recursive-include amp/items *.json
-recursive-include amp/protocol *.json
 recursive-include tests/fixtures *.json
 recursive-include tools *.py

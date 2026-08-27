@@ -3,8 +3,10 @@ __pycache__/
 .idea/
 .codex-python-deps/
 .tmp/
+.venv/
 *.py[cod]
 *.egg-info/
 build/
 dist/
 .env
+.DS_Store

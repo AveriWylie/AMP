@@ -9,9 +9,20 @@ description = "Agentic Minecraft player for supported Java Edition servers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+keywords = ["minecraft", "bot", "agent", "protocol", "java-edition"]
 authors = [
   {name = "Shahyar Anfaz"},
   {name = "Averi Wylie"},
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Games/Entertainment",
 ]
 dependencies = [
   "anthropic>=0.121,<1",
@@ -33,11 +44,8 @@ dev = [
 amp = "amp.cli:main"
 amp-world = "amp.local_world:main"
 
-[tool.setuptools]
-packages = ["amp", "amp.blocks", "amp.entities", "amp.items", "amp.protocol"]
+[tool.setuptools.packages.find]
+include = ["amp*"]
 
 [tool.setuptools.package-data]
-"amp.blocks" = ["*.json"]
-"amp.entities" = ["*.json"]
-"amp.items" = ["*.json"]
-"amp.protocol" = ["*.json"]
+"*" = ["*.json"]
