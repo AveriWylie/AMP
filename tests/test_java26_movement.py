@@ -30,6 +30,12 @@ def test_java26_movement_uses_flag_byte():
     assert struct.unpack(">dddB", payload) == (1.5, 64, -2, 1)
 
 
+def test_java26_movement_is_throttled_to_walking_rate():
+    encoded = adapter().encode_action(MoveAction(1, 64, 2), {}, "survival")
+
+    assert encoded.steps[0].delay_before >= 0.2
+
+
 def test_java26_look_swing_and_sneak_use_current_schemas():
     protocol, (packet_id, payload) = encode(LookAction(90, -10))
     assert packet_id == protocol.play_serverbound["look"]
