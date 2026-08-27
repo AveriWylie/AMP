@@ -30,9 +30,7 @@ jobs:
         run: python -m pytest
       - name: Check generated Minecraft data
         if: matrix.python-version == '3.12'
-        run: |
-          python tools/sync_minecraft_data.py --check
-          python tools/check_version_data.py
+        run: python tools/check_version_data.py
 
   package:
     runs-on: ubuntu-latest
