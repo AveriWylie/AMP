@@ -24,7 +24,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-lock.txt
       - name: Install locked dependencies
-        run: python -m pip install -r requirements-lock.txt
+        run: python -m pip install --require-hashes -r requirements-lock.txt
       - name: Install AMP package
         run: python -m pip install --no-deps .
       - name: Run offline tests
@@ -44,8 +44,8 @@ jobs:
           cache-dependency-path: requirements-lock.txt
       - name: Build distributions
         run: |
-          python -m pip install -r requirements-lock.txt
-          python -m build
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m build --no-isolation
       - name: Test installed wheel outside checkout
         run: |
           python -m venv "$RUNNER_TEMP/amp-wheel"

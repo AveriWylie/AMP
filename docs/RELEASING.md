@@ -13,12 +13,12 @@ Before the first PyPI release, register a pending Trusted Publisher for project
 From a clean checkout, install the development dependencies and run:
 
 ```bash
-python -m pip install -r requirements-lock.txt
+python -m pip install --require-hashes -r requirements-lock.txt
 python -m pip install --no-deps .
 python -m pytest
 python tools/sync_minecraft_data.py --check
 python tools/check_version_data.py
-python -m build
+python -m build --no-isolation
 ```
 
 Confirm that CI passes on every configured Python version. Review outstanding

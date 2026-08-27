@@ -24,7 +24,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-lock.txt
       - name: Install locked dependencies
-        run: python -m pip install -r requirements-lock.txt
+        run: python -m pip install --require-hashes -r requirements-lock.txt
       - name: Install AMP package
         run: python -m pip install --no-deps .
       - name: Discover stable Minecraft releases
