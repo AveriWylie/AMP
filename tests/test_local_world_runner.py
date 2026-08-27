@@ -71,10 +71,15 @@ def test_validate_model_configuration_reads_env_from_working_directory(
         "OPENAI_MODEL=test-model\n",
         encoding="utf-8",
     )
-    for name in (
-        "AMP_MODEL_PROVIDER", "OPENAI_BASE_URL", "OPENAI_MODEL", "ANTHROPIC_API_KEY"
-    ):
-        monkeypatch.delenv(name, raising=False)
+    provider_names = {
+        "AMP_MODEL_PROVIDER", "OPENAI_BASE_URL", "OPENAI_MODEL",
+        "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+    }
+    # Replace the mapping outright so load_dotenv cannot leak into later tests.
+    monkeypatch.setattr(os, "environ", {
+        name: value for name, value in os.environ.items()
+        if name not in provider_names
+    })
     monkeypatch.chdir(tmp_path)
 
     run_local_world.validate_model_configuration("guided")
@@ -170,7 +175,7 @@ def test_existing_eula_is_not_requested_again(tmp_path, monkeypatch):
 
 
 def test_missing_model_configuration_fails_actionably(monkeypatch):
-    monkeypatch.setattr("dotenv.load_dotenv", lambda: None)
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *_, **__: None)
     monkeypatch.setattr("amp.model_clients.build_model_client", lambda _: None)
 
     with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
