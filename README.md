@@ -188,6 +188,8 @@ licensing details.
 - [Future work](docs/FUTURE.md)
 - [Design](docs/DESIGN.md)
 - [Testing](docs/TESTING.md)
+- [Versioning](docs/VERSIONING.md)
+- [Release process](docs/RELEASING.md)
 - [Authentication status](docs/AUTHENTICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
 - [Third-party notices](docs/THIRD_PARTY_NOTICES.md)

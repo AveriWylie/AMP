@@ -1,0 +1,75 @@
+name: Minecraft release candidate
+
+on:
+  schedule:
+    - cron: "17 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: minecraft-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Discover stable Minecraft releases
+        run: python tools/discover_minecraft_releases.py
+      - name: Detect candidate changes
+        id: changes
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain -- \
+            protocol/minecraft_release_candidates.json)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Push candidate branch
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          BRANCH: automation/minecraft-release-candidates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add protocol/minecraft_release_candidates.json
+          git commit -m "Track Minecraft release candidates"
+          git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH" || true
+          git push --force-with-lease origin "$BRANCH"
+      - name: Open or update candidate pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: automation/minecraft-release-candidates
+        shell: bash
+        run: |
+          body=$(cat <<'EOF'
+          This automated PR records stable Minecraft releases not yet tracked by
+          AMP. It does not mark them supported or publish an AMP release.
+
+          Before promotion:
+
+          - [ ] Generate protocol, block, item, and entity data.
+          - [ ] Review protocol-family and fixture differences.
+          - [ ] Run the complete offline suite.
+          - [ ] Run every live gameplay check for each candidate version.
+          - [ ] Mark the version supported only after all gates pass.
+          EOF
+          )
+          number=$(gh pr list --head "$BRANCH" --state open --json number \
+            --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --body "$body"
+          else
+            gh pr create --head "$BRANCH" \
+              --title "Track Minecraft release candidates" --body "$body"
+          fi

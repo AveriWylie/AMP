@@ -58,9 +58,9 @@ python -m tools.check_combat --version 26.2
 - `check_combat` summons a stationary cow, verifies entity tracking, attacks it,
   and checks the authoritative health change.
 
-Before advertising a version, run the complete set for that version. AMP 1.0
-records successful runs for 26.1, 26.1.1, 26.1.2, and 26.2 in
-`protocol/version_support.json`.
+Each command accepts `--version`. The checked-in support manifest records the
+versions for which the complete set has passed. See
+[Versioning](VERSIONING.md) for the Minecraft-version promotion policy.
 
 Authenticated-server and Realm gates are retained but disabled until Microsoft
 approves AMP's client ID for Minecraft Services. See [Authentication
@@ -69,30 +69,15 @@ status](AUTHENTICATION.md).
 ## External model providers
 
 The automated suite verifies adapter request and response normalization without
-credentials or network calls. Before release, complete 1 guided request with
-the real Anthropic API and 1 with an OpenAI-compatible hosted or local service.
-Each request must produce a valid action that succeeds in Minecraft. Also
-complete 1 autonomous goal with at least 1 successful action and confirmed
-execution feedback. These checks require an operator-selected model,
-credentials or a local server, and may incur API charges. See [Future
-work](FUTURE.md) for the broader post-1.0 provider matrix.
+credentials or network calls. Real-provider behavior is a manual integration
+boundary because it requires an operator-selected model, credentials or a local
+server, and may incur API charges. [Releasing](RELEASING.md) defines the release
+gate; [Future work](FUTURE.md) defines the broader post-1.0 provider matrix.
 
 ## Local-world workflow
 
 `tests/test_local_world_runner.py` covers isolated world identities, preserved
 server properties, offline operator UUIDs, first-run defaults, persisted EULA
 acceptance, model preflight, version validation, prompt defaults, and
-backup-first copy-back.
-
-Before release, use disposable source worlds to verify the complete workflow:
-
-1. Start `idle` mode, join the printed address manually, and confirm that AMP
-   reaches Play and the requested human username has operator access.
-2. Change the server copy, use Ctrl+C to disconnect AMP and save the server,
-   decline copy-back, and confirm that the source world remains unchanged.
-3. Start the same source and version again. Confirm that AMP reuses the active
-   copy without repeating EULA or operator setup.
-4. Stop again, accept copy-back, and confirm that the played copy replaces the
-   source while the previous source remains in a timestamped backup.
-5. Start a different source at the same Minecraft version and confirm that it
-   receives a different active profile.
+backup-first copy-back. End-to-end operator checks are defined in
+[Releasing](RELEASING.md).

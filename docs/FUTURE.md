@@ -183,14 +183,13 @@ compatibility promise or delivery commitment.
 
 ## Release maintenance
 
-- Add a pending-version update command that imports a newly stable Java release
-  without advertising it as supported.
-- Add protocol-family diff reporting for packet states, IDs, registries, and
-  fixtures so maintainers can decide whether a release reuses an adapter or
-  needs a new one.
-- Automate the promotion checklist: generated-data completeness, protocol
-  fixtures, the offline suite, and all live gameplay checks must pass before a
-  version becomes supported.
+- Extend the candidate PR with generated data and protocol-family diff reports
+  when upstream data is available. The current automation records official
+  release metadata and the required promotion gates without guessing
+  compatibility.
+- Automate the promotion checks that can run offline. Protocol review and the
+  complete live gameplay matrix remain mandatory maintainer gates before a
+  Minecraft version becomes supported.
 - Keep the manifest's Realm `primary` value unset until authenticated-server and
   Realm gates can run with AMP's approved client ID. After approval, promote
   only a supported latest-stable release with a passing Realm smoke check.

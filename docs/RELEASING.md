@@ -1,0 +1,63 @@
+# Releasing AMP
+
+Releases are deliberate maintainer actions. A new Minecraft release may create
+a compatibility candidate, but it never publishes AMP automatically. See
+[Versioning](VERSIONING.md).
+
+## 1. Automated checks
+
+From a clean checkout, install the development dependencies and run:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest
+python tools/sync_minecraft_data.py --check
+python tools/check_version_data.py
+```
+
+Confirm that CI passes on every configured Python version. Review outstanding
+security and dependency-audit findings before continuing.
+
+## 2. Human testing
+
+Complete every item against a disposable local world and supported Minecraft
+version:
+
+- Send a real Anthropic request in guided mode and confirm its action succeeds.
+- Send a real OpenAI-compatible request in guided mode and confirm its action
+  succeeds.
+- Complete 1 autonomous goal with either provider, including at least 1
+  successful action and server-confirmed feedback.
+- Confirm that invalid or missing provider configuration fails before Java
+  starts and provides an actionable message.
+- Stop the local-world workflow and answer No to copy-back. Confirm that the
+  source world remains unchanged.
+- Stop the local-world workflow and answer Yes to copy-back. Confirm that AMP
+  creates a timestamped backup and replaces the source with the modified world.
+- Restart the same source world and Minecraft version. Confirm that AMP reuses
+  the existing active profile.
+- Start a second source world on the same Minecraft version. Confirm that AMP
+  creates and uses a different active profile.
+- Perform a final gameplay smoke test: connect, move, mine, place, attack, and
+  stop cleanly.
+
+Use [Testing](TESTING.md) for the live gameplay commands and [Local-world
+usage](USAGE.md) for startup, shutdown, and copy-back behavior.
+
+## 3. Release preparation
+
+1. Confirm that the README compatibility table matches
+   `protocol/version_support.json`.
+2. Confirm that every advertised Minecraft version has offline and live
+   verification evidence.
+3. Add the release date to the matching entry in `docs/CHANGELOG.md`.
+4. Confirm that the project license and third-party notices are present.
+5. Review the complete release diff and confirm that the worktree is clean.
+
+## 4. Publication
+
+1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
+2. Push the commit and tag.
+3. Publish the GitHub release using the matching changelog entry.
+4. Confirm that the published source archive contains the license and
+   documentation referenced by the README.
