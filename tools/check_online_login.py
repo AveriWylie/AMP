@@ -1,14 +1,21 @@
 """Opt-in authenticated join check for a direct online-mode Java server."""
 
-import argparse
-import os
-import time
-
-from authentication import MicrosoftAuthenticator
-from bot import Bot
-
-
 def main():
+    raise SystemExit(
+        "Unavailable: AMP's Microsoft client ID is not approved by Minecraft "
+        "Services. See docs/AUTHENTICATION.md."
+    )
+
+
+def _approved_main():
+    """Retained live gate to activate after Minecraft Services approval."""
+    import argparse
+    import os
+    import time
+
+    from authentication import MicrosoftAuthenticator
+    from bot import Bot
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("host")
     parser.add_argument("--port", type=int, default=25565)

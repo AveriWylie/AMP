@@ -1,15 +1,22 @@
 """Opt-in non-destructive Realm resolve/join/position/disconnect smoke check."""
 
-import argparse
-import os
-import time
-
-from authentication import MicrosoftAuthenticator
-from bot import Bot
-from realms import RealmResolver
-
-
 def main():
+    raise SystemExit(
+        "Unavailable: AMP's Microsoft client ID is not approved by Minecraft "
+        "Services. See docs/AUTHENTICATION.md."
+    )
+
+
+def _approved_main():
+    """Retained live gate to activate after Minecraft Services approval."""
+    import argparse
+    import os
+    import time
+
+    from authentication import MicrosoftAuthenticator
+    from bot import Bot
+    from realms import RealmResolver
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("realm", help="Realm name or numeric ID")
     parser.add_argument("--version", default="26.2")

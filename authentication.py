@@ -134,8 +134,11 @@ class MicrosoftAuthenticator:
         })
         user_hash = xsts["DisplayClaims"]["xui"][0]["uhs"]
         minecraft = self.transport.request(
-            "POST", f"{MINECRAFT}/authentication/login_with_xbox",
-            json_body={"identityToken": f"XBL3.0 x={user_hash};{xsts['Token']}"},
+            "POST", f"{MINECRAFT}/launcher/login",
+            json_body={
+                "xtoken": f"XBL3.0 x={user_hash};{xsts['Token']}",
+                "platform": "PC_LAUNCHER",
+            },
         )
         headers = {"Authorization": f"Bearer {minecraft['access_token']}"}
         entitlement = self.transport.request(

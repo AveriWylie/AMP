@@ -33,7 +33,7 @@ class FakeTransport:
             return {"Token": "xbox-secret"}
         if "xsts.auth" in url:
             return {"Token": "xsts-secret", "DisplayClaims": {"xui": [{"uhs": "user"}]}}
-        if url.endswith("login_with_xbox"):
+        if url.endswith("launcher/login"):
             return {"access_token": "minecraft-secret"}
         if url.endswith("mcstore"):
             return {"items": [{}]} if self.entitled else {"items": []}
@@ -56,6 +56,11 @@ def test_device_authorization_normalizes_to_redacted_minecraft_session():
     assert "secret" not in repr(session)
     profile_call = next(call for call in transport.calls if call[1].endswith("profile"))
     assert profile_call[2]["headers"] == {"Authorization": "Bearer minecraft-secret"}
+    launcher_call = next(call for call in transport.calls if call[1].endswith("launcher/login"))
+    assert launcher_call[2]["json_body"] == {
+        "xtoken": "XBL3.0 x=user;xsts-secret",
+        "platform": "PC_LAUNCHER",
+    }
 
 
 def test_refresh_uses_refresh_grant_and_checks_entitlement():

@@ -1,10 +1,4 @@
-import os
-
-from authentication import MicrosoftAuthenticator
 from bot import Bot
-from dotenv import load_dotenv
-from realms import RealmResolver
-from version_support import load_support_manifest
 
 """
 --------------------------------------------------------------------------------------------
@@ -35,44 +29,21 @@ def collect_config():
     print("=== Minecraft Bot Setup ===")
     print("Press enter to accept defaults\n")
 
-    realm_mode = input("Connect to a Realm? (y/N): ").strip().lower() == "y"
-    host, port = "localhost", 25565
-    if not realm_mode:
-        host = input("Server host (default: localhost): ").strip() or "localhost"
-        while True:
-            port = input("Port (default: 25565): ").strip() or "25565"
-            if port.isdigit() and 1024 <= int(port) <= 65535:
-                port = int(port)
-                break
-            print("Port must be a number between 1024 and 65535")
+    print("AMP 1.0 connects to direct offline-mode servers.")
+    print("Microsoft-authenticated servers and Realms require external client-ID approval.\n")
+    host = input("Server host (default: localhost): ").strip() or "localhost"
+    while True:
+        port = input("Port (default: 25565): ").strip() or "25565"
+        if port.isdigit() and 1024 <= int(port) <= 65535:
+            port = int(port)
+            break
+        print("Port must be a number between 1024 and 65535")
 
-    session = None
-    authenticate = realm_mode or input(
-        "Authenticate a Microsoft account for online mode? (y/N): "
-    ).strip().lower() == "y"
-    if authenticate:
-        load_dotenv()
-        authenticator = MicrosoftAuthenticator(os.getenv("AMP_MICROSOFT_CLIENT_ID"))
-        session = authenticator.authorize()
-        username = session.profile_name
-    else:
-        username = input("Offline username (default: Guest): ").strip() or "Guest"
-
-    if realm_mode:
-        manifest = load_support_manifest()
-        version = manifest["primary"]
-        if version is None:
-            raise RuntimeError("No Realm-verified primary Minecraft version is configured")
-        realms = RealmResolver().list(session)
-        for realm in realms:
-            print(f"{realm.id}: {realm.name} ({realm.state})")
-        endpoint = RealmResolver().resolve(session, input("Realm name or ID: ").strip())
-        host, port = endpoint.host, endpoint.port
-    else:
-        print(f"\nRunnable versions: {', '.join(sorted(Bot.allowed_values['version']))}")
-        version = input(
-            f"Version (default: {Bot.default_values['version']}): "
-        ).strip() or Bot.default_values["version"]
+    username = input("Offline username (default: Guest): ").strip() or "Guest"
+    print(f"\nRunnable versions: {', '.join(sorted(Bot.allowed_values['version']))}")
+    version = input(
+        f"Version (default: {Bot.default_values['version']}): "
+    ).strip() or Bot.default_values["version"]
 
     print("\nGame modes: survival, creative, superflat, adventure, spectator")
     game_mode = input("Game mode (default: survival): ").strip() or "survival"
@@ -87,7 +58,7 @@ def collect_config():
         "version": version,
         "game_mode": game_mode,
         "behavior_mode": behavior_mode,
-        "auth_session": session,
+        "auth_session": None,
     }
 
 def select_mode():

@@ -61,7 +61,7 @@ Survival and creative are the implemented gameplay modes. The CLI currently acce
 
 ## Current limits
 
-- Authenticated online-mode login is not implemented.
+- Microsoft-authenticated online-mode servers and Java Realms are disabled in AMP 1.0. The implementation is retained, but Minecraft Services rejects newly registered client IDs unless Microsoft approves them. See [Authentication status](docs/AUTHENTICATION.md).
 - Full gameplay support targets the 1.20.2 Overworld on an offline-mode server.
 - Crafting, container interaction, and general inventory management are not implemented.
 - Navigation does not swim, climb, open doors, bridge gaps, or continuously replan around moving obstacles.
@@ -125,5 +125,6 @@ See [Third-party notices](docs/THIRD_PARTY_NOTICES.md) for attribution and licen
 - [Future work](docs/FUTURE.md)
 - [Design](docs/DESIGN.md)
 - [Testing](docs/TESTING.md)
+- [Authentication status](docs/AUTHENTICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
 - [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
