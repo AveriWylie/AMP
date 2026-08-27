@@ -12,29 +12,19 @@ REVISION = "105097328f99a4f45cb6dca0fbef97db0cbd1cfd"
 RAW_ROOT = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/{REVISION}/data/pc"
 OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
 BLOCK_OUTPUTS = {
-    "1.20.2": Path(__file__).resolve().parents[1] / "blocks" / "blocks_1.20.2.json",
-    **{
-        version: Path(__file__).resolve().parents[1] / "blocks" / f"blocks_{version}.json"
-        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
-    },
+    version: Path(__file__).resolve().parents[1] / "blocks" / f"blocks_{version}.json"
+    for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 ITEM_OUTPUTS = {
-    "1.20.2": Path(__file__).resolve().parents[1] / "items" / "items_1.20.2.json",
-    **{
-        version: Path(__file__).resolve().parents[1] / "items" / f"items_{version}.json"
-        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
-    },
+    version: Path(__file__).resolve().parents[1] / "items" / f"items_{version}.json"
+    for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 ENTITY_OUTPUTS = {
-    "1.20.2": Path(__file__).resolve().parents[1] / "entities" / "entities_1.20.2.json",
-    **{
-        version: Path(__file__).resolve().parents[1] / "entities" / f"entities_{version}.json"
-        for version in ("26.1", "26.1.1", "26.1.2", "26.2")
-    },
+    version: Path(__file__).resolve().parents[1] / "entities" / f"entities_{version}.json"
+    for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 
 VERSION_SOURCES = {
-    "1.20.2": "1.20.2",
     "26.1": "26.1",
     "26.1.1": "26.1",
     "26.1.2": "26.1",
@@ -81,27 +71,11 @@ PLAY_PACKETS = {
     ),
 }
 
-MODERN_PLAY_PACKETS = {
-    "clientbound": ("start_configuration",),
-    "serverbound": ("configuration_acknowledged",),
-}
-
-CONFIGURATION_PACKETS = {
-    "clientbound": (
-        "custom_payload", "disconnect", "finish_configuration", "keep_alive",
-        "ping", "registry_data", "resource_pack_send", "feature_flags", "tags",
-    ),
-    "serverbound": (
-        "settings", "custom_payload", "finish_configuration", "keep_alive",
-        "pong", "resource_pack_receive",
-    ),
-}
-
 JAVA_26_PLAY_PACKETS = {
-    "clientbound": MODERN_PLAY_PACKETS["clientbound"] + (
+    "clientbound": ("start_configuration",
         "sync_entity_position", "set_player_inventory", "set_cursor_item",
     ),
-    "serverbound": MODERN_PLAY_PACKETS["serverbound"] + ("player_input", "attack"),
+    "serverbound": ("configuration_acknowledged", "player_input", "attack"),
 }
 
 JAVA_26_CONFIGURATION_PACKETS = {
@@ -184,9 +158,8 @@ def build_table(fetch=fetch_json):
             "protocol": version_numbers[version],
             "source_version": source_version,
         }
-        extras = MODERN_PLAY_PACKETS if version == "1.20.2" else JAVA_26_PLAY_PACKETS
         play_packets = {
-            direction: names + extras[direction]
+            direction: names + JAVA_26_PLAY_PACKETS[direction]
             for direction, names in PLAY_PACKETS.items()
         }
         for direction, names in play_packets.items():
@@ -195,12 +168,8 @@ def build_table(fetch=fetch_json):
         if version in VERSION_SOURCES:
             entry["states"] = {}
             for state, packets in (
-                ("login", LOGIN_PACKETS if version == "1.20.2" else JAVA_26_LOGIN_PACKETS),
-                (
-                    "configuration",
-                    CONFIGURATION_PACKETS if version == "1.20.2"
-                    else JAVA_26_CONFIGURATION_PACKETS,
-                ),
+                ("login", JAVA_26_LOGIN_PACKETS),
+                ("configuration", JAVA_26_CONFIGURATION_PACKETS),
             ):
                 entry["states"][state] = {}
                 for direction, names in packets.items():

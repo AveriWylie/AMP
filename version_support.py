@@ -42,15 +42,13 @@ def load_support_manifest(path=SUPPORT_MANIFEST_PATH):
 
 
 def runnable_version_protocols():
-    """Return versions backed by verified adapters, plus the migration reference."""
+    """Return versions backed by verified protocol adapters."""
     manifest = load_support_manifest()
-    runnable = {
+    return {
         version: entry["protocol"]
         for version, entry in manifest["versions"].items()
         if entry["status"] == "supported"
     }
-    runnable[manifest["legacy_reference"]] = manifest["legacy_protocol"]
-    return runnable
 
 
 def pending_versions():

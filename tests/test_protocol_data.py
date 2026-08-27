@@ -22,7 +22,6 @@ def test_generated_table_records_pinned_source():
 
 def test_generated_versions_and_aliases():
     assert version_protocols() == {
-        "1.20.2": 764,
         "26.1": 775,
         "26.1.1": 775,
         "26.1.2": 775,
@@ -32,18 +31,6 @@ def test_generated_versions_and_aliases():
     assert packet_ids_for_protocol(775, "serverbound") == packet_ids(
         "26.1", "serverbound"
     )
-
-
-def test_1202_configuration_packet_tables():
-    assert packet_ids("1.20.2", "clientbound", state="configuration")[
-        "finish_configuration"
-    ] == 0x02
-    assert packet_ids_for_protocol(764, "serverbound", state="login")[
-        "login_acknowledged"
-    ] == 0x03
-    assert packet_ids_for_protocol(764, "serverbound", state="configuration")[
-        "finish_configuration"
-    ] == 0x02
 
 
 def test_packet_table_results_are_copies():

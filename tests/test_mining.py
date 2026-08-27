@@ -14,7 +14,7 @@ class FlatChunk:
 def test_bot_delegates_gameplay_actions_to_controller():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "Miner",
-        "version": "1.20.2", "game_mode": "creative", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "creative", "behavior_mode": "passive",
     })
 
     assert isinstance(bot._gameplay, GameplayController)
@@ -34,7 +34,7 @@ def test_mine_block_selects_reachable_face_and_queues_dig_last():
         "host": "localhost",
         "port": 25565,
         "username": "TestBot",
-        "version": "1.20.2",
+        "version": "26.1.2",
         "game_mode": "creative",
         "behavior_mode": "passive",
     })
@@ -60,12 +60,12 @@ def test_mine_block_rejects_target_without_reachable_standing_position():
 def test_survival_mining_selects_suitable_hotbar_tool_and_duration():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "1.20.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
     })
     bot._world_state["map"][(0, 0)] = FlatChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})
     bot._world_state["inventory"]["slots"][38] = {
-        "id": 799, "name": "diamond_pickaxe", "count": 1
+        "id": 939, "name": "diamond_pickaxe", "count": 1
     }
 
     assert bot.mine_block((2, 64, 2)) is True
@@ -78,13 +78,13 @@ def test_survival_mining_selects_suitable_hotbar_tool_and_duration():
 def test_survival_mining_swaps_best_tool_from_main_inventory():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "1.20.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
     })
     bot._world_state["map"][(0, 0)] = FlatChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})
     bot._world_state["inventory"]["selected_hotbar_slot"] = 4
     bot._world_state["inventory"]["slots"][10] = {
-        "id": 799, "name": "diamond_pickaxe", "count": 1
+        "id": 939, "name": "diamond_pickaxe", "count": 1
     }
 
     assert bot.mine_block((2, 64, 2)) is True

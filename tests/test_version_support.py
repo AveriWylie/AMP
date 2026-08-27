@@ -14,7 +14,6 @@ def test_checked_in_manifest_tracks_only_stable_26x_targets():
 
     assert manifest["target_primary"] == "26.2"
     assert manifest["primary"] is None
-    assert manifest["legacy_reference"] == "1.20.2"
     assert {
         version: (entry["protocol"], entry["family"], entry["status"])
         for version, entry in manifest["versions"].items()
@@ -31,7 +30,6 @@ def test_manifest_rejects_snapshot_targets(tmp_path):
     path.write_text(json.dumps({
         "primary": None,
         "target_primary": "26.3-snapshot-10",
-        "legacy_reference": "1.20.2",
         "versions": {
             "26.3-snapshot-10": {
                 "release_type": "snapshot",
@@ -51,7 +49,6 @@ def test_manifest_rejects_unverified_primary(tmp_path):
     path.write_text(json.dumps({
         "primary": "26.2",
         "target_primary": "26.2",
-        "legacy_reference": "1.20.2",
         "versions": {
             "26.2": {
                 "release_type": "release",
@@ -72,6 +69,5 @@ def test_runtime_versions_exclude_pending_targets():
         "26.1.1": 775,
         "26.1.2": 775,
         "26.2": 776,
-        "1.20.2": 764,
     }
     assert pending_versions() == ()

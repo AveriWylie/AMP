@@ -31,13 +31,10 @@ class ProtocolAdapterRegistry:
         self._adapters[family] = adapter
 
     def for_version(self, version):
-        if version == self._manifest.get("legacy_reference"):
-            family = self._manifest["legacy_family"]
-        else:
-            try:
-                family = self._manifest["versions"][version]["family"]
-            except KeyError as error:
-                raise ValueError(f"Unknown Minecraft version: {version}") from error
+        try:
+            family = self._manifest["versions"][version]["family"]
+        except KeyError as error:
+            raise ValueError(f"Unknown Minecraft version: {version}") from error
         try:
             return self._adapters[family]
         except KeyError as error:

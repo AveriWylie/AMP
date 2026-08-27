@@ -6,7 +6,6 @@ import connection
 from execution import Execute
 from gameplay import GameplayController
 from lifecycle import LifecycleManager
-from legacy_protocol import LegacyProtocolAdapter
 from java26_protocol import Java26ProtocolAdapter
 from model_clients import build_model_client
 from pathfinder import Pathfinder
@@ -47,8 +46,7 @@ class Bot:
     Function Header - Version to protocol map
     --------------------------------------------------------------------------------------------
     The handshake sends a protocol number, not a version string, and every packet ID is keyed
-    to that number. The generated table covers the pre-1.20.2 Login -> Play transition
-    and Minecraft 1.20.2's Login -> Configuration -> Play transition.
+    to that number.
     --------------------------------------------------------------------------------------------
     """
     # ------------------------------------------------------------------------------------------
@@ -123,14 +121,11 @@ class Bot:
         )
         adapter_registry = ProtocolAdapterRegistry()
         manifest = load_support_manifest()
-        if self._version == manifest["legacy_reference"]:
-            adapter = LegacyProtocolAdapter(self._version, self._connection, self.play_ids)
-        else:
-            adapter = Java26ProtocolAdapter(
-                manifest["versions"][self._version]["family"],
-                self._version,
-                self._connection,
-            )
+        adapter = Java26ProtocolAdapter(
+            manifest["versions"][self._version]["family"],
+            self._version,
+            self._connection,
+        )
         adapter_registry.register(adapter)
         self._protocol_adapter = adapter_registry.for_version(self._version)
         self._connection.set_protocol_adapter(self._protocol_adapter)

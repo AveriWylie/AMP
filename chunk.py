@@ -50,9 +50,8 @@ class Chunk:
                     state_map[state_id] = block["name"]
         return state_map
 
-    def __init__(self, payload, version="1.20.1", heightmaps=None):
-        self._modern_chunk_data = version == "1.20.2"
-        self._no_palette_size_prefix = version.startswith("26.")
+    def __init__(self, payload, version="26.1.2", heightmaps=None):
+        self._no_palette_size_prefix = True
         self._java26_heightmaps = heightmaps
         self._min_y = -64
         self._world_height = 384
@@ -95,10 +94,6 @@ class Chunk:
         else:
             self._hmap, offset = self._read_nbt(payload, 0)
             sections_end = len(payload)
-        if self._modern_chunk_data:
-            chunk_length = self._read_varint(payload, offset)
-            offset += self._varint_size(payload, offset)
-            sections_end = offset + chunk_length
         # standard world is 384 blocks tall (-64 to 320) = 24 sections
         # section_y 0 corresponds to y=-64, section_y 23 corresponds to y=304
         section_y = 0
