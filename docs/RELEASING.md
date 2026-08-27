@@ -5,7 +5,7 @@ a compatibility candidate, but it never publishes AMP automatically. See
 [Versioning](VERSIONING.md).
 
 Before the first PyPI release, register a pending Trusted Publisher for project
-`amp-minecraft` with owner `AveriWylie`, repository `AMP`, workflow
+`amp-mc` with owner `AveriWylie`, repository `AMP`, workflow
 `release.yml`, and environment `pypi`. No PyPI token is stored in GitHub.
 
 ## 1. Automated checks
@@ -13,16 +13,17 @@ Before the first PyPI release, register a pending Trusted Publisher for project
 From a clean checkout, install the development dependencies and run:
 
 ```bash
-python -m pip install -r requirements-lock.txt
+python -m pip install --require-hashes -r requirements-lock.txt
 python -m pip install --no-deps .
 python -m pytest
 python tools/sync_minecraft_data.py --check
 python tools/check_version_data.py
-python -m build
+python -m build --no-isolation
 ```
 
-Confirm that CI passes on every configured Python version. Review outstanding
-security and dependency-audit findings before continuing.
+Confirm that CI passes on every configured Python version, including the
+`audit` job that runs `pip-audit` against `requirements-lock.txt`. Review any
+outstanding security findings before continuing.
 
 ## 2. Human testing
 
@@ -68,8 +69,9 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
 
 1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
 2. Push the commit and tag. The release workflow verifies that the tag matches
-   `pyproject.toml`, builds once, and publishes the same artifacts to GitHub and
-   PyPI through Trusted Publishing.
+   `pyproject.toml`, runs the offline suite, and builds once. It publishes to
+   PyPI through Trusted Publishing and then attaches the same artifacts to the
+   GitHub release, so a failed PyPI upload leaves no published release behind.
 3. Confirm that both published artifacts contain the license and Minecraft
    runtime data. Confirm that the source distribution also contains the project
    documents and protocol fixtures.

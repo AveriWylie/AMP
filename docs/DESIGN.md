@@ -26,10 +26,9 @@ user goal
 - `amp/connection.py` owns sockets, framing, compression, encryption, keepalive
   handling, and the listener thread.
 - `amp/java26_protocol.py` owns Java 26 Login and Configuration states,
-  clientbound
-  decoding, and serverbound action encoding.
-- `amp/world_state.py` applies normalized protocol events and owns mutable world,
-  inventory, health, and entity state.
+  clientbound decoding, and serverbound action encoding.
+- `amp/world_state.py` applies normalized protocol events and owns mutable
+  world, inventory, health, and entity state.
 - `amp/pathfinder.py` reads world state and produces walkable coordinate paths.
 - `amp/gameplay.py` turns high-level actions into paths, inventory preparation,
   orientation, and executable interactions.

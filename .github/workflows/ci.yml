@@ -3,12 +3,22 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   offline-tests:
+    # Pushes already cover every commit, so the pull_request event runs
+    # this only for forks, whose pushes never reach this repository.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,18 +33,32 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-lock.txt
       - name: Install locked dependencies
-        run: python -m pip install -r requirements-lock.txt
+        run: python -m pip install --require-hashes -r requirements-lock.txt
       - name: Install AMP package
         run: python -m pip install --no-deps .
       - name: Run offline tests
         run: python -m pytest
       - name: Check generated Minecraft data
         if: matrix.python-version == '3.12'
-        run: |
-          python tools/sync_minecraft_data.py --check
-          python tools/check_version_data.py
+        run: python tools/check_version_data.py
+
+  audit:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: python -m pip install --require-hashes -r requirements-audit.txt
+      - name: Audit locked dependencies
+        run: pip-audit --requirement requirements-lock.txt --require-hashes --strict
 
   package:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -45,19 +69,22 @@ jobs:
           cache-dependency-path: requirements-lock.txt
       - name: Build distributions
         run: |
-          python -m pip install -r requirements-lock.txt
-          python -m build
+          python -m pip install --require-hashes -r requirements-lock.txt
+          python -m build --no-isolation
       - name: Test installed wheel outside checkout
         run: |
-          python -m venv --system-site-packages "$RUNNER_TEMP/amp-wheel"
-          "$RUNNER_TEMP/amp-wheel/bin/python" -m pip install \
-            --no-deps dist/*.whl
+          python -m venv "$RUNNER_TEMP/amp-wheel"
+          "$RUNNER_TEMP/amp-wheel/bin/python" -m pip install dist/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/amp-wheel/bin/amp" --help
           "$RUNNER_TEMP/amp-wheel/bin/amp-world" --help
           "$RUNNER_TEMP/amp-wheel/bin/python" -c \
             "from amp.version_support import runnable_version_protocols; assert runnable_version_protocols()"
-      - name: Check distribution contents
+      - name: Check wheel contents
+        run: unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
+      - name: Run the source distribution's test suite
         run: |
-          unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
-          tar -tzf dist/*.tar.gz | grep 'tests/fixtures/protocol/java-26.2.json'
+          mkdir -p "$RUNNER_TEMP/amp-sdist"
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP/amp-sdist" --strip-components=1
+          cd "$RUNNER_TEMP/amp-sdist"
+          python -m pytest
