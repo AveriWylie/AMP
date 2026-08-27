@@ -17,6 +17,7 @@ import sys
 import threading
 
 import pytest
+import connection as connection_module
 from bot import Bot
 from connection import Connection
 from lifecycle import LifecycleManager
@@ -64,6 +65,7 @@ def test_validation():
     assert not bot_bad._valid_flags["game_mode"]
     assert bot_bad._port == Bot.default_values["port"]
     assert bot_bad._game_mode == Bot.default_values["game_mode"]
+    assert bot_bad._executor._game_mode == Bot.default_values["game_mode"]
 
     # These three fields were passed valid values in the bad config, The assertion is
     # confirming that the validation loop (called after make bot calls init) only replaces the
@@ -72,6 +74,13 @@ def test_validation():
     assert bot_bad._host == "localhost"
     assert bot_bad._username == "TestBot"
     assert bot_bad._behavior_mode == "passive"
+
+
+def test_invalid_modes_do_not_reach_executor():
+    bot = _make_bot({"game_mode": "god_mode", "behavior_mode": "berserker"})
+
+    assert bot._executor._game_mode == Bot.default_values["game_mode"]
+    assert bot._executor._behavior_mode == Bot.default_values["behavior_mode"]
 
     # Empty config â€” everything replaced by defaults, we are making bot without helper here
     bot_empty = Bot({})
@@ -351,6 +360,19 @@ def test_disconnect_state():
         assert False, f"disconnect() raised on already-disconnected: {e}"
 
 
+def test_disconnect_closes_socket_before_login_completes():
+    closed = []
+    conn = Connection("localhost", 25565, "26.1.2", "TestBot", None, 775)
+    conn._socket = type("PendingSocket", (), {
+        "close": lambda self: closed.append(True),
+    })()
+
+    conn.disconnect()
+
+    assert closed == [True]
+    assert conn._socket is None
+
+
 
 # --------------------------------------------------------------------------------------------
 # 10. Double connect guard
@@ -372,6 +394,28 @@ def test_double_connect_guard():
     # Clean up
     conn._connected = False
     fake_sock.close()
+
+
+def test_connect_closes_socket_when_tcp_connect_fails(monkeypatch):
+    class FailingSocket:
+        def __init__(self):
+            self.closed = False
+
+        def connect(self, address):
+            raise ConnectionError("unreachable")
+
+        def close(self):
+            self.closed = True
+
+    failed_socket = FailingSocket()
+    monkeypatch.setattr(connection_module.socket, "socket", lambda *args: failed_socket)
+    conn = Connection("localhost", 25565, "26.1.2", "TestBot", None, 775)
+
+    with pytest.raises(ConnectionError, match="unreachable"):
+        conn.connect()
+
+    assert failed_socket.closed is True
+    assert conn._socket is None
 
 
 
