@@ -1,8 +1,14 @@
 # AMP - Agentic Minecraft Player
 
-AMP is a Python Minecraft bot with guided and autonomous planning modes. It connects directly to a Minecraft Java Edition server, implements the network protocol over raw TCP, builds live world state from chunk and entity packets, and converts natural-language goals into validated gameplay actions.
+AMP is a Python Minecraft bot with guided and autonomous planning modes. It
+connects directly to a Minecraft Java Edition server, implements the network
+protocol over raw TCP, builds live world state from chunk and entity packets,
+and converts natural-language goals into validated gameplay actions.
 
-AMP 1.0 supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct servers running in offline mode. Each advertised version has generated protocol data, fixture coverage, and live gameplay verification. Historical protocol implementations are available only through Git history.
+AMP 1.0 supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct
+servers running in offline mode. Each advertised version has generated protocol
+data, fixture coverage, and live gameplay verification. Historical protocol
+implementations are available only through Git history.
 
 | Java version | Protocol family | Offline suite | Live gameplay |
 | --- | --- | --- | --- |
@@ -19,7 +25,8 @@ AMP requires Python 3.10 or later.
 python -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and configure a model provider. Shell, CI, and deployment environment variables take precedence over `.env`.
+Copy `.env.example` to `.env` and configure a model provider. Shell, CI, and
+deployment environment variables take precedence over `.env`.
 
 Anthropic is the default:
 
@@ -38,7 +45,9 @@ OPENAI_MODEL=your-model-name
 # OPENAI_API_KEY=optional-for-local-servers
 ```
 
-This path supports local servers such as Ollama, LM Studio, and vLLM without an API key. Remote endpoints must use HTTPS; HTTP is accepted only for loopback development servers.
+This path supports local servers such as Ollama, LM Studio, and vLLM without an
+API key. Remote endpoints must use HTTPS; HTTP is accepted only for loopback
+development servers.
 
 ## Run
 
@@ -48,35 +57,57 @@ Start AMP with:
 python cli.py
 ```
 
-To see AMP in a copy of an existing single-player world without Microsoft authentication, use the documented [local-world runner](docs/USAGE.md). It configures and starts an official offline-mode dedicated server, connects AMP, and shuts both down cleanly.
+To see AMP in a copy of an existing single-player world without Microsoft
+authentication, use the documented [local-world runner](docs/USAGE.md). It
+configures and starts an official offline-mode dedicated server, connects AMP,
+and shuts both down cleanly.
 
-The CLI collects the server host, port, username, Minecraft version, game mode, and behavior label before connecting. It defaults to the latest supported release, Java 26.2.
+The CLI collects the server host, port, username, Minecraft version, game mode,
+and behavior label before connecting. It defaults to the latest supported
+release, Java 26.2.
 
-- Guided mode accepts 1 instruction at a time, plans it, and waits for the next instruction.
-- Autonomous mode accepts a high-level goal and replans after each action batch for up to 20 steps. New instructions can be injected while it runs.
+- Guided mode accepts 1 instruction at a time, plans it, and waits for the next
+  instruction.
+- Autonomous mode accepts a high-level goal and replans after each action batch
+  for up to 20 steps. New instructions can be injected while it runs.
 
-Survival and creative are the implemented gameplay modes. The CLI currently accepts additional game-mode and behavior labels, but they do not yet have distinct mechanics or policies; these are tracked in [Future work](docs/FUTURE.md).
+Survival and creative are the implemented gameplay modes. The CLI currently
+accepts additional game-mode and behavior labels, but they do not yet have
+distinct mechanics or policies; these are tracked in [Future
+work](docs/FUTURE.md).
 
 ## Implemented gameplay
 
-- A* pathfinding over loaded chunk data, including flat movement, 1-block steps, and 1-block drops
-- Position, health, food, chunks, block updates, player inventory, selected hotbar slot, and nearby entity tracking
-- Creative and survival mining with inventory tool selection and hardness-based timing
+- A* pathfinding over loaded chunk data, including flat movement, 1-block steps,
+  and 1-block drops
+- Position, health, food, chunks, block updates, player inventory, selected
+  hotbar slot, and nearby entity tracking
+- Creative and survival mining with inventory tool selection and hardness-based
+  timing
 - Inventory-aware block placement with support-face selection
 - Attacks against tracked entities already within reach
 - Guided and autonomous model planning with validated command objects
 - Server-confirmed mining and placement results returned to the autonomous loop
-- Connection recovery, keepalive handling, bounded packet frames, and bounded decompression
+- Connection recovery, keepalive handling, bounded packet frames, and bounded
+  decompression
 
 ## Current limits
 
-- Microsoft-authenticated online-mode servers and Java Realms are disabled in AMP 1.0. The implementation is retained, but Minecraft Services rejects newly registered client IDs unless Microsoft approves them. See [Authentication status](docs/AUTHENTICATION.md).
-- World decoding and navigation target the standard Java 26 Overworld height range.
-- Crafting, container interaction, and general inventory management are not implemented.
-- Navigation does not swim, climb, open doors, bridge gaps, or continuously replan around moving obstacles.
+- Microsoft-authenticated online-mode servers and Java Realms are disabled in
+  AMP 1.0. The implementation is retained, but Minecraft Services rejects newly
+  registered client IDs unless Microsoft approves them. See [Authentication
+  status](docs/AUTHENTICATION.md).
+- World decoding and navigation target the standard Java 26 Overworld height
+  range.
+- Crafting, container interaction, and general inventory management are not
+  implemented.
+- Navigation does not swim, climb, open doors, bridge gaps, or continuously
+  replan around moving obstacles.
 - Combat does not pursue moving or distant targets.
-- Mining timing does not account for enchantments, status effects, or underwater and airborne penalties.
-- Live behavior with real hosted model providers has not been validated as part of the offline test suite.
+- Mining timing does not account for enchantments, status effects, or underwater
+  and airborne penalties.
+- Live behavior with real hosted model providers has not been validated as part
+  of the offline test suite.
 
 The complete post-1.0 roadmap is maintained in [Future work](docs/FUTURE.md).
 
@@ -85,9 +116,9 @@ The complete post-1.0 roadmap is maintained in [Future work](docs/FUTURE.md).
 ```text
 cli.py            interactive setup and mode selection
 bot.py            public facade, dependency composition, planning coordination
-connection.py     TCP transport, framing, compression, encryption, keepalive listener
-java26_protocol.py Java 26 login/configuration, packet decoding, and action encoding
-world_state.py    clientbound packet dispatch and live world/inventory/entity state
+connection.py     TCP framing, compression, encryption, and keepalive
+java26_protocol.py Java 26 login, decoding, and action encoding
+world_state.py    live world, inventory, and entity state
 gameplay.py       movement, mining, placement, and combat coordination
 lifecycle.py      connection recovery and execution-worker lifecycle
 chunk.py          chunk, NBT, palette, and block-state decoding
@@ -98,9 +129,17 @@ model_clients.py  model-client contract and provider adapters
 command_data.py   shared validation contract for planner and executor actions
 ```
 
-The planner receives a bounded world snapshot and returns JSON command objects. `command_data.py` validates model output before `gameplay.py` resolves high-level actions such as `go_to`, `find`, `mine`, `place`, and `attack`. `execution.py` serializes the resulting low-level actions and waits for observable world-state changes where server confirmation is available.
+The planner receives a bounded world snapshot and returns JSON command objects.
+`command_data.py` validates model output before `gameplay.py` resolves
+high-level actions such as `go_to`, `find`, `mine`, `place`, and `attack`.
+`execution.py` serializes the resulting low-level actions and waits for
+observable world-state changes where server confirmation is available.
 
-Provider-specific API shapes stay in `model_clients.py`. The Anthropic adapter uses the official [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python). The OpenAI-compatible adapter follows the documented [`/chat/completions`](https://developers.openai.com/api/reference/cli/resources/chat/subresources/completions) message and response shape using Python's standard library.
+Provider-specific API shapes stay in `model_clients.py`. The Anthropic adapter
+uses the official [Anthropic Python
+SDK](https://github.com/anthropics/anthropic-sdk-python). The OpenAI-compatible
+adapter follows the OpenAI-compatible Chat Completions message and response
+shape using Python's standard library.
 
 ## Tests
 
@@ -111,13 +150,21 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-The live connection test skips automatically when no server is listening on `localhost:25565`. Dedicated Java 26 checks cover movement, creative mining, survival mining, inventory handling, placement, and combat against a local offline-mode server with RCON enabled. The complete matrix has been run for every version listed above.
+The live connection test skips automatically when no server is listening on
+`localhost:25565`. Dedicated Java 26 checks cover movement, creative mining,
+survival mining, inventory handling, placement, and combat against a local
+offline-mode server with RCON enabled. The complete matrix has been run for
+every version listed above.
 
 See [Testing](docs/TESTING.md) for the commands and test boundaries.
 
 ## Generated Minecraft data
 
-AMP checks in compact protocol, block, item, and entity registries generated from a pinned [PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data) revision. Running AMP does not require Node.js, network access, or the upstream dataset.
+AMP checks in compact protocol, block, item, and entity registries generated
+from a pinned
+[PrismarineJS/minecraft-data](https://github.com/PrismarineJS/minecraft-data)
+revision. Running AMP does not require Node.js, network access, or the upstream
+dataset.
 
 Regenerate and verify the data with:
 
@@ -127,7 +174,8 @@ python tools/sync_minecraft_data.py --check
 python -m pytest
 ```
 
-See [Third-party notices](docs/THIRD_PARTY_NOTICES.md) for attribution and licensing details.
+See [Third-party notices](docs/NOTICES.md) for attribution and
+licensing details.
 
 ## Project documents
 
@@ -137,4 +185,4 @@ See [Third-party notices](docs/THIRD_PARTY_NOTICES.md) for attribution and licen
 - [Testing](docs/TESTING.md)
 - [Authentication status](docs/AUTHENTICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
-- [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
+- [Third-party notices](docs/NOTICES.md)
