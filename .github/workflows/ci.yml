@@ -67,10 +67,8 @@ jobs:
           "$RUNNER_TEMP/amp-wheel/bin/amp-world" --help
           "$RUNNER_TEMP/amp-wheel/bin/python" -c \
             "from amp.version_support import runnable_version_protocols; assert runnable_version_protocols()"
-      - name: Check distribution contents
-        run: |
-          unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
-          tar -tzf dist/*.tar.gz | grep 'tests/fixtures/protocol/java-26.2.json'
+      - name: Check wheel contents
+        run: unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
       - name: Run the source distribution's test suite
         run: |
           mkdir -p "$RUNNER_TEMP/amp-sdist"
