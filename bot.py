@@ -156,7 +156,7 @@ class Bot:
         # supplied by a shell, CI runner, or deployment platform.
         load_dotenv()
         model_client = build_model_client(os.environ)
-        if model_client is None:
+        if model_client is None and not config.get("model_optional", False):
             print("Warning: model provider is not configured, planner will not function")
 
         self._planner = Planner(self._world_state, model_client)

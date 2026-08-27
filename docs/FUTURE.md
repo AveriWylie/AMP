@@ -141,8 +141,8 @@ compatibility promise or delivery commitment.
 
 ## User and operator experience
 
-- Add safe world export and merge tooling. AMP 1.0 includes one cross-platform
-  Python runner that operates on an isolated copy of a Java single-player save.
+- Add selective world merge and backup-management tooling. AMP 1.0 includes a
+  backup-first whole-world copy-back workflow.
 - Add non-interactive configuration through command-line arguments and a
   validated configuration file.
 - Replace free-form configuration strings with explicit validation and

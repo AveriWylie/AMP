@@ -2,34 +2,29 @@
 
 AMP cannot connect directly to a single-player **Open to LAN** session because
 the integrated Java server requires a Microsoft-authenticated session. AMP 1.0
-intentionally disables that authentication path pending approval from Minecraft
+does not advertise that authentication path pending approval from Minecraft
 Services.
 
-The local-world runner uses the practical alternative: it copies a single-player
-save, runs the copy in the official dedicated Java server with authentication
-disabled, and connects both the human player and AMP to that server. The
-original save is never opened or modified by the script.
+The local-world runner copies a single-player save, hosts the copy with Mojang's
+dedicated Java server, and connects both the human player and AMP. One Python
+command owns setup, server startup, interactive planning, saving, and shutdown.
 
-## One-command setup
+## Requirements
 
-Requirements:
-
-- Minecraft Java Edition and a local world created with a version supported by
-  AMP
+- Minecraft Java Edition and a local world created with a supported version
 - Python 3.10 or later with AMP's dependencies installed
-- A JDK compatible with that Minecraft server release
+- A JDK compatible with the selected Minecraft server release
 - Java available on `PATH`, or its path supplied with `--java`
+- A configured model provider for guided or autonomous mode
 
-Close the world in Minecraft before copying it. From the AMP repository, run
-the command for your shell.
+Close the world in Minecraft before starting AMP.
 
 Windows PowerShell:
 
 ```powershell
 python tools\run_local_world.py `
     --world "$env:APPDATA\.minecraft\saves\My World" `
-    --version 26.2 --port 25576 `
-    --operator YourMinecraftName --accept-eula
+    --version 26.2 --port 25576
 ```
 
 Linux:
@@ -37,101 +32,121 @@ Linux:
 ```bash
 python tools/run_local_world.py \
     --world "$HOME/.minecraft/saves/My World" \
-    --version 26.2 \
-    --port 25576 \
-    --operator YourMinecraftName \
-    --accept-eula
+    --version 26.2 --port 25576
 ```
 
-`--accept-eula` confirms that the operator has read and accepts the
-[Minecraft EULA](https://aka.ms/MinecraftEULA). The runner will not write
-`eula=true` without that explicit flag.
+## First startup
 
-The first run downloads the matching official server JAR from Mojang, verifies
-its published SHA-1 digest, and copies the save. When the console says AMP is
-online:
+The runner asks the following questions when their answers are not already
+configured:
+
+1. Accept the [Minecraft EULA](https://aka.ms/MinecraftEULA). This is asked only
+   when creating a world profile. Later runs reuse its `eula=true` file.
+2. Choose whether to allow operator commands for the human player. This is the
+   dedicated-server equivalent of enabling commands or cheats in Minecraft.
+3. If enabled, enter the human player's exact in-game username. Offline-mode
+   identity is case-sensitive, so spelling and capitalization must match.
+4. Select AMP's mode. Press Enter for the default, `guided`.
+5. Select AMP's gameplay mode. Press Enter for the default, `survival`.
+
+After the operator question, pressing Enter twice accepts the two AMP defaults
+and starts the server. The runner prints both paths before it changes anything:
+
+```text
+Source world:      .../.minecraft/saves/My World
+Active world copy: .../.tmp/local-world-My-World-<identity>-26.2/world
+```
+
+When AMP connects:
 
 1. Launch the same Minecraft Java version.
 2. Select **Multiplayer**, then **Direct Connection**.
 3. Join `localhost:25576`.
-4. AMP appears as a player named `AMP`.
-5. Enter instructions in the runner terminal.
-6. Enter `quit` to disconnect AMP and stop the dedicated server.
+4. Enter guided instructions in the runner terminal.
+5. Enter `quit` to disconnect AMP and stop the server.
 
-Later runs reuse the dedicated-server copy, including changes made while playing
-there. To discard that copy and recopy the original save, close Minecraft and
-add `--refresh-world-copy`. This permanently removes only the copy under AMP's
-ignored `.tmp` directory; it does not remove the source save.
+Autonomous mode asks for a high-level goal instead. Idle mode only connects AMP
+for a smoke test and does not require a model provider.
+
+## Shutdown and copy-back
+
+AMP first disconnects and asks the Java server to save every dimension and stop.
+The runner then asks:
+
+```text
+Copy the played server world back over the source world? [Y/n]:
+```
+
+Yes is the default. Before replacing the source, AMP preserves it beside the
+save as a timestamped backup:
+
+```text
+My World.amp-backup-20260827-120000
+```
+
+The server copy also remains under `.tmp`. If copying or renaming fails, AMP
+restores the original source path instead of leaving it missing.
+
+## World isolation and reuse
+
+Each source path and Minecraft version gets a distinct profile. Two 26.2 worlds
+therefore cannot reuse each other's server copy. Later runs of the same source
+and version reuse its active copy, operator list, EULA acceptance, and advanced
+server properties.
+
+Use `--refresh-world-copy` to discard the active copy and import the current
+source again. This does not delete the source world.
+
+## Model configuration
+
+Guided and autonomous modes validate the model configuration before copying the
+world, downloading Java server data, or starting Java. Missing configuration
+produces an actionable startup error. Provider variables are documented in the
+root README.
+
+Use idle mode when only testing the Minecraft connection:
+
+```bash
+python tools/run_local_world.py --world PATH --mode idle
+```
 
 ## Environment variables
 
-Parameters override these environment variables when both are supplied.
+Command-line arguments override environment variables.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `AMP_WORLD_PATH` | none | Source Java save path |
-| `AMP_MC_VERSION` | `26.2` | Supported Minecraft Java version |
-| `AMP_SERVER_PORT` | `25565` | Local dedicated-server port |
-| `AMP_BOT_USERNAME` | `AMP` | Name displayed above the bot |
-| `AMP_GAME_MODE` | `survival` | `survival` or `creative` |
-| `AMP_MODE` | `guided` | `guided`, `autonomous`, or `idle` |
-| `AMP_OPERATOR_USERNAME` | none | Human player granted commands |
-| `AMP_JAVA_PATH` | `java` on `PATH` | Compatible Java executable |
+| Variable                | Default  | Purpose                           |
+|-------------------------|----------|-----------------------------------|
+| `AMP_WORLD_PATH`        | none     | Source Java save path             |
+| `AMP_MC_VERSION`        | `26.2`   | Minecraft Java version            |
+| `AMP_SERVER_PORT`       | `25565`  | Local server port                 |
+| `AMP_BOT_USERNAME`      | `AMP`    | Bot's displayed username          |
+| `AMP_BOT_GAME_MODE`     | prompted | AMP survival or creative behavior |
+| `AMP_MODE`              | prompted | `guided`, `autonomous`, or `idle` |
+| `AMP_OPERATOR_USERNAME` | prompted | Exact human username for commands |
+| `AMP_JAVA_PATH`         | `java`   | Compatible Java executable        |
 
-For example, a reusable PowerShell configuration is:
+## Non-interactive use
 
-```powershell
-$env:AMP_WORLD_PATH = "$env:APPDATA\.minecraft\saves\My World"
-$env:AMP_MC_VERSION = "26.2"
-$env:AMP_SERVER_PORT = "25576"
-$env:AMP_BOT_USERNAME = "AMP"
-$env:AMP_OPERATOR_USERNAME = "YourMinecraftName"
-$env:AMP_MODE = "guided"
-$env:AMP_JAVA_PATH = "C:\Program Files\Java\jdk-25\bin\java.exe"
-python tools\run_local_world.py --accept-eula
-```
-
-The equivalent Bash configuration is:
+Automation can supply every decision explicitly:
 
 ```bash
-export AMP_WORLD_PATH="$HOME/.minecraft/saves/My World"
-export AMP_MC_VERSION=26.2
-export AMP_SERVER_PORT=25576
-export AMP_BOT_USERNAME=AMP
-export AMP_OPERATOR_USERNAME=YourMinecraftName
-export AMP_MODE=guided
-export AMP_JAVA_PATH=/usr/lib/jvm/jdk-25/bin/java
-python tools/run_local_world.py --accept-eula
+python tools/run_local_world.py \
+    --world PATH \
+    --version 26.2 \
+    --port 25576 \
+    --operator ExactHumanName \
+    --mode guided \
+    --amp-game-mode survival \
+    --accept-eula \
+    --copy-back \
+    --non-interactive
 ```
 
-Guided mode is the default and requires a configured model provider. Autonomous
-mode accepts a high-level goal and replans between action batches. Idle mode is
-only a connection smoke test and does not require a model provider:
+`--accept-eula` is required only if that world profile has no accepted EULA.
+Without `--copy-back`, a non-interactive run leaves the source untouched.
 
-```bash
-python tools/run_local_world.py --mode idle --world PATH --accept-eula
-```
+## Security boundary
 
-## What the runner does
-
-The runner performs the following sequence:
-
-1. Validates that the selected source contains `level.dat`.
-2. Copies it to `.tmp/local-world-<version>/world` if no server copy exists.
-3. Downloads and verifies the official server JAR when absent.
-4. Writes `eula=true` after explicit acceptance.
-5. Updates only AMP-managed properties and preserves other server settings.
-6. Adds the optional human username to `ops.json` with permission level 4.
-7. Starts the server, connects AMP, and enters the selected planning mode.
-8. On exit or failure, disconnects AMP and asks the server to save and stop.
-
-## Security and data boundaries
-
-An offline-mode server does not verify player identities. The runners bind it to
-`127.0.0.1`, so only clients on the same computer can reach it. Do not change
-that binding or expose the port to the internet: anyone who can reach an
-offline-mode server can choose another player's username.
-
-The server copy becomes a separate world after its first run. Changes are not
-synchronized back into the original single-player save. Back up any world that
-matters before moving or merging save directories manually.
+The server binds to `127.0.0.1`, so only clients on the same computer can reach
+it. Do not expose an offline-mode server to the internet: it does not verify
+player identities, so a reachable client could claim another player's name.
