@@ -33,7 +33,10 @@
       "protocol": 775,
       "data_version": 4790,
       "family": "java-26.1",
-      "status": "pending"
+      "status": "supported",
+      "offline_verified": true,
+      "live_verified": true,
+      "realm_verified": false
     },
     "26.2": {
       "release_type": "release",

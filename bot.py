@@ -7,12 +7,13 @@ from execution import Execute
 from gameplay import GameplayController
 from lifecycle import LifecycleManager
 from legacy_protocol import LegacyProtocolAdapter
+from java26_protocol import Java26ProtocolAdapter
 from model_clients import build_model_client
 from pathfinder import Pathfinder
 from planner import Planner
 from protocol_adapters import ProtocolAdapterRegistry
 from protocol_data import packet_ids_for_protocol
-from version_support import pending_versions, runnable_version_protocols
+from version_support import load_support_manifest, pending_versions, runnable_version_protocols
 from world_state import WorldStateTracker
 from dotenv import load_dotenv
 
@@ -38,7 +39,7 @@ class Bot:
                       "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
                       "version": set(version_protocol)}
 
-    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "1.20.2",
+    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "26.1.2",
         "game_mode": "survival", "behavior_mode": "passive"}
 
     """
@@ -119,9 +120,16 @@ class Bot:
             protocol_version=protocol,
         )
         adapter_registry = ProtocolAdapterRegistry()
-        adapter_registry.register(
-            LegacyProtocolAdapter(self._version, self._connection, self.play_ids)
-        )
+        manifest = load_support_manifest()
+        if self._version == manifest["legacy_reference"]:
+            adapter = LegacyProtocolAdapter(self._version, self._connection, self.play_ids)
+        else:
+            adapter = Java26ProtocolAdapter(
+                manifest["versions"][self._version]["family"],
+                self._version,
+                self._connection,
+            )
+        adapter_registry.register(adapter)
         self._protocol_adapter = adapter_registry.for_version(self._version)
         self._connection.set_protocol_adapter(self._protocol_adapter)
         self._world_tracker = WorldStateTracker(

@@ -32,6 +32,7 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=25565)
     parser.add_argument("--rcon-port", type=int, default=25575)
     parser.add_argument("--username", default="AMPMovementCheck")
+    parser.add_argument("--version", default="26.1.2")
     args = parser.parse_args(argv)
     password = os.environ.get("MC_RCON_PASSWORD")
     if not password:
@@ -41,7 +42,7 @@ def main(argv=None):
         "host": args.host,
         "port": args.port,
         "username": args.username,
-        "version": "1.20.2",
+        "version": args.version,
         "game_mode": "creative",
         "behavior_mode": "passive",
     })

@@ -1,4 +1,4 @@
-"""Verify full-inventory survival block placement on vanilla 1.20.2."""
+"""Verify full-inventory survival block placement on vanilla Java."""
 
 import argparse
 import math
@@ -15,6 +15,7 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=25565)
     parser.add_argument("--rcon-port", type=int, default=25575)
     parser.add_argument("--username", default="AMPPlacement")
+    parser.add_argument("--version", default="26.1.2")
     args = parser.parse_args(argv)
     password = os.environ.get("MC_RCON_PASSWORD")
     if not password:
@@ -25,7 +26,7 @@ def main(argv=None):
 
     bot = Bot({
         "host": args.host, "port": args.port, "username": args.username,
-        "version": "1.20.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": args.version, "game_mode": "survival", "behavior_mode": "passive",
     })
     target = None
     try:

@@ -23,6 +23,11 @@ def load_support_manifest(path=SUPPORT_MANIFEST_PATH):
             raise ValueError(f"version {version} has no protocol family")
         if entry.get("status") not in VALID_STATUSES:
             raise ValueError(f"version {version} has invalid support status")
+        if entry.get("status") == "supported" and not (
+            entry.get("offline_verified") is True
+            and entry.get("live_verified") is True
+        ):
+            raise ValueError(f"supported version {version} lacks verification evidence")
 
     target_primary = manifest.get("target_primary")
     if target_primary not in versions:

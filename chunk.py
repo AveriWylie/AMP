@@ -52,6 +52,7 @@ class Chunk:
 
     def __init__(self, payload, version="1.20.1", heightmaps=None):
         self._modern_chunk_data = version == "1.20.2"
+        self._no_palette_size_prefix = version.startswith("26.")
         self._java26_heightmaps = heightmaps
         self._min_y = -64
         self._world_height = 384
@@ -109,8 +110,8 @@ class Chunk:
             if offset + 3 >= len(payload):
                 break
 
-            # skip block count, not needed, using bits_per_entry
-            offset += 2
+            # Java 26 adds a fluid count after the solid-block count.
+            offset += 4 if self._no_palette_size_prefix else 2
             bits_per_entry = payload[offset]
             offset += 1
             # bits_per_entry = 0 means single valued, entire section is one block type
@@ -121,7 +122,8 @@ class Chunk:
                 state_id = self._read_varint(payload, offset)
                 # skip state id, and data_length (given bits per entry) in payload
                 offset += self._varint_size(payload, offset)
-                offset += self._varint_size(payload, offset)
+                if not self._no_palette_size_prefix:
+                    offset += self._varint_size(payload, offset)
                 # store as single-value section
                 self._sections[section_y] = {
                     "bits_per_entry": 0,
@@ -132,10 +134,13 @@ class Chunk:
 
             else:
                 # clamp bits_per_entry to minimum of 4 or direct mode
-                effective_bits = max(4, bits_per_entry) if bits_per_entry < 15 else bits_per_entry
+                effective_bits = max(4, bits_per_entry) if bits_per_entry < 9 else bits_per_entry
                 palette, offset = self._read_palette(payload, offset, bits_per_entry)
-                data_length = self._read_varint(payload, offset)
-                offset += self._varint_size(payload, offset)
+                if self._no_palette_size_prefix:
+                    data_length = (4096 + (64 // effective_bits) - 1) // (64 // effective_bits)
+                else:
+                    data_length = self._read_varint(payload, offset)
+                    offset += self._varint_size(payload, offset)
 
                 if data_length == 0:
                     self._sections[section_y] = {
@@ -146,6 +151,12 @@ class Chunk:
                     }
 
                 else:
+                    if offset + data_length * 8 > sections_end:
+                        raise ValueError(
+                            "Truncated block-state array "
+                            f"in section {section_y} (bits={bits_per_entry}, "
+                            f"longs={data_length}, offset={offset}, end={sections_end})"
+                        )
                     longs = struct.unpack_from(f">{data_length}q", payload, offset)
                     offset += data_length * 8
                     self._sections[section_y] = {
@@ -166,17 +177,25 @@ class Chunk:
             # bookkeeping, not data extraction.
             if biome_bits == 0:
                 offset += self._varint_size(payload, offset)
-                offset += self._varint_size(payload, offset)
-
-            else:
-                biome_palette_length = self._read_varint(payload, offset)
-                offset += self._varint_size(payload, offset)
-
-                for _ in range(biome_palette_length):
+                if not self._no_palette_size_prefix:
                     offset += self._varint_size(payload, offset)
 
-                biome_data_length = self._read_varint(payload, offset)
-                offset += self._varint_size(payload, offset)
+            else:
+                if biome_bits < 4:
+                    biome_palette_length = self._read_varint(payload, offset)
+                    offset += self._varint_size(payload, offset)
+
+                    for _ in range(biome_palette_length):
+                        offset += self._varint_size(payload, offset)
+
+                if self._no_palette_size_prefix:
+                    effective_biome_bits = max(1, biome_bits)
+                    biome_data_length = (
+                        64 + (64 // effective_biome_bits) - 1
+                    ) // (64 // effective_biome_bits)
+                else:
+                    biome_data_length = self._read_varint(payload, offset)
+                    offset += self._varint_size(payload, offset)
                 offset += biome_data_length * 8
 
             section_y += 1
@@ -334,11 +353,16 @@ class Chunk:
     --------------------------------------------------------------------------------------------
     """
     def _read_palette(self, payload, offset, bits_per_entry):
-        if bits_per_entry >= 15:
+        if bits_per_entry >= 9:
             # direct mode -> no palette
             return None, offset
 
         palette_length = self._read_varint(payload, offset)
+        if palette_length > 4096:
+            raise ValueError(
+                f"Invalid block palette length {palette_length} "
+                f"for {bits_per_entry} bits at offset {offset}"
+            )
         offset += self._varint_size(payload, offset)
         palette = []
 

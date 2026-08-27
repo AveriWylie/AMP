@@ -44,7 +44,7 @@ def test_java26_health_and_block_updates_are_normalized():
 
 def test_java26_chunk_wrapper_decodes_section_data():
     adapter, tracker = setup_world()
-    section = struct.pack(">h", 0) + b"\x00\x00\x00\x00\x00\x00"
+    section = struct.pack(">hh", 0, 0) + b"\x00\x00\x00\x00"
     sections = section * 24
     payload = struct.pack(">ii", 2, -3) + b"\x00" + Connection._encode_varint(len(sections)) + sections
 
