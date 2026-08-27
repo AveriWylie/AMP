@@ -228,10 +228,10 @@ def resolve_startup(args, input_fn=input, output_fn=print):
 def validate_model_configuration(mode):
     if mode == "idle":
         return
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
     from amp.model_clients import build_model_client
 
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
     try:
         client = build_model_client(os.environ)
     except ValueError as error:

@@ -14,7 +14,7 @@ from amp.protocol_adapters import ProtocolAdapterRegistry
 from amp.protocol_data import packet_ids_for_protocol
 from amp.version_support import load_support_manifest, pending_versions, runnable_version_protocols
 from amp.world_state import WorldStateTracker
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 """
 --------------------------------------------------------------------------------------------
@@ -151,8 +151,9 @@ class Bot:
             (self._username, self._host, self._port),
         )
         # Load local development credentials without overriding environment variables
-        # supplied by a shell, CI runner, or deployment platform.
-        load_dotenv()
+        # supplied by a shell, CI runner, or deployment platform. Search from the
+        # working directory: the package lives in site-packages once installed.
+        load_dotenv(find_dotenv(usecwd=True))
         model_client = build_model_client(os.environ)
         if model_client is None and not config.get("model_optional", False):
             print("Warning: model provider is not configured, planner will not function")

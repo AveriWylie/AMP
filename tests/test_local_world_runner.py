@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from datetime import datetime
 
@@ -59,6 +60,26 @@ def test_world_profile_keeps_case_on_case_sensitive_platforms(tmp_path, monkeypa
         return world_profile(path, "26.2", tmp_path).name.split("-")[-2]
 
     assert identity(world) != identity(tmp_path / "my world")
+
+
+def test_validate_model_configuration_reads_env_from_working_directory(
+    tmp_path, monkeypatch
+):
+    (tmp_path / ".env").write_text(
+        "AMP_MODEL_PROVIDER=openai-compatible\n"
+        "OPENAI_BASE_URL=https://example.invalid/v1\n"
+        "OPENAI_MODEL=test-model\n",
+        encoding="utf-8",
+    )
+    for name in (
+        "AMP_MODEL_PROVIDER", "OPENAI_BASE_URL", "OPENAI_MODEL", "ANTHROPIC_API_KEY"
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    run_local_world.validate_model_configuration("guided")
+
+    assert os.environ["AMP_MODEL_PROVIDER"] == "openai-compatible"
 
 
 def test_update_properties_preserves_unmanaged_settings(tmp_path):
