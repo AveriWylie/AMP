@@ -1,6 +1,7 @@
 """Provider adapters that normalize model completion APIs to plain text."""
 
 import json
+import unicodedata
 from ipaddress import ip_address
 from typing import Mapping, Protocol
 from urllib.error import HTTPError, URLError
@@ -72,7 +73,7 @@ class OpenAICompatibleModelClient:
     def complete(self, system, messages, max_tokens):
         payload = json.dumps({
             "model": self._model,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
             "messages": [{"role": "system", "content": system}, *messages],
         }).encode("utf-8")
         headers = {"Content-Type": "application/json"}
@@ -92,8 +93,24 @@ class OpenAICompatibleModelClient:
             return content.strip()
         except ModelClientError:
             raise
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, UnicodeError,
-                KeyError, IndexError, TypeError) as error:
+        except HTTPError as error:
+            try:
+                body = error.read(self.MAX_RESPONSE_BYTES).decode(
+                    "utf-8", errors="replace"
+                )
+                message = json.loads(body).get("error", {}).get("message")
+            except (AttributeError, TypeError, ValueError):
+                message = None
+            if not isinstance(message, str) or not message.strip():
+                message = error.reason or "request rejected"
+            message = "".join(
+                character
+                for character in str(message)
+                if not unicodedata.category(character).startswith("C")
+            )[:500]
+            raise ModelClientError(f"HTTP {error.code}: {message}") from error
+        except (URLError, TimeoutError, OSError, ValueError, UnicodeError, KeyError,
+                IndexError, TypeError) as error:
             raise ModelClientError(
                 f"Invalid OpenAI-compatible response: {error.__class__.__name__}"
             ) from error

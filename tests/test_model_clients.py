@@ -1,7 +1,9 @@
 """Provider adapter contract tests."""
 
 import json
+from io import BytesIO
 from types import SimpleNamespace
+from urllib.error import HTTPError
 
 import pytest
 
@@ -91,7 +93,7 @@ def test_openai_compatible_adapter_normalizes_chat_completion(monkeypatch):
     assert request.get_header("Authorization") == "Bearer test-key"
     assert json.loads(request.data) == {
         "model": "local-model",
-        "max_tokens": 128,
+        "max_completion_tokens": 128,
         "messages": [
             {"role": "system", "content": "system"},
             {"role": "user", "content": "go"},
@@ -108,6 +110,27 @@ def test_openai_compatible_adapter_rejects_invalid_response(monkeypatch):
     client = OpenAICompatibleModelClient("http://localhost:11434/v1", "local-model")
 
     with pytest.raises(ModelClientError, match="response"):
+        client.complete("system", [], 128)
+
+
+def test_openai_compatible_adapter_reports_provider_http_error(monkeypatch):
+    payload = json.dumps({
+        "error": {
+            "message": "Unsupported parameter: max_tokens",
+            "type": "invalid_request_error",
+        }
+    }).encode("utf-8")
+
+    def reject(request, timeout):
+        raise HTTPError(request.full_url, 400, "Bad Request", {}, BytesIO(payload))
+
+    monkeypatch.setattr(model_clients, "urlopen", reject)
+    client = OpenAICompatibleModelClient("https://api.openai.com/v1", "gpt-test")
+
+    with pytest.raises(
+        ModelClientError,
+        match="HTTP 400: Unsupported parameter: max_tokens",
+    ):
         client.complete("system", [], 128)
 
 
