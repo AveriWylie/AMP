@@ -1,6 +1,7 @@
 include LICENSE
 include README.md
 include pytest.ini
+include requirements-audit.txt
 include requirements.txt
 include requirements-dev.txt
 include requirements-lock.txt
