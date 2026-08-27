@@ -19,8 +19,7 @@ Release tags use `vMAJOR.MINOR.PATCH`. The matching changelog heading omits the
 
 Minecraft compatibility is recorded separately in
 `amp/protocol/version_support.json` and summarized in the root README. Support
-is
-declared for an exact Minecraft release, not inferred from the AMP version.
+is declared for an exact Minecraft release, not inferred from the AMP version.
 
 Multiple Minecraft releases may share a protocol number or protocol-family
 adapter while using different data versions and registries. Sharing a protocol
