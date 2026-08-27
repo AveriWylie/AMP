@@ -483,8 +483,13 @@ class Connection:
         if not self._started:
             # breaks when target throws an exception
             self._thread_a = threading.Thread(target=self._listen, daemon=True)
-            self._thread_a.start()
             self._started = True
+            try:
+                self._thread_a.start()
+            except Exception:
+                self._started = False
+                self._thread_a = None
+                raise
 
         else:
             print("Already started")
@@ -500,15 +505,28 @@ class Connection:
     """
 
     def connect(self):
-        if not self._connected:
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if self._connected:
+            print("Already connected")
+            return
+
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
+
+        raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = raw_socket
+        try:
             self._socket.connect((self._host, self._port))
             self._send_handshake()
             self._send_login_start()
             self._login()
-
-        else:
-            print("Already connected")
+        except Exception:
+            failed_socket = self._socket or raw_socket
+            self._socket = None
+            self._connected = False
+            self._started = False
+            failed_socket.close()
+            raise
 
     """
     --------------------------------------------------------------------------------------------
@@ -534,14 +552,16 @@ class Connection:
                 break
 
     def disconnect(self):
-        if self._connected:
-            socket_to_close = self._socket
-            self._socket = None
-            self._connected = False
-            self._started = False
+        socket_to_close = self._socket
+        was_connected = self._connected
+        self._socket = None
+        self._connected = False
+        self._started = False
+        if socket_to_close is not None:
             socket_to_close.close()
-            print(f"Disconnected from {self._host}:{self._port}")
 
+        if was_connected:
+            print(f"Disconnected from {self._host}:{self._port}")
         else:
             print("Not connected to begin with")
 
