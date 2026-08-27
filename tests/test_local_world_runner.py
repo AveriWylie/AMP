@@ -37,6 +37,30 @@ def test_world_profile_is_stable_and_isolates_same_version_worlds(tmp_path):
     )
 
 
+def test_world_profile_folds_case_on_macos(tmp_path, monkeypatch):
+    world = make_world(tmp_path / "My World")
+    monkeypatch.setattr(run_local_world.sys, "platform", "darwin")
+
+    def identity(path):
+        return world_profile(path, "26.2", tmp_path).name.split("-")[-2]
+
+    assert identity(world) == identity(tmp_path / "my world")
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="os.path.normcase folds case on Windows regardless of the patch",
+)
+def test_world_profile_keeps_case_on_case_sensitive_platforms(tmp_path, monkeypatch):
+    world = make_world(tmp_path / "My World")
+    monkeypatch.setattr(run_local_world.sys, "platform", "linux")
+
+    def identity(path):
+        return world_profile(path, "26.2", tmp_path).name.split("-")[-2]
+
+    assert identity(world) != identity(tmp_path / "my world")
+
+
 def test_update_properties_preserves_unmanaged_settings(tmp_path):
     path = tmp_path / "server.properties"
     path.write_text("difficulty=hard\nserver-port=25565\n", encoding="utf-8")

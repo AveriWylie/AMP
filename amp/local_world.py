@@ -8,6 +8,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -29,6 +30,10 @@ def offline_player_uuid(username):
 
 def world_profile(source, version, temp_root=None):
     normalized = os.path.normcase(str(source.resolve()))
+    if sys.platform == "darwin":
+        # normcase folds case for Windows only, but macOS formats its volumes
+        # case-insensitively by default, so two spellings name one world.
+        normalized = normalized.casefold()
     identity = hashlib.sha256(normalized.encode()).hexdigest()[:10]
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", source.name).strip("-.") or "world"
     root = temp_root or DATA_ROOT
