@@ -23,17 +23,17 @@ python tools/sync_minecraft_data.py --check
 
 This check fetches upstream metadata and therefore requires network access. It does not rewrite files when the checked-in data is current.
 
-## Live 1.20.2 checks
+## Live Java 26 checks
 
-Run the live checks against a disposable local Minecraft Java Edition 1.20.2 server in offline mode. Enable RCON and provide its password through `MC_RCON_PASSWORD`. The checks change server state and should not target a shared world.
+Run the live checks against a disposable server for the Java version being verified, in offline mode. Enable RCON and provide its password through `MC_RCON_PASSWORD`. The checks change server state and should not target a shared world.
 
 ```bash
-python -m tools.check_movement
-python -m tools.check_mining
-python -m tools.check_inventory
-python -m tools.check_survival_mining
-python -m tools.check_placement
-python -m tools.check_combat
+python -m tools.check_movement --version 26.2
+python -m tools.check_mining --version 26.2
+python -m tools.check_inventory --version 26.2
+python -m tools.check_survival_mining --version 26.2
+python -m tools.check_placement --version 26.2
+python -m tools.check_combat --version 26.2
 ```
 
 - `check_movement` moves the test player 1 block and compares authoritative positions through RCON.
@@ -42,6 +42,10 @@ python -m tools.check_combat
 - `check_survival_mining` puts a pickaxe in main inventory and verifies swapping, equipping, timing, and breaking stone.
 - `check_placement` puts oak planks in main inventory and verifies swapping, support-face selection, placement, and the resulting block.
 - `check_combat` summons a stationary cow, verifies entity tracking, attacks it, and checks the authoritative health change.
+
+Before advertising a version, run the complete set for that version. AMP 1.0 records successful runs for 26.1, 26.1.1, 26.1.2, and 26.2 in `protocol/version_support.json`.
+
+Authenticated-server and Realm gates are retained but disabled until Microsoft approves AMP's client ID for Minecraft Services. See [Authentication status](AUTHENTICATION.md).
 
 ## External model providers
 

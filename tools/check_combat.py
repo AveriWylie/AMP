@@ -1,4 +1,4 @@
-"""Verify tracked-entity combat against a vanilla Minecraft 1.20.2 server."""
+"""Verify tracked-entity combat against a supported vanilla Java server."""
 
 import argparse
 import os

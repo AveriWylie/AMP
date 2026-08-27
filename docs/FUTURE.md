@@ -7,8 +7,8 @@ This document records functionality intentionally outside AMP 1.0. Items are gro
 - Activate authenticated online-mode login after Microsoft approves AMP's client ID for Minecraft Services. Device authorization, Minecraft account exchange, server-hash session join, encrypted transport, and Realm resolution are retained and covered by offline tests, but are not exposed as AMP 1.0 functionality. See [Authentication status](AUTHENTICATION.md).
 - Run the retained authenticated dedicated-server and Realm live gates after approval, then publish the supported authenticated-server and Realm version matrix.
 - Add resource-pack download, integrity validation, application, and status reporting. AMP 1.0 declines server resource packs.
-- Extend complete gameplay support beyond Minecraft Java Edition 1.20.2. Generated packet IDs alone do not guarantee that packet schemas and gameplay behavior match another version.
-- Add dimension-aware chunk bounds and navigation for the Nether, End, and custom dimensions. The 1.0 world model assumes the 1.20.2 Overworld height range.
+- Add future stable Minecraft Java releases after their protocol family, fixtures, and live gameplay matrix pass. Generated packet IDs alone do not confer support.
+- Add dimension-aware chunk bounds and navigation for the Nether, End, and custom dimensions. The 1.0 world model assumes the standard Java 26 Overworld height range.
 - Handle server transfers, proxy-specific login behavior, plugin channels, and modded protocol extensions.
 - Persist enough connection state to resume interrupted autonomous work after reconnecting instead of reconnecting only at the transport/lifecycle level.
 

@@ -18,8 +18,9 @@ user goal
 
 ## Module boundaries
 
-- `connection.py` owns sockets, framing, compression, login/configuration states, keepalive handling, and the listener thread.
-- `world_state.py` decodes selected clientbound Play packets and owns mutable world, inventory, health, and entity state.
+- `connection.py` owns sockets, framing, compression, encryption, keepalive handling, and the listener thread.
+- `java26_protocol.py` owns Java 26 Login and Configuration states, clientbound decoding, and serverbound action encoding.
+- `world_state.py` applies normalized protocol events and owns mutable world, inventory, health, and entity state.
 - `pathfinder.py` reads world state and produces walkable coordinate paths.
 - `gameplay.py` turns high-level actions into paths, inventory preparation, orientation, and executable interactions.
 - `execution.py` owns the action queue and serverbound packet serialization.
@@ -42,4 +43,4 @@ The model receives a concise snapshot rather than raw chunk objects. Model repli
 
 ## Supported-scope principle
 
-Generated protocol IDs are data, not proof of complete version support. AMP calls 1.20.2 its primary version because that is where the full gameplay path and live checks are defined. Functionality outside the 1.0 boundary is listed in [Future work](FUTURE.md).
+Generated protocol IDs are data, not proof of complete version support. The checked-in support manifest advertises only stable versions with complete offline and live evidence. AMP 1.0 supports all stable Java 26 releases for direct offline-mode servers. It has no Realm-primary version because Minecraft Services has not approved AMP's client ID. Functionality outside the 1.0 boundary is listed in [Future work](FUTURE.md).

@@ -2,7 +2,14 @@
 
 AMP is a Python Minecraft bot with guided and autonomous planning modes. It connects directly to a Minecraft Java Edition server, implements the network protocol over raw TCP, builds live world state from chunk and entity packets, and converts natural-language goals into validated gameplay actions.
 
-Minecraft Java Edition 1.20.2 is the primary supported version. Generated protocol IDs cover 1.19.4 through 1.20.2, but the complete gameplay path and live-server checks target 1.20.2. Servers must run in offline mode.
+AMP 1.0 supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct servers running in offline mode. Each advertised version has generated protocol data, fixture coverage, and live gameplay verification. Historical protocol implementations are available only through Git history.
+
+| Java version | Protocol family | Offline suite | Live gameplay |
+| --- | --- | --- | --- |
+| 26.1 | Java 26.1 | Verified | Verified |
+| 26.1.1 | Java 26.1 | Verified | Verified |
+| 26.1.2 | Java 26.1 | Verified | Verified |
+| 26.2 | Java 26.2 | Verified | Verified |
 
 ## Install
 
@@ -62,7 +69,7 @@ Survival and creative are the implemented gameplay modes. The CLI currently acce
 ## Current limits
 
 - Microsoft-authenticated online-mode servers and Java Realms are disabled in AMP 1.0. The implementation is retained, but Minecraft Services rejects newly registered client IDs unless Microsoft approves them. See [Authentication status](docs/AUTHENTICATION.md).
-- Full gameplay support targets the 1.20.2 Overworld on an offline-mode server.
+- World decoding and navigation target the standard Java 26 Overworld height range.
 - Crafting, container interaction, and general inventory management are not implemented.
 - Navigation does not swim, climb, open doors, bridge gaps, or continuously replan around moving obstacles.
 - Combat does not pursue moving or distant targets.
@@ -76,7 +83,8 @@ The complete post-1.0 roadmap is maintained in [Future work](docs/FUTURE.md).
 ```text
 cli.py            interactive setup and mode selection
 bot.py            public facade, dependency composition, planning coordination
-connection.py     TCP transport, framing, login/configuration protocol, keepalive listener
+connection.py     TCP transport, framing, compression, encryption, keepalive listener
+java26_protocol.py Java 26 login/configuration, packet decoding, and action encoding
 world_state.py    clientbound packet dispatch and live world/inventory/entity state
 gameplay.py       movement, mining, placement, and combat coordination
 lifecycle.py      connection recovery and execution-worker lifecycle
@@ -101,7 +109,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-The live connection test skips automatically when no server is listening on `localhost:25565`. Dedicated 1.20.2 checks cover movement, creative mining, survival mining, inventory handling, placement, and combat against a local offline-mode server with RCON enabled.
+The live connection test skips automatically when no server is listening on `localhost:25565`. Dedicated Java 26 checks cover movement, creative mining, survival mining, inventory handling, placement, and combat against a local offline-mode server with RCON enabled. The complete matrix has been run for every version listed above.
 
 See [Testing](docs/TESTING.md) for the commands and test boundaries.
 
