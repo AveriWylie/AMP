@@ -44,7 +44,6 @@ def main(argv=None):
         "username": args.username,
         "version": args.version,
         "game_mode": "creative",
-        "behavior_mode": "passive",
     })
     try:
         bot._connection.connect()

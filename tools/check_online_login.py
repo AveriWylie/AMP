@@ -25,7 +25,7 @@ def _approved_main():
     bot = Bot({
         "host": args.host, "port": args.port, "version": args.version,
         "username": session.profile_name, "auth_session": session,
-        "game_mode": "survival", "behavior_mode": "passive",
+        "game_mode": "survival",
     })
     bot._connection.connect()
     time.sleep(2)

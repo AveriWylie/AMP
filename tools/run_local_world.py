@@ -296,7 +296,7 @@ def run_amp(args):
     bot = Bot({
         "host": "127.0.0.1", "port": args.port,
         "username": args.username, "version": args.version,
-        "game_mode": args.amp_game_mode, "behavior_mode": "passive",
+        "game_mode": args.amp_game_mode,
         "model_optional": args.mode == "idle",
     })
     bot.start()

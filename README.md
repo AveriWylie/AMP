@@ -63,19 +63,16 @@ Python command prepares and starts the server, grants optional operator access,
 connects AMP in the selected planning mode, and coordinates shutdown. The human
 player joins the printed local server address manually.
 
-The CLI collects the server host, port, username, Minecraft version, game mode,
-and behavior label before connecting. It defaults to the latest supported
-release, Java 26.2.
+The CLI collects the server host, port, username, Minecraft version, and
+gameplay mode before connecting. It defaults to the latest supported release,
+Java 26.2.
 
 - Guided mode accepts 1 instruction at a time, plans it, and waits for the next
   instruction.
 - Autonomous mode accepts a high-level goal and replans after each action batch
   for up to 20 steps. New instructions can be injected while it runs.
 
-Survival and creative are the implemented gameplay modes. The CLI currently
-accepts additional game-mode and behavior labels, but they do not yet have
-distinct mechanics or policies; these are tracked in [Future
-work](docs/FUTURE.md).
+Survival and creative are the supported gameplay modes.
 
 ## Implemented gameplay
 

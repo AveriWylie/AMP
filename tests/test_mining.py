@@ -14,7 +14,7 @@ class FlatChunk:
 def test_bot_delegates_gameplay_actions_to_controller():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "Miner",
-        "version": "26.1.2", "game_mode": "creative", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "creative",
     })
 
     assert isinstance(bot._gameplay, GameplayController)
@@ -36,7 +36,6 @@ def test_mine_block_selects_reachable_face_and_queues_dig_last():
         "username": "TestBot",
         "version": "26.1.2",
         "game_mode": "creative",
-        "behavior_mode": "passive",
     })
     bot._world_state["map"][(0, 0)] = FlatChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})
@@ -60,7 +59,7 @@ def test_mine_block_rejects_target_without_reachable_standing_position():
 def test_survival_mining_selects_suitable_hotbar_tool_and_duration():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival",
     })
     bot._world_state["map"][(0, 0)] = FlatChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})
@@ -78,7 +77,7 @@ def test_survival_mining_selects_suitable_hotbar_tool_and_duration():
 def test_survival_mining_swaps_best_tool_from_main_inventory():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival",
     })
     bot._world_state["map"][(0, 0)] = FlatChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})

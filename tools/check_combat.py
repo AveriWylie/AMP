@@ -25,7 +25,7 @@ def main(argv=None):
 
     bot = Bot({
         "host": args.host, "port": args.port, "username": args.username,
-        "version": args.version, "game_mode": "survival", "behavior_mode": "passive",
+        "version": args.version, "game_mode": "survival",
     })
     try:
         bot._connection.connect()

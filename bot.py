@@ -34,12 +34,12 @@ class Bot:
     None ... etc.).
     --------------------------------------------------------------------------------------------
     """
-    allowed_values = {"game_mode": {"survival", "creative", "superflat", "adventure", "spectator"},
-                      "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
+    allowed_values = {"game_mode": {"survival", "creative"},
+                      "port": range(1024, 65536),
                       "version": set(version_protocol)}
 
     default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "26.2",
-        "game_mode": "survival", "behavior_mode": "passive"}
+        "game_mode": "survival"}
 
     """
     --------------------------------------------------------------------------------------------
@@ -105,7 +105,6 @@ class Bot:
         self._version = config.get("version")
         self._username = config.get("username")
         self._game_mode = config.get("game_mode")
-        self._behavior_mode = config.get("behavior_mode")
         self._valid_flags = {}
         # guarantee the object is always in a valid state immediately after
         # creation with config get
@@ -139,7 +138,6 @@ class Bot:
         self._executor = Execute(
             self._connection,
             game_mode=self._game_mode,
-            behavior_mode=self._behavior_mode,
             protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )

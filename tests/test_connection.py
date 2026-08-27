@@ -35,7 +35,7 @@ def _make_bot(overrides=None):
 
     base = {
         "host": "localhost", "port": 25565, "username": "TestBot",
-        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival",
     }
     base.update(overrides)
     return Bot(base)
@@ -67,20 +67,18 @@ def test_validation():
     assert bot_bad._game_mode == Bot.default_values["game_mode"]
     assert bot_bad._executor._game_mode == Bot.default_values["game_mode"]
 
-    # These three fields were passed valid values in the bad config, The assertion is
+    # These two fields were passed valid values in the bad config, The assertion is
     # confirming that the validation loop (called after make bot calls init) only replaces the
     # fields that failed, and leaves the valid ones exactly as passed. It's checking that
     # fixing one field doesn't accidentally clobber another.
     assert bot_bad._host == "localhost"
     assert bot_bad._username == "TestBot"
-    assert bot_bad._behavior_mode == "passive"
 
 
 def test_invalid_modes_do_not_reach_executor():
-    bot = _make_bot({"game_mode": "god_mode", "behavior_mode": "berserker"})
+    bot = _make_bot({"game_mode": "god_mode"})
 
     assert bot._executor._game_mode == Bot.default_values["game_mode"]
-    assert bot._executor._behavior_mode == Bot.default_values["behavior_mode"]
 
     # Empty config â€” everything replaced by defaults, we are making bot without helper here
     bot_empty = Bot({})
@@ -132,11 +130,6 @@ def test_set():
     assert bot._game_mode == "creative"
     assert bot._valid_flags["game_mode"] is True
 
-    # Invalid update â€” falls back to default, flag corrects itself
-    bot.set("behavior_mode", "berserker")
-    assert bot._behavior_mode == Bot.default_values["behavior_mode"]
-    assert bot._valid_flags["behavior_mode"] is True
-
     # Setting a field to its current value â€” no-op, stays valid
     bot.set("game_mode", "creative")
     assert bot._game_mode == "creative"
@@ -145,13 +138,6 @@ def test_set():
     for mode in Bot.allowed_values["game_mode"]:
         bot.set("game_mode", mode)
         assert bot._game_mode == mode
-
-    # All valid behavior_modes accepted
-    for mode in Bot.allowed_values["behavior_mode"]:
-        bot.set("behavior_mode", mode)
-        assert bot._behavior_mode == mode
-
-
 
 # --------------------------------------------------------------------------------------------
 # 3. Connection composition

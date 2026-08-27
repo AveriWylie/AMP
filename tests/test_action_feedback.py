@@ -12,7 +12,7 @@ def _executor(world_state=None):
     connection = Connection("localhost", 25565, "26.1.2", "Feedback", None, 775)
     connection._send = lambda packet: None
     adapter = Java26ProtocolAdapter("java-26.1", "26.1.2", connection)
-    return Execute(connection, "survival", "passive", adapter, world_state=world_state)
+    return Execute(connection, "survival", adapter, world_state=world_state)
 
 
 def test_wait_until_idle_returns_completed_command_result():
@@ -43,7 +43,7 @@ def test_wait_until_idle_reports_timeout_when_queue_is_not_drained():
 def test_disconnected_send_is_reported_as_a_failed_result():
     connection = Connection("localhost", 25565, "26.1.2", "Feedback", None, 775)
     adapter = Java26ProtocolAdapter("java-26.1", "26.1.2", connection)
-    executor = Execute(connection, "survival", "passive", adapter)
+    executor = Execute(connection, "survival", adapter)
     executor.enque_command({"action": "chat", "message": "not sent"})
 
     try:

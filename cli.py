@@ -45,11 +45,15 @@ def collect_config():
         f"Version (default: {Bot.default_values['version']}): "
     ).strip() or Bot.default_values["version"]
 
-    print("\nGame modes: survival, creative, superflat, adventure, spectator")
-    game_mode = input("Game mode (default: survival): ").strip() or "survival"
-
-    print("\nBehavior modes: passive, aggressive, neutral")
-    behavior_mode = input("Behavior mode (default: passive): ").strip() or "passive"
+    print("\nGame modes: survival, creative")
+    while True:
+        game_mode = (
+            input("Game mode (default: survival): ").strip().lower()
+            or Bot.default_values["game_mode"]
+        )
+        if game_mode in Bot.allowed_values["game_mode"]:
+            break
+        print("Game mode must be survival or creative")
 
     return {
         "host": host,
@@ -57,7 +61,6 @@ def collect_config():
         "username": username,
         "version": version,
         "game_mode": game_mode,
-        "behavior_mode": behavior_mode,
         "auth_session": None,
     }
 

@@ -135,13 +135,9 @@ compatibility promise or delivery commitment.
 
 ## Planning and behavior
 
-- Give the CLI's `passive`, `neutral`, and `aggressive` behavior labels defined
-  policies. In 1.0 they are stored and reported but do not alter
-  decision-making.
-- Validate the CLI's accepted game-mode labels. Adventure and spectator need
-  explicit mechanics, while superflat is a world type and should not be accepted
-  as a game mode. In 1.0 every value except creative follows the survival
-  branch.
+- Add explicit behavior policies only when they affect planning and execution.
+- Add adventure or spectator gameplay modes only with their required mechanics.
+  World types such as superflat remain separate from bot gameplay modes.
 - Expand the planner command vocabulary beyond movement, chat, finding blocks,
   mining, placement, and attacks.
 - Add provider capabilities so adapters can request schema-constrained JSON when

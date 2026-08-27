@@ -11,9 +11,6 @@ needs, for example {"action": "move", "x": x, "y": y, "z": z} or {"action": "min
 "x": x, "y": y, "z": z, "face": 1}. _execute pulls the action key to dispatch and then
 reads the remaining fields by name.
 
-behavior_mode in Execute is the in-game behavior descriptor (passive, aggressive, neutral)
-passed from the config, not input mode. It is only here to print actions of that behavior
-mode, but the action is decided with the behavior in mind before the command is enqueued.
 --------------------------------------------------------------------------------------------
 """
 # imports
@@ -33,11 +30,10 @@ the thread drives execution automatically once _start_execution is called in sta
 --------------------------------------------------------------------------------------------
 """
 class Execute:
-    def __init__(self, connection, game_mode, behavior_mode, protocol_adapter, world_state=None):
+    def __init__(self, connection, game_mode, protocol_adapter, world_state=None):
         self._connection = connection
         self._command_queue = deque()
         self._game_mode = game_mode
-        self._behavior_mode = behavior_mode
         self._protocol_adapter = protocol_adapter
         self._world_state = world_state
         self._condition = threading.Condition()
@@ -166,5 +162,5 @@ class Execute:
             if self._world_state is not None:
                 self._world_state["inventory"]["selected_hotbar_slot"] = slot
 
-        print(f"Executed {command} in {self._game_mode} mode as {self._behavior_mode} bot.")
+        print(f"Executed {command} in {self._game_mode} mode.")
         return {"action": action, "success": success, "message": message}

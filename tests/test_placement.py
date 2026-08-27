@@ -16,7 +16,7 @@ class PlacementChunk:
 def _bot(chunk=None):
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "PlaceTest",
-        "version": "26.1.2", "game_mode": "survival", "behavior_mode": "passive",
+        "version": "26.1.2", "game_mode": "survival",
     })
     bot._world_state["map"][(0, 0)] = chunk or PlacementChunk()
     bot._world_state["position"].update({"x": 2.0, "y": 64.0, "z": 0.0})
