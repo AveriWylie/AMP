@@ -31,10 +31,14 @@ jobs:
           if os.environ["RELEASE_TAG"] != f"v{version}":
               raise SystemExit("release tag does not match project version")
           PY
+      - name: Install locked dependencies
+        run: python -m pip install -r requirements-lock.txt
+      - name: Install AMP package
+        run: python -m pip install --no-deps .
+      - name: Run offline tests
+        run: python -m pytest
       - name: Build distributions
-        run: |
-          python -m pip install -r requirements-lock.txt
-          python -m build
+        run: python -m build
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: python-distributions
@@ -42,7 +46,7 @@ jobs:
           if-no-files-found: error
 
   github-release:
-    needs: build
+    needs: [build, pypi-publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
