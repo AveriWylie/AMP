@@ -3,4 +3,7 @@ __pycache__/
 .codex-python-deps/
 .tmp/
 *.py[cod]
+*.egg-info/
+build/
+dist/
 .env

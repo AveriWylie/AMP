@@ -17,6 +17,9 @@ from urllib.request import urlopen
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
+DATA_ROOT = Path(
+    os.getenv("AMP_DATA_DIR", Path.home() / ".amp")
+).expanduser().resolve()
 MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 
@@ -31,7 +34,7 @@ def world_profile(source, version, temp_root=None):
     normalized = os.path.normcase(str(source.resolve()))
     identity = hashlib.sha256(normalized.encode()).hexdigest()[:10]
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", source.name).strip("-.") or "world"
-    root = temp_root or REPO_ROOT / ".tmp"
+    root = temp_root or DATA_ROOT
     return root / f"local-world-{slug}-{identity}-{version}"
 
 
@@ -253,7 +256,7 @@ def prepare_server(args, source, run_root):
     else:
         print(f"Reusing server world copy: {server_world}")
 
-    server_jar = REPO_ROOT / ".tmp" / "server-jars" / args.version / "server.jar"
+    server_jar = DATA_ROOT / "server-jars" / args.version / "server.jar"
     if not server_jar.exists():
         print(f"Downloading and verifying Minecraft {args.version} server...")
         download_server(args.version, server_jar)

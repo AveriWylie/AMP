@@ -1,0 +1,1 @@
+"""Packaged Minecraft protocol data."""

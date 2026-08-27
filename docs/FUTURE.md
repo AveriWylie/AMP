@@ -174,8 +174,6 @@ compatibility promise or delivery commitment.
   repository.
 - Add an operator status view for connection state, current goal, queued
   actions, world position, health, inventory, and recent failures.
-- Add an installable package, project metadata, a console entry point, and a
-  locked reproducible environment.
 
 ## Release maintenance
 
@@ -202,11 +200,3 @@ compatibility promise or delivery commitment.
   prompt injection through world or user text, and repeated invalid plans.
 - Add multiplayer tests for concurrent world changes, competing inventory
   interactions, and entity movement during planning and execution.
-
-## Deferred project work
-
-- Choose and add the project's license. [Third-party
-  notices](THIRD_PARTY_NOTICES.md) cover upstream data but do not license AMP.
-- Finalize package metadata and release artifacts.
-- Define the dependency-locking and reproducible-build policy for release
-  distributions.

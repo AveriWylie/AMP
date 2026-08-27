@@ -9,10 +9,12 @@ a compatibility candidate, but it never publishes AMP automatically. See
 From a clean checkout, install the development dependencies and run:
 
 ```bash
-python -m pip install -r requirements-dev.txt
+python -m pip install -r requirements-lock.txt
+python -m pip install --no-deps .
 python -m pytest
 python tools/sync_minecraft_data.py --check
 python tools/check_version_data.py
+python -m build
 ```
 
 Confirm that CI passes on every configured Python version. Review outstanding
@@ -52,12 +54,17 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
    verification evidence.
 3. Add the release date to the matching entry in `docs/CHANGELOG.md`.
 4. Confirm that the project license and third-party notices are present.
-5. Review the complete release diff and confirm that the worktree is clean.
+5. Install the wheel in a clean environment and smoke-test both `amp --help`
+   and `amp-world --help`.
+6. Confirm that `requirements-lock.txt` matches the validated release and test
+   environment.
+7. Review the complete release diff and confirm that the worktree is clean.
 
 ## 4. Publication
 
 1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
 2. Push the commit and tag.
-3. Publish the GitHub release using the matching changelog entry.
-4. Confirm that the published source archive contains the license and
-   documentation referenced by the README.
+3. Publish the wheel and source distribution with the GitHub release using the
+   matching changelog entry.
+4. Confirm that both artifacts contain the license and Minecraft runtime data.
+   Confirm that the source distribution also contains the project documents.

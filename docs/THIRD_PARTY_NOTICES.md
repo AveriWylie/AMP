@@ -19,5 +19,5 @@ to source-specific licensing. AMP's generated files contain selected packet
 mappings and the block, item, and entity registries needed at runtime.
 
 Copyright and license notices remain with their respective upstream authors.
-This notice covers upstream data only and does not grant a license for AMP
-itself.
+This notice covers upstream data. AMP itself is licensed separately under the
+root [MIT License](../LICENSE).

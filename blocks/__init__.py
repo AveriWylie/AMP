@@ -1,0 +1,1 @@
+"""Packaged Minecraft block registries."""

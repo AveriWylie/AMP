@@ -78,7 +78,7 @@ def test_yes_no_prompt_uses_requested_default():
 
 def test_two_blank_mode_answers_start_with_defaults(tmp_path, monkeypatch):
     source = make_world(tmp_path / "world")
-    monkeypatch.setattr(run_local_world, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(run_local_world, "DATA_ROOT", tmp_path)
     args = parse_args([
         "--world", str(source), "--java", sys.executable, "--accept-eula",
     ])
@@ -96,7 +96,7 @@ def test_unsupported_version_is_rejected_before_profile_creation(
     monkeypatch,
 ):
     source = make_world(tmp_path / "world")
-    monkeypatch.setattr(run_local_world, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(run_local_world, "DATA_ROOT", tmp_path)
     args = parse_args([
         "--world", str(source), "--java", sys.executable,
         "--version", "../../outside", "--accept-eula",
@@ -109,7 +109,7 @@ def test_unsupported_version_is_rejected_before_profile_creation(
 
 def test_existing_eula_is_not_requested_again(tmp_path, monkeypatch):
     source = make_world(tmp_path / "world")
-    monkeypatch.setattr(run_local_world, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(run_local_world, "DATA_ROOT", tmp_path)
     run_root = world_profile(source, "26.2")
     run_root.mkdir(parents=True)
     (run_root / "eula.txt").write_text("eula=true\n", encoding="ascii")

@@ -1,0 +1,10 @@
+include LICENSE
+include README.md
+include requirements.txt
+include requirements-dev.txt
+include requirements-lock.txt
+recursive-include blocks *.json
+recursive-include docs *.md
+recursive-include entities *.json
+recursive-include items *.json
+recursive-include protocol *.json

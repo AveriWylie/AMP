@@ -22,8 +22,13 @@ implementations are available only through Git history.
 AMP requires Python 3.10 or later.
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install .
 ```
+
+This installs the `amp` and `amp-world` commands. Contributors can use
+`python -m pip install -e ".[dev]"` for an editable development install. The
+exact environment used to validate the release is recorded in
+`requirements-lock.txt`.
 
 Copy `.env.example` to `.env` and configure a model provider. Shell, CI, and
 deployment environment variables take precedence over `.env`.
@@ -54,7 +59,7 @@ development servers.
 Start AMP with:
 
 ```bash
-python cli.py
+amp
 ```
 
 To run AMP in a copy of an existing single-player world without Microsoft
@@ -177,6 +182,8 @@ python -m pytest
 
 See [Third-party notices](docs/THIRD_PARTY_NOTICES.md) for attribution and
 licensing details.
+
+AMP itself is available under the [MIT License](LICENSE).
 
 ## Project documents
 

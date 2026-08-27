@@ -7,7 +7,7 @@ Services.
 
 The local-world runner copies a single-player save, hosts the copy with Mojang's
 dedicated Java server, and connects AMP. It prints the local server address for
-the human player to join manually. One Python command owns setup, server
+the human player to join manually. The `amp-world` command owns setup, server
 startup, interactive planning, saving, and shutdown.
 
 ## Requirements
@@ -23,7 +23,7 @@ Close the world in Minecraft before starting AMP.
 Windows PowerShell:
 
 ```powershell
-python tools\run_local_world.py `
+amp-world `
     --world "$env:APPDATA\.minecraft\saves\My World" `
     --version 26.2 --port 25576
 ```
@@ -31,7 +31,7 @@ python tools\run_local_world.py `
 Linux:
 
 ```bash
-python tools/run_local_world.py \
+amp-world \
     --world "$HOME/.minecraft/saves/My World" \
     --version 26.2 --port 25576
 ```
@@ -55,7 +55,7 @@ and starts the server. The runner prints both paths before it changes anything:
 
 ```text
 Source world:      .../.minecraft/saves/My World
-Active world copy: .../.tmp/local-world-My-World-<identity>-26.2/world
+Active world copy: ~/.amp/local-world-My-World-<identity>-26.2/world
 ```
 
 When AMP connects:
@@ -85,8 +85,9 @@ save as a timestamped backup:
 My World.amp-backup-20260827-120000
 ```
 
-The server copy also remains under `.tmp`. If copying or renaming fails, AMP
-restores the original source path instead of leaving it missing.
+The server copy also remains under AMP's data directory, `~/.amp` by default.
+If copying or renaming fails, AMP restores the original source path instead of
+leaving it missing.
 
 ## World isolation and reuse
 
@@ -108,7 +109,7 @@ root README.
 Use idle mode when only testing the Minecraft connection:
 
 ```bash
-python tools/run_local_world.py --world PATH --mode idle
+amp-world --world PATH --mode idle
 ```
 
 ## Environment variables
@@ -125,13 +126,14 @@ Command-line arguments override environment variables.
 | `AMP_MODE`              | prompted | `guided`, `autonomous`, or `idle` |
 | `AMP_OPERATOR_USERNAME` | prompted | Exact human username for commands |
 | `AMP_JAVA_PATH`         | `java`   | Compatible Java executable        |
+| `AMP_DATA_DIR`          | `~/.amp` | Profiles and downloaded servers   |
 
 ## Non-interactive startup
 
 Automation can supply every startup decision explicitly:
 
 ```bash
-python tools/run_local_world.py \
+amp-world \
     --world PATH \
     --version 26.2 \
     --port 25576 \

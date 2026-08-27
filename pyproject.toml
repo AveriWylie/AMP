@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amp-minecraft"
+version = "1.0.0"
+description = "Agentic Minecraft player for supported Java Edition servers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  {name = "Shahyar Anfaz"},
+  {name = "Averi Wylie"},
+]
+dependencies = [
+  "anthropic>=0.121,<1",
+  "cryptography>=45,<51",
+  "python-dotenv>=1,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/AveriWylie/AMP"
+Issues = "https://github.com/AveriWylie/AMP/issues"
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.3,<2",
+  "pytest>=9.0.3,<10",
+]
+
+[project.scripts]
+amp = "cli:main"
+amp-world = "tools.run_local_world:main"
+
+[tool.setuptools]
+py-modules = [
+  "authentication",
+  "bot",
+  "chunk",
+  "cli",
+  "command_data",
+  "connection",
+  "entity_data",
+  "execution",
+  "gameplay",
+  "inventory_data",
+  "java26_protocol",
+  "lifecycle",
+  "mining_data",
+  "model_clients",
+  "pathfinder",
+  "planner",
+  "protocol_adapters",
+  "protocol_data",
+  "protocol_types",
+  "realms",
+  "version_support",
+  "world_state",
+]
+packages = ["blocks", "entities", "items", "protocol", "tools"]
+
+[tool.setuptools.package-data]
+blocks = ["*.json"]
+entities = ["*.json"]
+items = ["*.json"]
+protocol = ["*.json"]

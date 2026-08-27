@@ -1,3 +1,5 @@
+import argparse
+
 from bot import Bot
 
 """
@@ -128,7 +130,11 @@ def autonomous_loop(bot):
         bot.disconnect()
         print("\nDisconnected.")
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Connect AMP to a supported direct Minecraft server."
+    )
+    parser.parse_args(argv)
     config = collect_config()
     bot = Bot(config)
     bot.start()
