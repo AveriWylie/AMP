@@ -138,8 +138,8 @@ class Bot:
         self._pathfinder = Pathfinder(self._world_state)
         self._executor = Execute(
             self._connection,
-            game_mode=config.get("game_mode", "survival"),
-            behavior_mode=config.get("behavior_mode", "neutral"),
+            game_mode=self._game_mode,
+            behavior_mode=self._behavior_mode,
             protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )
