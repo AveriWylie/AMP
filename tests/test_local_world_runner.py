@@ -3,6 +3,7 @@ import os
 import sys
 import zipfile
 from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,6 +15,7 @@ from amp.local_world import (
     has_operators,
     offline_player_uuid,
     parse_args,
+    prepare_server,
     resolve_startup,
     update_properties,
     validate_server_java,
@@ -98,6 +100,28 @@ def test_update_properties_preserves_unmanaged_settings(tmp_path):
     assert path.read_text(encoding="utf-8") == (
         "difficulty=hard\nserver-port=25576\nonline-mode=false\n"
     )
+
+
+def test_local_server_allows_amp_packet_movement(tmp_path, monkeypatch):
+    source = make_world(tmp_path / "source")
+    run_root = tmp_path / "run"
+    server_jar = tmp_path / "server-jars" / "26.2" / "server.jar"
+    server_jar.parent.mkdir(parents=True)
+    server_jar.write_bytes(b"server")
+    monkeypatch.setattr(run_local_world, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(run_local_world, "validate_server_java", lambda *args: None)
+    args = SimpleNamespace(
+        refresh_world_copy=False,
+        version="26.2",
+        java="java",
+        port=25576,
+        operator=None,
+    )
+
+    prepare_server(args, source, run_root)
+
+    properties = (run_root / "server.properties").read_text(encoding="utf-8")
+    assert "allow-flight=true\n" in properties
 
 
 def test_add_operator_uses_offline_uuid_and_is_idempotent(tmp_path):

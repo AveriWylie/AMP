@@ -307,6 +307,7 @@ def prepare_server(args, source, run_root):
         "enforce-secure-profile": "false",
         "motd": "AMP local world",
         "spawn-protection": 0,
+        "allow-flight": "true",
     })
     if args.operator:
         add_operator(run_root / "ops.json", args.operator)
