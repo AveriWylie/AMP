@@ -49,9 +49,8 @@ jobs:
           python -m build
       - name: Test installed wheel outside checkout
         run: |
-          python -m venv --system-site-packages "$RUNNER_TEMP/amp-wheel"
-          "$RUNNER_TEMP/amp-wheel/bin/python" -m pip install \
-            --no-deps dist/*.whl
+          python -m venv "$RUNNER_TEMP/amp-wheel"
+          "$RUNNER_TEMP/amp-wheel/bin/python" -m pip install dist/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/amp-wheel/bin/amp" --help
           "$RUNNER_TEMP/amp-wheel/bin/amp-world" --help
