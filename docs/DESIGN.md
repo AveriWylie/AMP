@@ -2,10 +2,12 @@
 
 ## Runtime flow
 
-The CLI creates a `Bot`, starts its connection and execution lifecycle, and
-selects guided or autonomous input. `Bot` is the public facade and composition
-root; callers do not coordinate transport, planning, world state, or execution
-directly.
+`cli.py` connects AMP to an existing direct server.
+`tools/run_local_world.py` adds copied-world setup and dedicated-server
+orchestration. Both create a `Bot`, start its connection and execution
+lifecycle, and select an AMP input mode. `Bot` is the public facade and
+composition root; callers do not coordinate transport, planning, world state,
+or execution directly.
 
 ```text
 user goal
@@ -38,6 +40,9 @@ user goal
 - `lifecycle.py` starts, stops, and recovers the connection and execution
   workers.
 - `bot.py` composes these modules and remains the public interface.
+- `tools/run_local_world.py` owns isolated local-world profiles, server process
+  lifecycle, operator setup, and backup-first copy-back outside the `Bot`
+  runtime.
 
 ## Concurrency
 

@@ -56,6 +56,8 @@ compatibility promise or delivery commitment.
 - Track block entities such as chests, furnaces, signs, beds, and command-driven
   state.
 - Track fluid levels, light, world border, portals, and environmental hazards.
+- Track player and system chat, the tab list, teams, scoreboards, boss bars,
+  advancements, titles, and other server-originated operator context.
 - Add bounded eviction or persistence for old chunks so long sessions do not
   retain every loaded chunk indefinitely.
 - Model other players and multiplayer contention explicitly, including ownership
@@ -90,11 +92,29 @@ compatibility promise or delivery commitment.
   rules, fluids, falling blocks, and state-dependent break behavior.
 - Place directional and stateful blocks with requested orientation, half, axis,
   attachment face, waterlogging, and neighbor-dependent state.
-- Build multi-block structures from plans, reserve materials, recover from
-  partial failure, and compare the completed structure with the requested
-  design.
 - Add bridging, scaffolding, excavation volumes, vein mining, and area-clearing
   strategies.
+
+## Blueprints and construction
+
+- Define a versioned, provider-neutral blueprint model with a block palette,
+  relative coordinates, origin, dimensions, metadata, and explicit air policy.
+- Import common community formats such as Sponge `.schem` and Litematica
+  `.litematic`, with size limits and clear errors for unsupported block states.
+- Rotate, mirror, translate, crop, and preview a blueprint before changing the
+  world.
+- Produce a material manifest, compare it with inventory, reserve required
+  items, and request acquisition or crafting of missing materials.
+- Order construction around reach, support blocks, gravity, fluids, directional
+  states, multi-block structures, scaffolding, and safe navigation.
+- Checkpoint long builds, resume after interruption, reconcile the plan against
+  current world state, and recover from partial placement or another player's
+  edits.
+- Verify the completed region block by block and report missing, extra, or
+  incorrectly oriented blocks.
+- Export a selected world region to AMP's neutral blueprint format.
+- Require explicit bounds, maximum block counts, protected-block rules, and
+  operator approval before large or destructive builds.
 
 ## Combat and survival
 
@@ -138,15 +158,19 @@ compatibility promise or delivery commitment.
   goals.
 - Support additional hosted providers through the existing `ModelClient`
   contract.
+- Coordinate multiple AMP players without assigning the same target, inventory,
+  or construction region to competing agents.
 
 ## User and operator experience
 
 - Add selective world merge and backup-management tooling. AMP 1.0 includes a
   backup-first whole-world copy-back workflow.
-- Add non-interactive configuration through command-line arguments and a
-  validated configuration file.
-- Replace free-form configuration strings with explicit validation and
-  actionable startup errors.
+- Add non-interactive arguments to the existing direct-server `cli.py` flow.
+  The local-world runner already supports non-interactive launch arguments.
+- Replace the direct-server CLI's free-form configuration strings with explicit
+  validation and actionable startup errors.
+- Accept goals from authorized in-game chat users through a configurable command
+  prefix, without treating arbitrary server chat as trusted model instructions.
 - Add structured logs, configurable verbosity, metrics, and trace records
   linking a goal to model replies, resolved commands, packets, and
   server-confirmed results.

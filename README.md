@@ -11,11 +11,11 @@ data, fixture coverage, and live gameplay verification. Historical protocol
 implementations are available only through Git history.
 
 | Java version | Protocol family | Offline suite | Live gameplay |
-| --- | --- | --- | --- |
-| 26.1 | Java 26.1 | Verified | Verified |
-| 26.1.1 | Java 26.1 | Verified | Verified |
-| 26.1.2 | Java 26.1 | Verified | Verified |
-| 26.2 | Java 26.2 | Verified | Verified |
+|--------------|-----------------|---------------|---------------|
+| 26.1         | Java 26.1       | Verified      | Verified      |
+| 26.1.1       | Java 26.1       | Verified      | Verified      |
+| 26.1.2       | Java 26.1       | Verified      | Verified      |
+| 26.2         | Java 26.2       | Verified      | Verified      |
 
 ## Install
 
@@ -101,6 +101,8 @@ work](docs/FUTURE.md).
   range.
 - Crafting, container interaction, and general inventory management are not
   implemented.
+- Blueprint import, material planning, and multi-block construction are not
+  implemented.
 - Navigation does not swim, climb, open doors, bridge gaps, or continuously
   replan around moving obstacles.
 - Combat does not pursue moving or distant targets.
@@ -180,6 +182,7 @@ licensing details.
 ## Project documents
 
 - [Changelog](docs/CHANGELOG.md)
+- [Local-world usage](docs/USAGE.md)
 - [Future work](docs/FUTURE.md)
 - [Design](docs/DESIGN.md)
 - [Testing](docs/TESTING.md)

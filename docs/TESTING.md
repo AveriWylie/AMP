@@ -73,3 +73,15 @@ credentials or network calls. Real Anthropic and OpenAI-compatible services
 remain integration checks because they require an operator-selected model,
 credentials or a local server, and potentially paid requests. See [Future
 work](FUTURE.md) for the remaining provider-validation matrix.
+
+## Local-world workflow
+
+`tests/test_local_world_runner.py` covers isolated world identities, preserved
+server properties, offline operator UUIDs, first-run defaults, persisted EULA
+acceptance, model preflight, version validation, prompt defaults, and
+backup-first copy-back.
+
+Before release, run one disposable live workflow in `idle` mode. Confirm that
+AMP reaches Play, the server grants the requested human operator, `stop` saves
+all dimensions, accepted copy-back preserves a timestamped source backup, and a
+second run reuses the correct world profile without repeating first-run prompts.
