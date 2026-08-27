@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import uuid
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
@@ -106,6 +107,40 @@ def download_server(version, destination):
     partial = destination.with_suffix(".jar.part")
     partial.write_bytes(payload)
     partial.replace(destination)
+
+
+def server_java_feature(server_jar):
+    with zipfile.ZipFile(server_jar) as archive:
+        class_file = archive.read("net/minecraft/bundler/Main.class")
+    if class_file[:4] != b"\xca\xfe\xba\xbe" or len(class_file) < 8:
+        raise ValueError(f"Invalid Minecraft server JAR: {server_jar}")
+    class_version = int.from_bytes(class_file[6:8], "big")
+    return class_version - 44
+
+
+def installed_java_feature(java):
+    result = subprocess.run(
+        [java, "-version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+        text=True,
+    )
+    match = re.search(r'(?:java|openjdk) version "?(?:1\.)?(\d+)', result.stdout)
+    if result.returncode or match is None:
+        raise ValueError(f"Could not determine the Java version from: {java}")
+    return int(match.group(1))
+
+
+def validate_server_java(java, server_jar, minecraft_version):
+    required = server_java_feature(server_jar)
+    installed = installed_java_feature(java)
+    if installed < required:
+        raise ValueError(
+            f"Minecraft {minecraft_version} requires Java {required} or newer; "
+            f"found Java {installed}. Install a compatible JDK, then pass its "
+            "java executable with --java or set AMP_JAVA_PATH."
+        )
 
 
 def port_is_open(port):
@@ -262,6 +297,7 @@ def prepare_server(args, source, run_root):
     if not server_jar.exists():
         print(f"Downloading and verifying Minecraft {args.version} server...")
         download_server(args.version, server_jar)
+    validate_server_java(args.java, server_jar, args.version)
     (run_root / "eula.txt").write_text("eula=true\n", encoding="ascii")
     update_properties(run_root / "server.properties", {
         "server-port": args.port,
@@ -358,7 +394,10 @@ def main(argv=None, input_fn=input):
         deadline = time.monotonic() + 180
         while not port_is_open(args.port):
             if server.poll() is not None:
-                raise RuntimeError(f"Minecraft server exited; inspect {stdout.name}")
+                raise RuntimeError(
+                    "Minecraft server exited; inspect "
+                    f"{stdout.name} and {stderr.name}"
+                )
             if time.monotonic() >= deadline:
                 raise TimeoutError("Minecraft server did not start within 3 minutes")
             time.sleep(2)

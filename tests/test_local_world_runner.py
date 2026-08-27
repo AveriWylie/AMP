@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import zipfile
 from datetime import datetime
 
 import pytest
@@ -15,6 +16,7 @@ from amp.local_world import (
     parse_args,
     resolve_startup,
     update_properties,
+    validate_server_java,
     validate_model_configuration,
     world_profile,
 )
@@ -180,6 +182,20 @@ def test_missing_model_configuration_fails_actionably(monkeypatch):
 
     with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
         validate_model_configuration("guided")
+
+
+def test_server_rejects_java_older_than_jar_requires(tmp_path, monkeypatch):
+    server_jar = tmp_path / "server.jar"
+    class_file = b"\xca\xfe\xba\xbe\x00\x00\x00\x45"
+    with zipfile.ZipFile(server_jar, "w") as archive:
+        archive.writestr("net/minecraft/bundler/Main.class", class_file)
+    completed = run_local_world.subprocess.CompletedProcess(
+        ["java", "-version"], 0, stdout='java version "22.0.2"'
+    )
+    monkeypatch.setattr(run_local_world.subprocess, "run", lambda *_, **__: completed)
+
+    with pytest.raises(ValueError, match="requires Java 25.*found Java 22"):
+        validate_server_java("java", server_jar, "26.2")
 
 
 def test_copy_back_preserves_original_as_timestamped_backup(tmp_path):
