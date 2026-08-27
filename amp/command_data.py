@@ -4,6 +4,7 @@
 PLANNER_COMMAND_FIELDS = {
     "move": {"x": int, "y": int, "z": int},
     "chat": {"message": str},
+    "look": {"yaw": (int, float), "pitch": (int, float)},
     "go_to": {"x": int, "y": int, "z": int},
     "find": {"block": str, "radius": int},
     "mine": {"x": int, "y": int, "z": int},
@@ -29,7 +30,8 @@ def planner_command_error(command):
     for name, expected_type in fields.items():
         value = command.get(name)
         if not isinstance(value, expected_type) or (
-            expected_type is int and isinstance(value, bool)
+            isinstance(value, bool)
+            and (expected_type is int or expected_type == (int, float))
         ):
             invalid.append(name)
     if invalid:

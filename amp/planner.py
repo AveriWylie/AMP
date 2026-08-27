@@ -44,7 +44,7 @@ class Planner:
     MAX_TOKENS = 1024
 
     # commands the executor handles directly, no planner resolution needed
-    LOW_LEVEL_ACTIONS = {"move", "chat"}
+    LOW_LEVEL_ACTIONS = {"move", "chat", "look"}
 
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place", "attack"}
@@ -147,6 +147,7 @@ class Planner:
             "Available actions:\n"
             "  {\"action\": \"move\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"chat\", \"message\": string}\n"
+            "  {\"action\": \"look\", \"yaw\": number, \"pitch\": number}\n"
             "  {\"action\": \"go_to\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"find\", \"block\": string, \"radius\": int}\n"
             "  {\"action\": \"mine\", \"x\": int, \"y\": int, \"z\": int}\n"
@@ -196,7 +197,9 @@ class Planner:
             clean = clean.split("\n", 1)[-1]
             clean = clean.rsplit("```", 1)[0]
         try:
-            commands = json.loads(clean)
+            commands, end = json.JSONDecoder().raw_decode(clean)
+            if clean[end:].strip():
+                print("Planner warning: trailing content ignored")
             if not isinstance(commands, list):
                 return []
             valid = []

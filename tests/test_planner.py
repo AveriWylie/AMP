@@ -81,3 +81,18 @@ def test_parse_commands_rejects_unknown_or_malformed_actions(capsys):
     output = capsys.readouterr().out
     assert "unknown action" in output
     assert "invalid fields" in output
+
+
+def test_parse_commands_accepts_valid_array_with_trailing_model_junk(capsys):
+    raw = (
+        '[{"action":"chat","message":"Turning around."},'
+        '{"action":"look","yaw":180,"pitch":0},'
+        '{"action":"go_to","x":59,"y":64,"z":-132}]}'
+    )
+
+    assert Planner._parse_commands(raw) == [
+        {"action": "chat", "message": "Turning around."},
+        {"action": "look", "yaw": 180, "pitch": 0},
+        {"action": "go_to", "x": 59, "y": 64, "z": -132},
+    ]
+    assert "trailing content ignored" in capsys.readouterr().out
