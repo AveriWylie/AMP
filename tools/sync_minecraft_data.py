@@ -38,10 +38,13 @@ VERSION_SOURCES = {
     "26.1": "26.1",
     "26.1.1": "26.1",
     "26.1.2": "26.1",
-    # The pinned upstream index declares 26.2/protocol 776 but provides no 26.2
-    # data directory. Keep it pending and use 26.1 only as the explicit diff base.
+    # The pinned upstream index declares protocol 776 but has no 26.2 directory.
+    # Packet IDs remain compatible with 26.1; official server reports supply the
+    # 26.2 registries through tools/import_server_reports.py.
     "26.2": "26.1",
 }
+
+OFFICIAL_REPORT_REGISTRIES = {"26.2"}
 
 PLAY_PACKETS = {
     "clientbound": (
@@ -237,15 +240,15 @@ def main(argv=None):
     rendered = render_table(build_table())
     rendered_blocks = {
         version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/blocks.json"))
-        for version in BLOCK_OUTPUTS
+        for version in BLOCK_OUTPUTS if version not in OFFICIAL_REPORT_REGISTRIES
     }
     rendered_items = {
         version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/items.json"))
-        for version in ITEM_OUTPUTS
+        for version in ITEM_OUTPUTS if version not in OFFICIAL_REPORT_REGISTRIES
     }
     rendered_entities = {
         version: render_blocks(fetch_json(f"{VERSION_SOURCES[version]}/entities.json"))
-        for version in ENTITY_OUTPUTS
+        for version in ENTITY_OUTPUTS if version not in OFFICIAL_REPORT_REGISTRIES
     }
 
     if args.check:
@@ -253,14 +256,20 @@ def main(argv=None):
             print(f"Generated protocol data is stale: {OUTPUT}", file=sys.stderr)
             return 1
         for version, path in BLOCK_OUTPUTS.items():
+            if version in OFFICIAL_REPORT_REGISTRIES:
+                continue
             if not path.exists() or path.read_text(encoding="utf-8") != rendered_blocks[version]:
                 print(f"Generated block data is stale: {path}", file=sys.stderr)
                 return 1
         for version, path in ITEM_OUTPUTS.items():
+            if version in OFFICIAL_REPORT_REGISTRIES:
+                continue
             if not path.exists() or path.read_text(encoding="utf-8") != rendered_items[version]:
                 print(f"Generated item data is stale: {path}", file=sys.stderr)
                 return 1
         for version, path in ENTITY_OUTPUTS.items():
+            if version in OFFICIAL_REPORT_REGISTRIES:
+                continue
             if not path.exists() or path.read_text(encoding="utf-8") != rendered_entities[version]:
                 print(f"Generated entity data is stale: {path}", file=sys.stderr)
                 return 1
@@ -276,18 +285,24 @@ def main(argv=None):
     temporary.replace(OUTPUT)
     print(f"Wrote {OUTPUT}")
     for version, path in BLOCK_OUTPUTS.items():
+        if version in OFFICIAL_REPORT_REGISTRIES:
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(rendered_blocks[version], encoding="utf-8", newline="\n")
         temporary.replace(path)
         print(f"Wrote {path}")
     for version, path in ITEM_OUTPUTS.items():
+        if version in OFFICIAL_REPORT_REGISTRIES:
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(rendered_items[version], encoding="utf-8", newline="\n")
         temporary.replace(path)
         print(f"Wrote {path}")
     for version, path in ENTITY_OUTPUTS.items():
+        if version in OFFICIAL_REPORT_REGISTRIES:
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".json.tmp")
         temporary.write_text(rendered_entities[version], encoding="utf-8", newline="\n")

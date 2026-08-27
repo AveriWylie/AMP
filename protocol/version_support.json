@@ -17,7 +17,10 @@
       "protocol": 775,
       "data_version": 4786,
       "family": "java-26.1",
-      "status": "pending"
+      "status": "supported",
+      "offline_verified": true,
+      "live_verified": true,
+      "realm_verified": false
     },
     "26.1.1": {
       "release_type": "release",
@@ -25,7 +28,10 @@
       "protocol": 775,
       "data_version": 4788,
       "family": "java-26.1",
-      "status": "pending"
+      "status": "supported",
+      "offline_verified": true,
+      "live_verified": true,
+      "realm_verified": false
     },
     "26.1.2": {
       "release_type": "release",
@@ -44,7 +50,10 @@
       "protocol": 776,
       "data_version": 4903,
       "family": "java-26.2",
-      "status": "pending"
+      "status": "supported",
+      "offline_verified": true,
+      "live_verified": true,
+      "realm_verified": false
     }
   }
 }

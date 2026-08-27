@@ -86,10 +86,7 @@ def test_validation():
             f"Expected default for {key} when None passed"
 
 
-def test_validation_rejects_pending_and_unknown_versions():
-    with pytest.raises(ValueError, match="pending"):
-        _make_bot({"version": "26.2"})
-
+def test_validation_rejects_unknown_versions():
     with pytest.raises(ValueError, match="Unsupported Minecraft version"):
         _make_bot({"version": "0.0.0"})
 

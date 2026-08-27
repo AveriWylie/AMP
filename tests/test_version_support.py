@@ -19,10 +19,10 @@ def test_checked_in_manifest_tracks_only_stable_26x_targets():
         version: (entry["protocol"], entry["family"], entry["status"])
         for version, entry in manifest["versions"].items()
     } == {
-        "26.1": (775, "java-26.1", "pending"),
-        "26.1.1": (775, "java-26.1", "pending"),
+        "26.1": (775, "java-26.1", "supported"),
+        "26.1.1": (775, "java-26.1", "supported"),
         "26.1.2": (775, "java-26.1", "supported"),
-        "26.2": (776, "java-26.2", "pending"),
+        "26.2": (776, "java-26.2", "supported"),
     }
 
 
@@ -67,5 +67,11 @@ def test_manifest_rejects_unverified_primary(tmp_path):
 
 
 def test_runtime_versions_exclude_pending_targets():
-    assert runnable_version_protocols() == {"26.1.2": 775, "1.20.2": 764}
-    assert pending_versions() == ("26.1", "26.1.1", "26.2")
+    assert runnable_version_protocols() == {
+        "26.1": 775,
+        "26.1.1": 775,
+        "26.1.2": 775,
+        "26.2": 776,
+        "1.20.2": 764,
+    }
+    assert pending_versions() == ()
