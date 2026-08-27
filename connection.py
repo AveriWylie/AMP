@@ -10,8 +10,12 @@ import zlib
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.decrepit.ciphers.modes import CFB8
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+
+try:
+    from cryptography.hazmat.decrepit.ciphers.modes import CFB8
+except ImportError:
+    from cryptography.hazmat.primitives.ciphers.modes import CFB8
 
 from authentication import SessionJoiner
 
