@@ -77,6 +77,7 @@ This document records functionality intentionally outside AMP 1.0. Items are gro
 
 ## User and operator experience
 
+- Add safe world export and merge tooling. AMP 1.0 includes Windows PowerShell and Linux Bash runners that operate on an isolated copy of a Java single-player save.
 - Add non-interactive configuration through command-line arguments and a validated configuration file.
 - Replace free-form configuration strings with explicit validation and actionable startup errors.
 - Add structured logs, configurable verbosity, metrics, and trace records linking a goal to model replies, resolved commands, packets, and server-confirmed results.

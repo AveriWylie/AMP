@@ -48,6 +48,8 @@ Start AMP with:
 python cli.py
 ```
 
+To see AMP in a copy of an existing single-player world without Microsoft authentication, use the documented [local-world runner](docs/USAGE.md). It configures and starts an official offline-mode dedicated server, connects AMP, and shuts both down cleanly.
+
 The CLI collects the server host, port, username, Minecraft version, game mode, and behavior label before connecting. It defaults to the latest supported release, Java 26.2.
 
 - Guided mode accepts 1 instruction at a time, plans it, and waits for the next instruction.
