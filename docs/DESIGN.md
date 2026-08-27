@@ -70,7 +70,7 @@ return text only and normalize transport or SDK errors into `ModelClientError`.
 
 Generated protocol IDs are data, not proof of complete version support. The
 checked-in support manifest advertises only stable versions with complete
-offline and live evidence. AMP 1.0 supports all stable Java 26 releases for
-direct offline-mode servers. It has no Realm-primary version because Minecraft
-Services has not approved AMP's client ID. Functionality outside the 1.0
-boundary is listed in [Future work](FUTURE.md).
+offline and live evidence. AMP 1.0 supports the listed Java versions, 26.1,
+26.1.1, 26.1.2, and 26.2, on direct offline-mode servers. It has no
+Realm-primary version because Minecraft Services has not approved AMP's client
+ID. See [Future work](FUTURE.md) for functionality outside the 1.0 boundary.

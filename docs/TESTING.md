@@ -69,10 +69,13 @@ status](AUTHENTICATION.md).
 ## External model providers
 
 The automated suite verifies adapter request and response normalization without
-credentials or network calls. Real Anthropic and OpenAI-compatible services
-remain integration checks because they require an operator-selected model,
-credentials or a local server, and potentially paid requests. See [Future
-work](FUTURE.md) for the remaining provider-validation matrix.
+credentials or network calls. Before release, complete 1 guided request with
+the real Anthropic API and 1 with an OpenAI-compatible hosted or local service.
+Each request must produce a valid action that succeeds in Minecraft. Also
+complete 1 autonomous goal with at least 1 successful action and confirmed
+execution feedback. These checks require an operator-selected model,
+credentials or a local server, and may incur API charges. See [Future
+work](FUTURE.md) for the broader post-1.0 provider matrix.
 
 ## Local-world workflow
 
@@ -81,7 +84,15 @@ server properties, offline operator UUIDs, first-run defaults, persisted EULA
 acceptance, model preflight, version validation, prompt defaults, and
 backup-first copy-back.
 
-Before release, run one disposable live workflow in `idle` mode. Confirm that
-AMP reaches Play, the server grants the requested human operator, `stop` saves
-all dimensions, accepted copy-back preserves a timestamped source backup, and a
-second run reuses the correct world profile without repeating first-run prompts.
+Before release, use disposable source worlds to verify the complete workflow:
+
+1. Start `idle` mode, join the printed address manually, and confirm that AMP
+   reaches Play and the requested human username has operator access.
+2. Change the server copy, use Ctrl+C to disconnect AMP and save the server,
+   decline copy-back, and confirm that the source world remains unchanged.
+3. Start the same source and version again. Confirm that AMP reuses the active
+   copy without repeating EULA or operator setup.
+4. Stop again, accept copy-back, and confirm that the played copy replaces the
+   source while the previous source remains in a timestamped backup.
+5. Start a different source at the same Minecraft version and confirm that it
+   receives a different active profile.

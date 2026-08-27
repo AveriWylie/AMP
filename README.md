@@ -60,7 +60,8 @@ python cli.py
 To run AMP in a copy of an existing single-player world without Microsoft
 authentication, use the documented [local-world workflow](docs/USAGE.md). One
 Python command prepares and starts the server, grants optional operator access,
-connects AMP in the selected planning mode, and shuts everything down cleanly.
+connects AMP in the selected planning mode, and coordinates shutdown. The human
+player joins the printed local server address manually.
 
 The CLI collects the server host, port, username, Minecraft version, game mode,
 and behavior label before connecting. It defaults to the latest supported
@@ -103,13 +104,14 @@ work](docs/FUTURE.md).
   implemented.
 - Blueprint import, material planning, and multi-block construction are not
   implemented.
-- Navigation does not swim, climb, open doors, bridge gaps, or continuously
-  replan around moving obstacles.
+- Movement uses discrete 1-block position steps. AMP does not sprint, swim,
+  climb, jump gaps, open doors, bridge gaps, or continuously replan around
+  moving obstacles.
 - Combat does not pursue moving or distant targets.
 - Mining timing does not account for enchantments, status effects, or underwater
   and airborne penalties.
-- Live behavior with real hosted model providers has not been validated as part
-  of the offline test suite.
+- Real-provider behavior remains a manual pre-release gate; the offline suite
+  uses injected provider fakes.
 
 The complete post-1.0 roadmap is maintained in [Future work](docs/FUTURE.md).
 
@@ -132,10 +134,10 @@ command_data.py   shared validation contract for planner and executor actions
 ```
 
 The planner receives a bounded world snapshot and returns JSON command objects.
-`command_data.py` validates model output before `gameplay.py` resolves
-high-level actions such as `go_to`, `find`, `mine`, `place`, and `attack`.
-`execution.py` serializes the resulting low-level actions and waits for
-observable world-state changes where server confirmation is available.
+`command_data.py` validates model output. `planner.py` resolves `find` to a
+`go_to` command, while `bot.py` sends `go_to`, `mine`, `place`, and `attack` to
+`gameplay.py`. `execution.py` serializes the resulting low-level actions and
+waits for observable world-state changes where confirmation is available.
 
 Provider-specific API shapes stay in `model_clients.py`. The Anthropic adapter
 uses the official [Anthropic Python

@@ -126,9 +126,9 @@ Command-line arguments override environment variables.
 | `AMP_OPERATOR_USERNAME` | prompted | Exact human username for commands |
 | `AMP_JAVA_PATH`         | `java`   | Compatible Java executable        |
 
-## Non-interactive use
+## Non-interactive startup
 
-Automation can supply every decision explicitly:
+Automation can supply every startup decision explicitly:
 
 ```bash
 python tools/run_local_world.py \
@@ -145,6 +145,8 @@ python tools/run_local_world.py \
 
 `--accept-eula` is required only if that world profile has no accepted EULA.
 Without `--copy-back`, a non-interactive run leaves the source untouched.
+`--non-interactive` suppresses setup questions; guided and autonomous modes
+still read goals and instructions from the terminal.
 
 ## Security boundary
 

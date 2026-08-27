@@ -19,7 +19,7 @@
 - Supports pathfinding, movement, creative and survival mining, block placement,
   and attacks against nearby tracked entities.
 - Provides guided and autonomous model planning with validated structured
-  commands and server-confirmed execution feedback.
+  commands and server-confirmed mining and placement feedback.
 - Supports Anthropic and OpenAI-compatible providers behind a provider-neutral
   completion interface.
 - Reads provider configuration from the environment or an ignored `.env` file.

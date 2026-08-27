@@ -195,10 +195,10 @@ compatibility promise or delivery commitment.
   Realm gates can run with AMP's approved client ID. After approval, promote
   only a supported latest-stable release with a passing Realm smoke check.
 
-## Validation still needed after 1.0
+## Validation to expand after 1.0
 
-- Exercise the Anthropic adapter against the real Anthropic API and the
-  OpenAI-compatible adapter against representative hosted and local servers.
+- Expand the v1.0 real-provider smoke checks into a matrix of representative
+  hosted and local Anthropic and OpenAI-compatible models.
 - Run the complete live gameplay suite across supported server implementations,
   network conditions, and every version claimed for complete gameplay support.
 - Add long-running soak tests for reconnects, chunk retention, autonomous loops,
