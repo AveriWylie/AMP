@@ -38,7 +38,7 @@ class Bot:
                       "behavior_mode": {"passive", "aggressive", "neutral"}, "port": range(1024, 65536),
                       "version": set(version_protocol)}
 
-    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "26.1.2",
+    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "26.2",
         "game_mode": "survival", "behavior_mode": "passive"}
 
     """

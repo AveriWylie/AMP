@@ -14,7 +14,7 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=25565)
     parser.add_argument("--rcon-port", type=int, default=25575)
     parser.add_argument("--username", default="AMPCombat")
-    parser.add_argument("--version", default="26.1.2")
+    parser.add_argument("--version", default="26.2")
     args = parser.parse_args(argv)
     password = os.environ.get("MC_RCON_PASSWORD")
     if not password:

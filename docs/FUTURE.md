@@ -84,6 +84,13 @@ This document records functionality intentionally outside AMP 1.0. Items are gro
 - Add an operator status view for connection state, current goal, queued actions, world position, health, inventory, and recent failures.
 - Add an installable package, project metadata, a console entry point, and a locked reproducible environment.
 
+## Release maintenance
+
+- Add a pending-version update command that imports a newly stable Java release without advertising it as supported.
+- Add protocol-family diff reporting for packet states, IDs, registries, and fixtures so maintainers can decide whether a release reuses an adapter or needs a new one.
+- Automate the promotion checklist: generated-data completeness, protocol fixtures, the offline suite, and all live gameplay checks must pass before a version becomes supported.
+- Keep the manifest's Realm `primary` value unset until authenticated-server and Realm gates can run with AMP's approved client ID. After approval, promote only a supported latest-stable release with a passing Realm smoke check.
+
 ## Validation still needed after 1.0
 
 - Exercise the Anthropic adapter against the real Anthropic API and the OpenAI-compatible adapter against representative hosted and local servers.

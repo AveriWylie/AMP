@@ -48,7 +48,7 @@ Start AMP with:
 python cli.py
 ```
 
-The CLI collects the server host, port, username, Minecraft version, game mode, and behavior label before connecting.
+The CLI collects the server host, port, username, Minecraft version, game mode, and behavior label before connecting. It defaults to the latest supported release, Java 26.2.
 
 - Guided mode accepts 1 instruction at a time, plans it, and waits for the next instruction.
 - Autonomous mode accepts a high-level goal and replans after each action batch for up to 20 steps. New instructions can be injected while it runs.

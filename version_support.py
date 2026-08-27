@@ -29,10 +29,6 @@ def load_support_manifest(path=SUPPORT_MANIFEST_PATH):
         ):
             raise ValueError(f"supported version {version} lacks verification evidence")
 
-    target_primary = manifest.get("target_primary")
-    if target_primary not in versions:
-        raise ValueError("target primary must be present in versions")
-
     primary = manifest.get("primary")
     if primary is not None and (
         primary not in versions or versions[primary]["status"] != "supported"

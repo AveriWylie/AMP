@@ -12,7 +12,6 @@ from version_support import (
 def test_checked_in_manifest_tracks_only_stable_26x_targets():
     manifest = load_support_manifest()
 
-    assert manifest["target_primary"] == "26.2"
     assert manifest["primary"] is None
     assert {
         version: (entry["protocol"], entry["family"], entry["status"])
@@ -29,7 +28,6 @@ def test_manifest_rejects_snapshot_targets(tmp_path):
     path = tmp_path / "support.json"
     path.write_text(json.dumps({
         "primary": None,
-        "target_primary": "26.3-snapshot-10",
         "versions": {
             "26.3-snapshot-10": {
                 "release_type": "snapshot",
@@ -48,7 +46,6 @@ def test_manifest_rejects_unverified_primary(tmp_path):
     path = tmp_path / "support.json"
     path.write_text(json.dumps({
         "primary": "26.2",
-        "target_primary": "26.2",
         "versions": {
             "26.2": {
                 "release_type": "release",
