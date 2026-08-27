@@ -1,4 +1,4 @@
-from cli import collect_config
+from amp.cli import collect_config
 
 
 def test_collect_config_exposes_only_implemented_game_modes(monkeypatch, capsys):

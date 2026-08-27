@@ -4,11 +4,11 @@ import struct
 import time
 import uuid
 
-from chunk import Chunk
-from entity_data import entity_name
-from inventory_data import item_name
-from protocol_data import packet_ids_for_protocol
-from protocol_types import (
+from amp.chunk import Chunk
+from amp.entity_data import entity_name
+from amp.inventory_data import item_name
+from amp.protocol_data import packet_ids_for_protocol
+from amp.protocol_types import (
     BlockChanged, ChunkLoaded, EntitiesRemoved, EntityMoved, EntitySpawned,
     EntityTeleported, HealthChanged, PositionChanged, SelfEntityIdentified,
     HotbarSelected, InventoryReplaced, SlotChanged,

@@ -1,5 +1,5 @@
-from authentication import AuthenticationError, MinecraftSession
-from realms import RealmError, RealmResolver
+from amp.authentication import AuthenticationError, MinecraftSession
+from amp.realms import RealmError, RealmResolver
 
 
 SESSION = MinecraftSession("secret", "profile", "Player")

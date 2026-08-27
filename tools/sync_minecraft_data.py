@@ -10,17 +10,18 @@ from pathlib import Path
 REPOSITORY = "https://github.com/PrismarineJS/minecraft-data"
 REVISION = "105097328f99a4f45cb6dca0fbef97db0cbd1cfd"
 RAW_ROOT = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/{REVISION}/data/pc"
-OUTPUT = Path(__file__).resolve().parents[1] / "protocol" / "packet_ids.json"
+DATA_ROOT = Path(__file__).resolve().parents[1] / "amp"
+OUTPUT = DATA_ROOT / "protocol" / "packet_ids.json"
 BLOCK_OUTPUTS = {
-    version: Path(__file__).resolve().parents[1] / "blocks" / f"blocks_{version}.json"
+    version: DATA_ROOT / "blocks" / f"blocks_{version}.json"
     for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 ITEM_OUTPUTS = {
-    version: Path(__file__).resolve().parents[1] / "items" / f"items_{version}.json"
+    version: DATA_ROOT / "items" / f"items_{version}.json"
     for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 ENTITY_OUTPUTS = {
-    version: Path(__file__).resolve().parents[1] / "entities" / f"entities_{version}.json"
+    version: DATA_ROOT / "entities" / f"entities_{version}.json"
     for version in ("26.1", "26.1.1", "26.1.2", "26.2")
 }
 

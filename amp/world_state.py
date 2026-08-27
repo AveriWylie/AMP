@@ -1,6 +1,6 @@
 """Apply version-neutral protocol events to AMP's live world state."""
 
-from protocol_types import (
+from amp.protocol_types import (
     BlockChanged,
     ChunkLoaded,
     EntitiesRemoved,

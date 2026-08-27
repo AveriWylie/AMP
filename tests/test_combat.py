@@ -1,4 +1,4 @@
-from bot import Bot
+from amp.bot import Bot
 
 
 def _bot_with_entity(distance=2.0):

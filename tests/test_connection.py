@@ -17,10 +17,10 @@ import sys
 import threading
 
 import pytest
-import connection as connection_module
-from bot import Bot
-from connection import Connection
-from lifecycle import LifecycleManager
+from amp import connection as connection_module
+from amp.bot import Bot
+from amp.connection import Connection
+from amp.lifecycle import LifecycleManager
 
 """
 --------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ def test_validation_rejects_unknown_versions():
         _make_bot({"version": "0.0.0"})
 
 
-def test_bot_module_imports_outside_repository_root(tmp_path):
+def test_amp_bot_module_imports_outside_repository_root(tmp_path):
     repository = Path(__file__).resolve().parents[1]
     environment = os.environ.copy()
     environment["PYTHONPATH"] = os.pathsep.join(filter(None, (
@@ -106,7 +106,7 @@ def test_bot_module_imports_outside_repository_root(tmp_path):
     )))
 
     result = subprocess.run(
-        [sys.executable, "-c", "import bot"],
+        [sys.executable, "-c", "import amp.bot"],
         cwd=tmp_path,
         env=environment,
         capture_output=True,

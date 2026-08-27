@@ -1,6 +1,6 @@
-from connection import Connection
-from java26_protocol import Java26ProtocolAdapter
-from authentication import MinecraftSession
+from amp.connection import Connection
+from amp.java26_protocol import Java26ProtocolAdapter
+from amp.authentication import MinecraftSession
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
@@ -113,7 +113,7 @@ def test_java26_login_joins_session_and_enables_encrypted_transport(monkeypatch)
     value.set_protocol_adapter(adapter)
     raw_socket = FakeSocket()
     value._socket = raw_socket
-    monkeypatch.setattr("connection.os.urandom", lambda size: b"s" * size)
+    monkeypatch.setattr("amp.connection.os.urandom", lambda size: b"s" * size)
     encode = Connection._encode_varint
     payload = (
         value._encode_string("") + encode(len(public_key)) + public_key

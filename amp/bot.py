@@ -2,18 +2,18 @@
 # imports
 import os
 import threading
-import connection
-from execution import Execute
-from gameplay import GameplayController
-from lifecycle import LifecycleManager
-from java26_protocol import Java26ProtocolAdapter
-from model_clients import build_model_client
-from pathfinder import Pathfinder
-from planner import Planner
-from protocol_adapters import ProtocolAdapterRegistry
-from protocol_data import packet_ids_for_protocol
-from version_support import load_support_manifest, pending_versions, runnable_version_protocols
-from world_state import WorldStateTracker
+from amp import connection
+from amp.execution import Execute
+from amp.gameplay import GameplayController
+from amp.lifecycle import LifecycleManager
+from amp.java26_protocol import Java26ProtocolAdapter
+from amp.model_clients import build_model_client
+from amp.pathfinder import Pathfinder
+from amp.planner import Planner
+from amp.protocol_adapters import ProtocolAdapterRegistry
+from amp.protocol_data import packet_ids_for_protocol
+from amp.version_support import load_support_manifest, pending_versions, runnable_version_protocols
+from amp.world_state import WorldStateTracker
 from dotenv import load_dotenv
 
 """

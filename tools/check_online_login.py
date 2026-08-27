@@ -13,8 +13,8 @@ def _approved_main():
     import os
     import time
 
-    from authentication import MicrosoftAuthenticator
-    from bot import Bot
+    from amp.authentication import MicrosoftAuthenticator
+    from amp.bot import Bot
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("host")

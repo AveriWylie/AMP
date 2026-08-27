@@ -62,7 +62,7 @@ def _remap_blocks(base, ids, report, item_ids):
     by_name = {entry["name"]: entry for entry in base}
     old_item_names = {
         entry["id"]: entry["name"]
-        for entry in _load(ROOT / "items" / "items_26.1.json")
+        for entry in _load(ROOT / "amp" / "items" / "items_26.1.json")
     }
     result = []
     for name, block_id in sorted(ids.items(), key=lambda pair: pair[1]):
@@ -114,18 +114,18 @@ def main(argv=None):
     block_ids = _registry_ids(registries, "block")
 
     items = _remap_items(
-        _load(ROOT / "items" / f"items_{args.base}.json"), item_ids
+        _load(ROOT / "amp" / "items" / f"items_{args.base}.json"), item_ids
     )
     entities = _remap_entities(
-        _load(ROOT / "entities" / f"entities_{args.base}.json"), entity_ids
+        _load(ROOT / "amp" / "entities" / f"entities_{args.base}.json"), entity_ids
     )
     blocks = _remap_blocks(
-        _load(ROOT / "blocks" / f"blocks_{args.base}.json"),
+        _load(ROOT / "amp" / "blocks" / f"blocks_{args.base}.json"),
         block_ids, block_report, item_ids,
     )
-    _write(ROOT / "items" / f"items_{args.version}.json", items)
-    _write(ROOT / "entities" / f"entities_{args.version}.json", entities)
-    _write(ROOT / "blocks" / f"blocks_{args.version}.json", blocks)
+    _write(ROOT / "amp" / "items" / f"items_{args.version}.json", items)
+    _write(ROOT / "amp" / "entities" / f"entities_{args.version}.json", entities)
+    _write(ROOT / "amp" / "blocks" / f"blocks_{args.version}.json", blocks)
 
 
 if __name__ == "__main__":

@@ -2,8 +2,8 @@
 
 import math
 
-from mining_data import mining_plan
-from pathfinder import PASSABLE
+from amp.mining_data import mining_plan
+from amp.pathfinder import PASSABLE
 
 
 class GameplayController:

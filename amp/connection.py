@@ -17,9 +17,9 @@ try:
 except ImportError:
     from cryptography.hazmat.primitives.ciphers.modes import CFB8
 
-from authentication import SessionJoiner
+from amp.authentication import SessionJoiner
 
-from protocol_data import packet_ids_for_protocol
+from amp.protocol_data import packet_ids_for_protocol
 
 
 class EncryptedSocket:

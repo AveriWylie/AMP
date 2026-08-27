@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPPORT_PATH = ROOT / "protocol" / "version_support.json"
-CANDIDATE_PATH = ROOT / "protocol" / "minecraft_release_candidates.json"
+SUPPORT_PATH = ROOT / "amp" / "protocol" / "version_support.json"
+CANDIDATE_PATH = ROOT / "amp" / "protocol" / "minecraft_release_candidates.json"
 NUMERIC_RELEASE = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?$")
 
 

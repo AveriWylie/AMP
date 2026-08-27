@@ -2,8 +2,8 @@
 
 ## Runtime flow
 
-`cli.py` connects AMP to an existing direct server.
-`tools/run_local_world.py` adds copied-world setup and dedicated-server
+`amp/cli.py` connects AMP to an existing direct server.
+`amp/local_world.py` adds copied-world setup and dedicated-server
 orchestration. Both create a `Bot`, start its connection and execution
 lifecycle, and select an AMP input mode. `Bot` is the public facade and
 composition root; callers do not coordinate transport, planning, world state,
@@ -23,26 +23,26 @@ user goal
 
 ## Module boundaries
 
-- `connection.py` owns sockets, framing, compression, encryption, keepalive
+- `amp/connection.py` owns sockets, framing, compression, encryption, keepalive
   handling, and the listener thread.
-- `java26_protocol.py` owns Java 26 Login and Configuration states, clientbound
+- `amp/java26_protocol.py` owns Java 26 Login and Configuration states,
+  clientbound
   decoding, and serverbound action encoding.
-- `world_state.py` applies normalized protocol events and owns mutable world,
+- `amp/world_state.py` applies normalized protocol events and owns mutable world,
   inventory, health, and entity state.
-- `pathfinder.py` reads world state and produces walkable coordinate paths.
-- `gameplay.py` turns high-level actions into paths, inventory preparation,
+- `amp/pathfinder.py` reads world state and produces walkable coordinate paths.
+- `amp/gameplay.py` turns high-level actions into paths, inventory preparation,
   orientation, and executable interactions.
-- `execution.py` owns the action queue and serverbound packet serialization.
-- `planner.py` builds model context, validates replies, resolves supported
+- `amp/execution.py` owns the action queue and serverbound packet serialization.
+- `amp/planner.py` builds model context, validates replies, resolves supported
   commands, and runs the autonomous loop.
-- `model_clients.py` normalizes provider APIs to a plain-text completion
+- `amp/model_clients.py` normalizes provider APIs to a plain-text completion
   contract.
-- `lifecycle.py` starts, stops, and recovers the connection and execution
+- `amp/lifecycle.py` starts, stops, and recovers the connection and execution
   workers.
-- `bot.py` composes these modules and remains the public interface.
-- `tools/run_local_world.py` owns isolated local-world profiles, server process
-  lifecycle, operator setup, and backup-first copy-back outside the `Bot`
-  runtime.
+- `amp/bot.py` composes these modules and remains the public interface.
+- `amp/local_world.py` owns isolated local-world profiles and the server process
+  lifecycle, operator setup, and backup-first copy-back outside `Bot`.
 
 ## Concurrency
 
@@ -53,17 +53,17 @@ planner waits for a completed action batch before replanning.
 
 ## World representation
 
-Chunk sections use palette-compressed block states. `chunk.py` resolves a block
-coordinate through section-local packed data, the section palette, and the
-generated global block registry. `world_state.py` patches block changes after
-the initial chunk decode so pathfinding and action confirmation read current
-state.
+Chunk sections use palette-compressed block states. `amp/chunk.py` resolves a
+block coordinate through section-local packed data, the section palette, and
+the generated global block registry. `amp/world_state.py` patches block changes
+after the initial chunk decode so pathfinding and action confirmation read
+current state.
 
 ## Planning boundary
 
 The model receives a concise snapshot rather than raw chunk objects. Model
 replies are treated as untrusted input: they must parse as a command list and
-satisfy `command_data.py` before resolution or execution. Provider adapters
+satisfy `amp/command_data.py` before resolution or execution. Provider adapters
 return text only and normalize transport or SDK errors into `ModelClientError`.
 
 ## Supported-scope principle

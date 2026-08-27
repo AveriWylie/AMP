@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from version_support import (
+from amp.version_support import (
     load_support_manifest,
     pending_versions,
     runnable_version_protocols,

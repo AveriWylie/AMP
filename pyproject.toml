@@ -30,38 +30,14 @@ dev = [
 ]
 
 [project.scripts]
-amp = "cli:main"
-amp-world = "tools.run_local_world:main"
+amp = "amp.cli:main"
+amp-world = "amp.local_world:main"
 
 [tool.setuptools]
-py-modules = [
-  "authentication",
-  "bot",
-  "chunk",
-  "cli",
-  "command_data",
-  "connection",
-  "entity_data",
-  "execution",
-  "gameplay",
-  "inventory_data",
-  "java26_protocol",
-  "lifecycle",
-  "mining_data",
-  "model_clients",
-  "pathfinder",
-  "planner",
-  "protocol_adapters",
-  "protocol_data",
-  "protocol_types",
-  "realms",
-  "version_support",
-  "world_state",
-]
-packages = ["blocks", "entities", "items", "protocol", "tools"]
+packages = ["amp", "amp.blocks", "amp.entities", "amp.items", "amp.protocol"]
 
 [tool.setuptools.package-data]
-blocks = ["*.json"]
-entities = ["*.json"]
-items = ["*.json"]
-protocol = ["*.json"]
+"amp.blocks" = ["*.json"]
+"amp.entities" = ["*.json"]
+"amp.items" = ["*.json"]
+"amp.protocol" = ["*.json"]

@@ -1,8 +1,8 @@
 import struct
 
-from connection import Connection
-from java26_protocol import Java26ProtocolAdapter
-from world_state import WorldStateTracker
+from amp.connection import Connection
+from amp.java26_protocol import Java26ProtocolAdapter
+from amp.world_state import WorldStateTracker
 
 
 def setup_inventory():

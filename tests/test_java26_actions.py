@@ -1,8 +1,8 @@
 import struct
 
-from connection import Connection
-from java26_protocol import Java26ProtocolAdapter
-from protocol_types import (
+from amp.connection import Connection
+from amp.java26_protocol import Java26ProtocolAdapter
+from amp.protocol_types import (
     AttackAction, MineAction, PlaceAction, SelectHotbarAction, SwapHotbarAction,
     UseItemAction,
 )

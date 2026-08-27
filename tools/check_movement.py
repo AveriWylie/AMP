@@ -6,7 +6,7 @@ import socket
 import struct
 import time
 
-from bot import Bot
+from amp.bot import Bot
 
 
 def _rcon_packet(request_id, packet_type, body):

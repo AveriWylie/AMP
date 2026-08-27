@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from command_data import EXECUTOR_ACTIONS
-from protocol_data import packet_ids
-from version_support import load_support_manifest
+from amp.command_data import EXECUTOR_ACTIONS
+from amp.protocol_data import packet_ids
+from amp.version_support import load_support_manifest
 
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "protocol"

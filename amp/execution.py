@@ -17,8 +17,8 @@ reads the remaining fields by name.
 import threading
 from collections import deque
 import time
-from command_data import EXECUTOR_ACTIONS
-from protocol_types import action_from_command
+from amp.command_data import EXECUTOR_ACTIONS
+from amp.protocol_types import action_from_command
 
 """
 --------------------------------------------------------------------------------------------

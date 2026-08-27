@@ -2,10 +2,10 @@
 
 import threading
 
-from connection import Connection
-from execution import Execute
-from java26_protocol import Java26ProtocolAdapter
-from planner import Planner
+from amp.connection import Connection
+from amp.execution import Execute
+from amp.java26_protocol import Java26ProtocolAdapter
+from amp.planner import Planner
 
 
 def _executor(world_state=None):

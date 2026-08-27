@@ -1,7 +1,7 @@
 """Tests for turning a requested block target into movement and digging commands."""
 
-from bot import Bot
-from gameplay import GameplayController
+from amp.bot import Bot
+from amp.gameplay import GameplayController
 
 
 class FlatChunk:

@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import model_clients
-from model_clients import (
+from amp import model_clients
+from amp.model_clients import (
     AnthropicModelClient,
     ModelClientError,
     OpenAICompatibleModelClient,

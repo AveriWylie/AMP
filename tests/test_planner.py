@@ -1,5 +1,5 @@
-from model_clients import ModelClientError
-from planner import Planner
+from amp.model_clients import ModelClientError
+from amp.planner import Planner
 
 
 class FakeModelClient:

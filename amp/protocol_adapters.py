@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from version_support import load_support_manifest
+from amp.version_support import load_support_manifest
 
 
 class ProtocolAdapter(Protocol):

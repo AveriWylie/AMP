@@ -13,9 +13,9 @@ def _approved_main():
     import os
     import time
 
-    from authentication import MicrosoftAuthenticator
-    from bot import Bot
-    from realms import RealmResolver
+    from amp.authentication import MicrosoftAuthenticator
+    from amp.bot import Bot
+    from amp.realms import RealmResolver
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("realm", help="Realm name or numeric ID")

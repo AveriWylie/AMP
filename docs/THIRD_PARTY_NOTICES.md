@@ -8,10 +8,10 @@ pinned at commit `105097328f99a4f45cb6dca0fbef97db0cbd1cfd`.
 
 The generated files are:
 
-- `protocol/packet_ids.json`
-- `blocks/blocks_26.1.json` through `blocks/blocks_26.2.json`
-- `items/items_26.1.json` through `items/items_26.2.json`
-- `entities/entities_26.1.json` through `entities/entities_26.2.json`
+- `amp/protocol/packet_ids.json`
+- `amp/blocks/blocks_26.1.json` through `amp/blocks/blocks_26.2.json`
+- `amp/items/items_26.1.json` through `amp/items/items_26.2.json`
+- `amp/entities/entities_26.1.json` through `amp/entities/entities_26.2.json`
 
 The upstream project identifies minecraft-data as MIT licensed. Its README notes
 that some data was extracted from wiki.vg and Minecraft Wiki and may be subject

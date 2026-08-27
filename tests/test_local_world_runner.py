@@ -4,8 +4,8 @@ from datetime import datetime
 
 import pytest
 
-from tools import run_local_world
-from tools.run_local_world import (
+from amp import local_world as run_local_world
+from amp.local_world import (
     add_operator,
     ask_yes_no,
     copy_world_back,
@@ -126,7 +126,7 @@ def test_existing_eula_is_not_requested_again(tmp_path, monkeypatch):
 
 def test_missing_model_configuration_fails_actionably(monkeypatch):
     monkeypatch.setattr("dotenv.load_dotenv", lambda: None)
-    monkeypatch.setattr("model_clients.build_model_client", lambda _: None)
+    monkeypatch.setattr("amp.model_clients.build_model_client", lambda _: None)
 
     with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
         validate_model_configuration("guided")

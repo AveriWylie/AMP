@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from protocol_adapters import ProtocolAdapterRegistry
+from amp.protocol_adapters import ProtocolAdapterRegistry
 
 
 def test_registry_selects_one_adapter_for_version_family():

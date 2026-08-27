@@ -22,7 +22,7 @@ implementations are available only through Git history.
 AMP requires Python 3.10 or later.
 
 ```bash
-python -m pip install .
+python -m pip install amp-minecraft
 ```
 
 This installs the `amp` and `amp-world` commands. Contributors can use
@@ -120,28 +120,29 @@ The complete post-1.0 roadmap is maintained in [Future work](docs/FUTURE.md).
 ## Architecture
 
 ```text
-cli.py            interactive setup and mode selection
-bot.py            public facade, dependency composition, planning coordination
-connection.py     TCP framing, compression, encryption, and keepalive
-java26_protocol.py Java 26 login, decoding, and action encoding
-world_state.py    live world, inventory, and entity state
-gameplay.py       movement, mining, placement, and combat coordination
-lifecycle.py      connection recovery and execution-worker lifecycle
-chunk.py          chunk, NBT, palette, and block-state decoding
-pathfinder.py     A* pathfinding over loaded world data
-execution.py      command queue and serverbound packet serialization
-planner.py        provider-neutral guided and autonomous planning
-model_clients.py  model-client contract and provider adapters
-command_data.py   shared validation contract for planner and executor actions
+amp/cli.py            interactive setup and mode selection
+amp/bot.py            public facade and dependency composition
+amp/connection.py     TCP framing, compression, encryption, and keepalive
+amp/java26_protocol.py Java 26 login, decoding, and action encoding
+amp/world_state.py    live world, inventory, and entity state
+amp/gameplay.py       movement, mining, placement, and combat coordination
+amp/lifecycle.py      connection recovery and worker lifecycle
+amp/chunk.py          chunk, NBT, palette, and block-state decoding
+amp/pathfinder.py     A* pathfinding over loaded world data
+amp/execution.py      action queue and packet serialization
+amp/planner.py        provider-neutral guided and autonomous planning
+amp/model_clients.py  model-client contract and provider adapters
+amp/command_data.py   planner and executor action validation
 ```
 
 The planner receives a bounded world snapshot and returns JSON command objects.
-`command_data.py` validates model output. `planner.py` resolves `find` to a
-`go_to` command, while `bot.py` sends `go_to`, `mine`, `place`, and `attack` to
-`gameplay.py`. `execution.py` serializes the resulting low-level actions and
+`amp/command_data.py` validates model output. `amp/planner.py` resolves `find`
+to a `go_to` command, while `amp/bot.py` sends gameplay actions to
+`amp/gameplay.py`. `amp/execution.py` serializes the resulting actions and
 waits for observable world-state changes where confirmation is available.
 
-Provider-specific API shapes stay in `model_clients.py`. The Anthropic adapter
+Provider-specific API shapes stay in `amp/model_clients.py`. The Anthropic
+adapter
 uses the official [Anthropic Python
 SDK](https://github.com/anthropics/anthropic-sdk-python). The OpenAI-compatible
 adapter follows the OpenAI-compatible Chat Completions message and response

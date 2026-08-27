@@ -1,6 +1,6 @@
 """Offline pathfinder correctness tests over a small in-memory world."""
 
-from pathfinder import Pathfinder
+from amp.pathfinder import Pathfinder
 
 
 class FakeChunk:

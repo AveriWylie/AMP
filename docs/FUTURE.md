@@ -161,7 +161,8 @@ compatibility promise or delivery commitment.
 
 - Add selective world merge and backup-management tooling. AMP 1.0 includes a
   backup-first whole-world copy-back workflow.
-- Add non-interactive arguments to the existing direct-server `cli.py` flow.
+- Add non-interactive arguments to the existing direct-server `amp/cli.py`
+  flow.
   The local-world runner already supports non-interactive launch arguments.
 - Replace the direct-server CLI's free-form configuration strings with explicit
   validation and actionable startup errors.

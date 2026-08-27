@@ -12,7 +12,7 @@ import zlib
 
 import pytest
 
-from connection import Connection
+from amp.connection import Connection
 
 """
 --------------------------------------------------------------------------------------------

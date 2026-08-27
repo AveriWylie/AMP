@@ -1,4 +1,4 @@
-from entity_data import entity_name
+from amp.entity_data import entity_name
 
 
 def test_supported_entity_registry_exposes_readable_names():

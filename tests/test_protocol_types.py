@@ -1,6 +1,6 @@
 import pytest
 
-from protocol_types import (
+from amp.protocol_types import (
     AttackAction,
     BlockChanged,
     ChatAction,

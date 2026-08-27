@@ -5,9 +5,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+DATA_ROOT = ROOT / "amp"
 
-from protocol_data import load_protocol_tables  # noqa: E402
-from version_support import load_support_manifest  # noqa: E402
+from amp.protocol_data import load_protocol_tables  # noqa: E402
+from amp.version_support import load_support_manifest  # noqa: E402
 
 
 REQUIRED_STATES = ("login", "configuration")
@@ -15,7 +16,7 @@ REQUIRED_DIRECTIONS = ("clientbound", "serverbound")
 REGISTRY_DIRECTORIES = ("blocks", "items", "entities")
 
 
-def completeness_errors(root=ROOT, manifest=None, protocol_table=None):
+def completeness_errors(root=DATA_ROOT, manifest=None, protocol_table=None):
     manifest = manifest or load_support_manifest()
     protocol_table = protocol_table or load_protocol_tables()
     errors = []

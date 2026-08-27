@@ -8,15 +8,12 @@ import re
 import shutil
 import socket
 import subprocess
-import sys
 import time
 import uuid
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
 DATA_ROOT = Path(
     os.getenv("AMP_DATA_DIR", Path.home() / ".amp")
 ).expanduser().resolve()
@@ -149,7 +146,7 @@ def parse_args(argv=None):
 
 
 def resolve_startup(args, input_fn=input, output_fn=print):
-    from version_support import runnable_version_protocols
+    from amp.version_support import runnable_version_protocols
 
     interactive = not args.non_interactive
     if not args.world and interactive:
@@ -227,7 +224,7 @@ def validate_model_configuration(mode):
     if mode == "idle":
         return
     from dotenv import load_dotenv
-    from model_clients import build_model_client
+    from amp.model_clients import build_model_client
 
     load_dotenv()
     try:
@@ -293,8 +290,8 @@ def copy_world_back(server_world, source, now=None):
 
 
 def run_amp(args):
-    from bot import Bot
-    from cli import autonomous_loop, guided_loop
+    from amp.bot import Bot
+    from amp.cli import autonomous_loop, guided_loop
 
     bot = Bot({
         "host": "127.0.0.1", "port": args.port,

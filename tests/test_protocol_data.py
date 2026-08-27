@@ -2,7 +2,7 @@
 
 import pytest
 
-from protocol_data import (
+from amp.protocol_data import (
     load_protocol_tables,
     packet_ids,
     packet_ids_for_protocol,

@@ -1,6 +1,6 @@
 """Block registry tests for the supported Minecraft data schemas."""
 
-from chunk import Chunk
+from amp.chunk import Chunk
 
 
 def test_checked_in_registry_uses_ranges_without_missing_state_ids():

@@ -4,6 +4,10 @@ Releases are deliberate maintainer actions. A new Minecraft release may create
 a compatibility candidate, but it never publishes AMP automatically. See
 [Versioning](VERSIONING.md).
 
+Before the first PyPI release, register a pending Trusted Publisher for project
+`amp-minecraft` with owner `AveriWylie`, repository `AMP`, workflow
+`release.yml`, and environment `pypi`. No PyPI token is stored in GitHub.
+
 ## 1. Automated checks
 
 From a clean checkout, install the development dependencies and run:
@@ -49,7 +53,7 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
 ## 3. Release preparation
 
 1. Confirm that the README compatibility table matches
-   `protocol/version_support.json`.
+   `amp/protocol/version_support.json`.
 2. Confirm that every advertised Minecraft version has offline and live
    verification evidence.
 3. Add the release date to the matching entry in `docs/CHANGELOG.md`.
@@ -63,8 +67,9 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
 ## 4. Publication
 
 1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
-2. Push the commit and tag.
-3. Publish the wheel and source distribution with the GitHub release using the
-   matching changelog entry.
-4. Confirm that both artifacts contain the license and Minecraft runtime data.
-   Confirm that the source distribution also contains the project documents.
+2. Push the commit and tag. The release workflow verifies that the tag matches
+   `pyproject.toml`, builds once, and publishes the same artifacts to GitHub and
+   PyPI through Trusted Publishing.
+3. Confirm that both published artifacts contain the license and Minecraft
+   runtime data. Confirm that the source distribution also contains the project
+   documents and protocol fixtures.

@@ -1,6 +1,6 @@
 import argparse
 
-from bot import Bot
+from amp.bot import Bot
 
 """
 --------------------------------------------------------------------------------------------

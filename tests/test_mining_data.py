@@ -1,6 +1,6 @@
 """Vanilla base mining-speed and hotbar tool selection tests."""
 
-from mining_data import mining_plan
+from amp.mining_data import mining_plan
 
 
 def _inventory(*items):

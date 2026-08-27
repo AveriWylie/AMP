@@ -1,6 +1,6 @@
 """Placement orchestration tests for inventory, approach, support, and facing."""
 
-from bot import Bot
+from amp.bot import Bot
 
 
 class PlacementChunk:

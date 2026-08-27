@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from authentication import AuthenticationError, UrlLibTransport
+from amp.authentication import AuthenticationError, UrlLibTransport
 
 
 REALMS_API = "https://pc.realms.minecraft.net"

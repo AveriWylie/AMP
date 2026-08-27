@@ -4,7 +4,7 @@ import argparse
 import os
 import time
 
-from bot import Bot
+from amp.bot import Bot
 from tools.check_movement import _rcon_command
 
 

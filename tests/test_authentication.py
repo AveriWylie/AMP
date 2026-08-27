@@ -1,4 +1,4 @@
-from authentication import (
+from amp.authentication import (
     AuthenticationError, MINECRAFT, MicrosoftAuthenticator, MinecraftSession,
 )
 

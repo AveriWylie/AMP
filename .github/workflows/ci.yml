@@ -33,3 +33,31 @@ jobs:
         run: |
           python tools/sync_minecraft_data.py --check
           python tools/check_version_data.py
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Build distributions
+        run: |
+          python -m pip install -r requirements-lock.txt
+          python -m build
+      - name: Test installed wheel outside checkout
+        run: |
+          python -m venv --system-site-packages "$RUNNER_TEMP/amp-wheel"
+          "$RUNNER_TEMP/amp-wheel/bin/python" -m pip install \
+            --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/amp-wheel/bin/amp" --help
+          "$RUNNER_TEMP/amp-wheel/bin/amp-world" --help
+          "$RUNNER_TEMP/amp-wheel/bin/python" -c \
+            "from amp.version_support import runnable_version_protocols; assert runnable_version_protocols()"
+      - name: Check distribution contents
+        run: |
+          unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
+          tar -tzf dist/*.tar.gz | grep 'tests/fixtures/protocol/java-26.2.json'

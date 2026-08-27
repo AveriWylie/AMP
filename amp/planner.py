@@ -29,8 +29,8 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 import json
 import threading
 import queue
-from command_data import planner_command_error
-from model_clients import ModelClientError
+from amp.command_data import planner_command_error
+from amp.model_clients import ModelClientError
 
 """
 --------------------------------------------------------------------------------------------
