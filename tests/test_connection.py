@@ -404,6 +404,35 @@ def test_connect_closes_socket_when_tcp_connect_fails(monkeypatch):
     assert conn._socket is None
 
 
+def test_reconnect_resets_compression_before_login(monkeypatch):
+    class ReconnectSocket:
+        def connect(self, address):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(
+        connection_module.socket,
+        "socket",
+        lambda *args: ReconnectSocket(),
+    )
+    conn = Connection("localhost", 25565, "26.1.2", "TestBot", None, 775)
+    conn._compression_threshold = 256
+    monkeypatch.setattr(conn, "_send_handshake", lambda: None)
+    monkeypatch.setattr(conn, "_send_login_start", lambda: None)
+    observed = []
+    monkeypatch.setattr(
+        conn,
+        "_login",
+        lambda: observed.append(conn._compression_threshold),
+    )
+
+    conn.connect()
+
+    assert observed == [None]
+
+
 
 # --------------------------------------------------------------------------------------------
 # 11. Failure handler

@@ -517,6 +517,7 @@ class Connection:
             self._socket.close()
             self._socket = None
 
+        self._compression_threshold = None
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket = raw_socket
         try:
