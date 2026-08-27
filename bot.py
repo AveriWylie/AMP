@@ -118,6 +118,8 @@ class Bot:
             self._host, self._port, self._version, self._username,
             on_failure=lambda error: self._lifecycle.handle_failure(error),
             protocol_version=protocol,
+            auth_session=config.get("auth_session"),
+            session_joiner=config.get("session_joiner"),
         )
         adapter_registry = ProtocolAdapterRegistry()
         manifest = load_support_manifest()

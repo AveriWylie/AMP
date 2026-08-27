@@ -332,7 +332,20 @@ class Java26ProtocolAdapter:
         if packet_id == ids["disconnect"]:
             raise ConnectionError("Server disconnected during Login")
         if packet_id == ids["encryption_begin"]:
-            raise ConnectionError("Server requires authenticated online-mode login")
+            if session is None:
+                raise ConnectionError("Server requires a Microsoft-authenticated session")
+            server_id, offset = self._decode_string(payload)
+            key_length, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            public_key = payload[offset:offset + key_length]
+            offset += key_length
+            token_length, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            verify_token = payload[offset:offset + token_length]
+            if len(public_key) != key_length or len(verify_token) != token_length:
+                raise ConnectionError("Malformed encryption request")
+            self.connection.authenticate_server(server_id, public_key, verify_token)
+            return False
         if packet_id == ids["login_plugin_request"]:
             raise ConnectionError("Unsupported Login plugin request")
         raise ConnectionError(f"Unexpected Login packet id {packet_id:#x}")

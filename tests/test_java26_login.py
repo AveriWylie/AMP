@@ -1,5 +1,8 @@
 from connection import Connection
 from java26_protocol import Java26ProtocolAdapter
+from authentication import MinecraftSession
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 
 class FakeSocket:
@@ -72,7 +75,7 @@ def test_java26_configuration_declines_resource_pack_by_uuid():
     assert response.endswith(pack_id + b"\x01")
 
 
-def test_java26_login_rejects_online_mode_until_account_session_is_added():
+def test_java26_login_rejects_online_mode_without_account_session():
     value, adapter = connection()
     value._socket = FakeSocket(frame(
         Connection._encode_varint(adapter.login_clientbound["encryption_begin"])
@@ -82,4 +85,54 @@ def test_java26_login_rejects_online_mode_until_account_session_is_added():
         value._login()
         assert False
     except ConnectionError as error:
-        assert "authenticated online-mode" in str(error)
+        assert "Microsoft-authenticated" in str(error)
+
+
+def test_java26_login_joins_session_and_enables_encrypted_transport(monkeypatch):
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+    public_key = private_key.public_key().public_bytes(
+        serialization.Encoding.DER,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    verify_token = b"verify"
+    session = MinecraftSession("access-secret", "profile-id", "AMP")
+
+    class Joiner:
+        def __init__(self):
+            self.joined = None
+
+        def join(self, joined_session, server_hash):
+            self.joined = (joined_session, server_hash)
+
+    joiner = Joiner()
+    value = Connection(
+        "localhost", 25565, "26.1", "AMP", None, 775,
+        auth_session=session, session_joiner=joiner,
+    )
+    adapter = Java26ProtocolAdapter("java-26.1", "26.1", value)
+    value.set_protocol_adapter(adapter)
+    raw_socket = FakeSocket()
+    value._socket = raw_socket
+    monkeypatch.setattr("connection.os.urandom", lambda size: b"s" * size)
+    encode = Connection._encode_varint
+    payload = (
+        value._encode_string("") + encode(len(public_key)) + public_key
+        + encode(len(verify_token)) + verify_token + b"\x01"
+    )
+
+    assert adapter.handle_login(
+        adapter.login_clientbound["encryption_begin"], payload, session
+    ) is False
+
+    assert joiner.joined[0] is session
+    response = body(raw_socket.sent[0])
+    _, offset = Connection._decode_varint_bytes(response, 0)
+    secret_length, consumed = Connection._decode_varint_bytes(response, offset)
+    offset += consumed
+    encrypted_secret = response[offset:offset + secret_length]
+    offset += secret_length
+    token_length, consumed = Connection._decode_varint_bytes(response, offset)
+    offset += consumed
+    encrypted_token = response[offset:offset + token_length]
+    assert private_key.decrypt(encrypted_secret, padding.PKCS1v15()) == b"s" * 16
+    assert private_key.decrypt(encrypted_token, padding.PKCS1v15()) == verify_token

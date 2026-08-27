@@ -1,13 +1,38 @@
 """Minecraft protocol transport and connection lifecycle."""
 
 import hashlib
+import os
 import socket
 import struct
 import threading
 import uuid
 import zlib
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.decrepit.ciphers.modes import CFB8
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+
+from authentication import SessionJoiner
+
 from protocol_data import packet_ids_for_protocol
+
+
+class EncryptedSocket:
+    def __init__(self, raw_socket, shared_secret):
+        cipher = Cipher(algorithms.AES(shared_secret), CFB8(shared_secret))
+        self.raw_socket = raw_socket
+        self.encryptor = cipher.encryptor()
+        self.decryptor = cipher.decryptor()
+
+    def recv(self, size):
+        return self.decryptor.update(self.raw_socket.recv(size))
+
+    def sendall(self, data):
+        return self.raw_socket.sendall(self.encryptor.update(data))
+
+    def close(self):
+        return self.raw_socket.close()
 
 
 class Connection:
@@ -22,7 +47,8 @@ class Connection:
     because keepalive is received clientbound and echoed serverbound.
     --------------------------------------------------------------------------------------------
     """
-    def __init__(self, host, port, version, username, on_failure, protocol_version, packet_handler=None):
+    def __init__(self, host, port, version, username, on_failure, protocol_version,
+                 packet_handler=None, auth_session=None, session_joiner=None):
         self._host = host
         self._port = port
         self._version = version
@@ -51,6 +77,34 @@ class Connection:
         # every read and every send uses the compressed frame envelope (see _read_packet/_send).
         self._compression_threshold = None
         self._protocol_adapter = None
+        self._auth_session = auth_session
+        self._session_joiner = session_joiner or SessionJoiner()
+
+    @staticmethod
+    def _minecraft_server_hash(server_id, shared_secret, public_key):
+        digest = hashlib.sha1(
+            server_id.encode("iso-8859-1") + shared_secret + public_key,
+            usedforsecurity=False,
+        ).digest()
+        signed = int.from_bytes(digest, "big", signed=True)
+        return ("-" if signed < 0 else "") + format(abs(signed), "x")
+
+    def authenticate_server(self, server_id, public_key, verify_token):
+        if self._auth_session is None:
+            raise ConnectionError("Server requires a Microsoft-authenticated session")
+        key = serialization.load_der_public_key(public_key)
+        shared_secret = os.urandom(16)
+        server_hash = self._minecraft_server_hash(server_id, shared_secret, public_key)
+        self._session_joiner.join(self._auth_session, server_hash)
+        encrypted_secret = key.encrypt(shared_secret, padding.PKCS1v15())
+        encrypted_token = key.encrypt(verify_token, padding.PKCS1v15())
+        encode = self._encode_varint
+        payload = (
+            encode(len(encrypted_secret)) + encrypted_secret
+            + encode(len(encrypted_token)) + encrypted_token
+        )
+        self._send_protocol_packet(self.login_ids["encryption_begin"], payload)
+        self._socket = EncryptedSocket(self._socket, shared_secret)
 
     def set_protocol_adapter(self, adapter):
         self._protocol_adapter = adapter
@@ -528,7 +582,9 @@ class Connection:
             packet_id, payload = self._read_packet()
 
             if callable(getattr(self._protocol_adapter, "handle_login", None)):
-                if self._protocol_adapter.handle_login(packet_id, payload):
+                if self._protocol_adapter.handle_login(
+                    packet_id, payload, self._auth_session
+                ):
                     self._connected = True
                     self._start_func()
                     print(f"Connected to {self._host}:{self._port}")

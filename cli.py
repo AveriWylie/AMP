@@ -1,4 +1,8 @@
+import os
+
+from authentication import MicrosoftAuthenticator
 from bot import Bot
+from dotenv import load_dotenv
 
 """
 --------------------------------------------------------------------------------------------
@@ -38,7 +42,14 @@ def collect_config():
             break
         print("Port must be a number between 1024 and 65535")
 
-    username = input("Username (default: Guest): ").strip() or "Guest"
+    session = None
+    if input("Authenticate a Microsoft account for online-mode/Realms? (y/N): ").strip().lower() == "y":
+        load_dotenv()
+        authenticator = MicrosoftAuthenticator(os.getenv("AMP_MICROSOFT_CLIENT_ID"))
+        session = authenticator.authorize()
+        username = session.profile_name
+    else:
+        username = input("Offline username (default: Guest): ").strip() or "Guest"
 
     print(f"\nRunnable versions: {', '.join(sorted(Bot.allowed_values['version']))}")
     if Bot.pending_versions:
@@ -57,7 +68,8 @@ def collect_config():
         "username": username,
         "version": version,
         "game_mode": game_mode,
-        "behavior_mode": behavior_mode
+        "behavior_mode": behavior_mode,
+        "auth_session": session,
     }
 
 def select_mode():
