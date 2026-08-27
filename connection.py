@@ -56,17 +56,6 @@ class Connection:
         self._protocol_version = protocol_version
         self.play_ids = packet_ids_for_protocol(protocol_version, "serverbound")
         self.clientbound_ids = packet_ids_for_protocol(protocol_version, "clientbound")
-        self._modern_configuration = protocol_version >= 764
-        if self._modern_configuration:
-            self.login_ids = packet_ids_for_protocol(
-                protocol_version, "serverbound", state="login"
-            )
-            self.configuration_ids = packet_ids_for_protocol(
-                protocol_version, "serverbound", state="configuration"
-            )
-            self.configuration_clientbound_ids = packet_ids_for_protocol(
-                protocol_version, "clientbound", state="configuration"
-            )
         self._connected = False
         self._username = username
         self._on_failure = on_failure
@@ -103,7 +92,9 @@ class Connection:
             encode(len(encrypted_secret)) + encrypted_secret
             + encode(len(encrypted_token)) + encrypted_token
         )
-        self._send_protocol_packet(self.login_ids["encryption_begin"], payload)
+        self._send_protocol_packet(
+            self._protocol_adapter.login_serverbound["encryption_begin"], payload
+        )
         self._socket = EncryptedSocket(self._socket, shared_secret)
 
     def set_protocol_adapter(self, adapter):
@@ -190,13 +181,10 @@ class Connection:
     def _serialize_login_start(self, username: str) -> bytes:
         packet_id = self._encode_varint(0x00)  # Login Start packet ID
         data = self._encode_string(username)
-        if self._modern_configuration:
-            # Java's UUID.nameUUIDFromBytes("OfflinePlayer:<name>") algorithm. Modern
-            # Login Start requires these 16 raw bytes even when the server is offline-mode.
-            digest = hashlib.md5(
-                f"OfflinePlayer:{username}".encode("utf-8"), usedforsecurity=False
-            ).digest()
-            data += uuid.UUID(bytes=digest, version=3).bytes
+        digest = hashlib.md5(
+            f"OfflinePlayer:{username}".encode("utf-8"), usedforsecurity=False
+        ).digest()
+        data += uuid.UUID(bytes=digest, version=3).bytes
         length = self._encode_varint(len(packet_id + data))
         return length + packet_id + data
 
@@ -423,45 +411,6 @@ class Connection:
             frame = self._compress_frame(frame)
         self._socket.sendall(frame)
 
-    def _send_configuration_settings(self):
-        payload = (
-            self._encode_string("en_us")
-            + struct.pack(">b", 10)
-            + self._encode_varint(0)
-            + b"\x01"
-            + b"\x7f"
-            + self._encode_varint(1)
-            + b"\x00"
-            + b"\x01"
-        )
-        self._send_protocol_packet(self.configuration_ids["settings"], payload)
-
-    def _configuration(self):
-        """Process Configuration packets until the server releases us into Play."""
-        self._send_configuration_settings()
-        while True:
-            packet_id, payload = self._read_packet()
-            ids = self.configuration_clientbound_ids
-            if packet_id == ids["finish_configuration"]:
-                self._send_protocol_packet(
-                    self.configuration_ids["finish_configuration"]
-                )
-                return
-            if packet_id == ids["keep_alive"]:
-                self._send_protocol_packet(self.configuration_ids["keep_alive"], payload)
-            elif packet_id == ids["ping"]:
-                self._send_protocol_packet(self.configuration_ids["pong"], payload)
-            elif packet_id == ids["resource_pack_send"]:
-                # 1 = declined. AMP is headless and cannot apply client resource packs.
-                self._send_protocol_packet(
-                    self.configuration_ids["resource_pack_receive"],
-                    self._encode_varint(1),
-                )
-            elif packet_id == ids["disconnect"]:
-                raise ConnectionError("Server disconnected during Configuration")
-            # Registry, feature, tag and custom payload packets are length-framed and
-            # may be safely retained/ignored by this headless base.
-
     # ------------------------------------------------------------------------------------------
 
     """
@@ -485,12 +434,11 @@ class Connection:
                 if packet_id == self.clientbound_ids["keep_alive"]:
                     self._send(self._keepalive_response_aux(payload))
 
-                elif (self._modern_configuration and
-                      packet_id == self.clientbound_ids["start_configuration"]):
+                elif packet_id == self.clientbound_ids["start_configuration"]:
                     self._send_protocol_packet(
                         self.play_ids["configuration_acknowledged"]
                     )
-                    self._configuration()
+                    self._protocol_adapter.handle_configuration()
 
                 else:
                     # functions are truthy objects, in bot we initialize this attribute
@@ -566,62 +514,24 @@ class Connection:
     --------------------------------------------------------------------------------------------
     Function Header - Login state machine
     --------------------------------------------------------------------------------------------
-    After Login Start the server drives a short exchange before Play begins, and it does not
-    always end on the first packet, so we loop until Login Success rather than read exactly one.
-      0x03 Set Compression    -> store threshold, all frames after this are compressed
-      0x02 Login Success      -> transition to Play, start keepalive/listen thread
-      0x00 Disconnect         -> server rejected us
-      0x01 Encryption Request -> online-mode server, unsupported by this base
-    _read_packet already honors _compression_threshold, so once Set Compression sets it the
-    following Login Success frame is read compressed automatically.
+    After Login Start, the selected protocol adapter owns the Login and Configuration state
+    machines. Transport only reads framed packets and starts the listener after the adapter
+    reports that Play has been reached.
     --------------------------------------------------------------------------------------------
     """
 
     def _login(self):
+        if not callable(getattr(self._protocol_adapter, "handle_login", None)):
+            raise ConnectionError("No protocol adapter configured")
         while True:
             packet_id, payload = self._read_packet()
-
-            if callable(getattr(self._protocol_adapter, "handle_login", None)):
-                if self._protocol_adapter.handle_login(
-                    packet_id, payload, self._auth_session
-                ):
-                    self._connected = True
-                    self._start_func()
-                    print(f"Connected to {self._host}:{self._port}")
-                    break
-                continue
-
-            if packet_id == 0x03:
-                threshold, _ = self._decode_varint_bytes(payload, 0)
-                self._compression_threshold = threshold
-
-            elif packet_id == 0x02:
-                if self._modern_configuration:
-                    self._send_protocol_packet(self.login_ids["login_acknowledged"])
-                    self._configuration()
-                # because we (As per design choice) have keepalive handled within connection
-                # we start it when someone connects
+            if self._protocol_adapter.handle_login(
+                packet_id, payload, self._auth_session
+            ):
                 self._connected = True
                 self._start_func()
                 print(f"Connected to {self._host}:{self._port}")
                 break
-
-            # connect is called on Connection directly by whatever sets up the bot, so that
-            # ConnectionError propagates up to that caller, not to _listen. They're the same
-            # exception type but raised in completely separate contexts which determines the
-            # propogation. (i.e. it will propogate to bot.start() which initiates connection,
-            # etc.)
-            elif packet_id == 0x00:
-                # note that a consequence of the information above is that there is no
-                # gen case for this raised exception
-                raise ConnectionError("Login failed: server rejected connection")
-
-            elif packet_id == 0x01:
-                raise ConnectionError("Server is online-mode (encryption required). This "
-                                      "base only supports offline-mode / LAN servers.")
-
-            else:
-                raise ConnectionError(f"Unexpected login packet id {hex(packet_id)}")
 
     def disconnect(self):
         if self._connected:
