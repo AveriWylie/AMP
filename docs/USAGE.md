@@ -6,8 +6,9 @@ does not advertise that authentication path pending approval from Minecraft
 Services.
 
 The local-world runner copies a single-player save, hosts the copy with Mojang's
-dedicated Java server, and connects both the human player and AMP. One Python
-command owns setup, server startup, interactive planning, saving, and shutdown.
+dedicated Java server, and connects AMP. It prints the local server address for
+the human player to join manually. One Python command owns setup, server
+startup, interactive planning, saving, and shutdown.
 
 ## Requirements
 
