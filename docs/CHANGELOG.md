@@ -23,6 +23,8 @@
 - Supports Anthropic and OpenAI-compatible providers behind a provider-neutral
   completion interface.
 - Reads provider configuration from the environment or an ignored `.env` file.
+- Provides one cross-platform Python workflow for copied single-player worlds,
+  local server startup, operator access, interactive AMP control, and shutdown.
 - Separates transport, world state, gameplay, lifecycle, execution, model
   providers, and planning behind the `Bot` facade.
 - Includes offline pytest coverage and vanilla-server checks for connection and

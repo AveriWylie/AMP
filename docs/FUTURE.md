@@ -141,9 +141,8 @@ compatibility promise or delivery commitment.
 
 ## User and operator experience
 
-- Add safe world export and merge tooling. AMP 1.0 includes Windows PowerShell
-  and Linux Bash runners that operate on an isolated copy of a Java
-  single-player save.
+- Add safe world export and merge tooling. AMP 1.0 includes one cross-platform
+  Python runner that operates on an isolated copy of a Java single-player save.
 - Add non-interactive configuration through command-line arguments and a
   validated configuration file.
 - Replace free-form configuration strings with explicit validation and
@@ -188,7 +187,7 @@ compatibility promise or delivery commitment.
 ## Deferred project work
 
 - Choose and add the project's license. [Third-party
-  notices](NOTICES.md) cover upstream data but do not license AMP.
+  notices](THIRD_PARTY_NOTICES.md) cover upstream data but do not license AMP.
 - Finalize package metadata and release artifacts.
 - Define the dependency-locking and reproducible-build policy for release
   distributions.

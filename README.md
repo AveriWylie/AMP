@@ -57,10 +57,10 @@ Start AMP with:
 python cli.py
 ```
 
-To see AMP in a copy of an existing single-player world without Microsoft
-authentication, use the documented [local-world runner](docs/USAGE.md). It
-configures and starts an official offline-mode dedicated server, connects AMP,
-and shuts both down cleanly.
+To run AMP in a copy of an existing single-player world without Microsoft
+authentication, use the documented [local-world workflow](docs/USAGE.md). One
+Python command prepares and starts the server, grants optional operator access,
+connects AMP in the selected planning mode, and shuts everything down cleanly.
 
 The CLI collects the server host, port, username, Minecraft version, game mode,
 and behavior label before connecting. It defaults to the latest supported
@@ -174,7 +174,7 @@ python tools/sync_minecraft_data.py --check
 python -m pytest
 ```
 
-See [Third-party notices](docs/NOTICES.md) for attribution and
+See [Third-party notices](docs/THIRD_PARTY_NOTICES.md) for attribution and
 licensing details.
 
 ## Project documents
@@ -185,4 +185,4 @@ licensing details.
 - [Testing](docs/TESTING.md)
 - [Authentication status](docs/AUTHENTICATION.md)
 - [Project philosophy](docs/PHILOSOPHY.md)
-- [Third-party notices](docs/NOTICES.md)
+- [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
