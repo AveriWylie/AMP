@@ -21,8 +21,9 @@ python tools/check_version_data.py
 python -m build --no-isolation
 ```
 
-Confirm that CI passes on every configured Python version. Review outstanding
-security and dependency-audit findings before continuing.
+Confirm that CI passes on every configured Python version, including the
+`audit` job that runs `pip-audit` against `requirements-lock.txt`. Review any
+outstanding security findings before continuing.
 
 ## 2. Human testing
 
