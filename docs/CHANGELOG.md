@@ -4,7 +4,7 @@
 
 - Requires Python 3.10 or later. Development tests require pytest 9.0.3 or
   later.
-- Ships as the MIT-licensed `amp-minecraft` Python package with `amp` and
+- Ships as the MIT-licensed `amp-mc` Python package with `amp` and
   `amp-world` console commands and an exact release-environment lock.
 - Supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct
   offline-mode servers; all four releases passed the offline and live gameplay

@@ -5,7 +5,7 @@ a compatibility candidate, but it never publishes AMP automatically. See
 [Versioning](VERSIONING.md).
 
 Before the first PyPI release, register a pending Trusted Publisher for project
-`amp-minecraft` with owner `AveriWylie`, repository `AMP`, workflow
+`amp-mc` with owner `AveriWylie`, repository `AMP`, workflow
 `release.yml`, and environment `pypi`. No PyPI token is stored in GitHub.
 
 ## 1. Automated checks

@@ -3,7 +3,7 @@ requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "amp-minecraft"
+name = "amp-mc"
 version = "1.0.0"
 description = "Agentic Minecraft player for supported Java Edition servers"
 readme = "README.md"

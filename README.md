@@ -22,7 +22,7 @@ implementations are available only through Git history.
 AMP requires Python 3.10 or later.
 
 ```bash
-python -m pip install amp-minecraft
+python -m pip install amp-mc
 ```
 
 This installs the `amp` and `amp-world` commands. Contributors can use
