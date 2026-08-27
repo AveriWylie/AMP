@@ -28,6 +28,14 @@ amp-world `
     --version 26.2 --port 25576
 ```
 
+macOS:
+
+```bash
+amp-world \
+    --world "$HOME/Library/Application Support/minecraft/saves/My World" \
+    --version 26.2 --port 25576
+```
+
 Linux:
 
 ```bash
