@@ -61,3 +61,9 @@ jobs:
         run: |
           unzip -l dist/*.whl | grep 'amp/protocol/version_support.json'
           tar -tzf dist/*.tar.gz | grep 'tests/fixtures/protocol/java-26.2.json'
+      - name: Run the source distribution's test suite
+        run: |
+          mkdir -p "$RUNNER_TEMP/amp-sdist"
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP/amp-sdist" --strip-components=1
+          cd "$RUNNER_TEMP/amp-sdist"
+          python -m pytest

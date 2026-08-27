@@ -1,5 +1,6 @@
 include LICENSE
 include README.md
+include pytest.ini
 include requirements.txt
 include requirements-dev.txt
 include requirements-lock.txt
@@ -9,3 +10,4 @@ recursive-include amp/entities *.json
 recursive-include amp/items *.json
 recursive-include amp/protocol *.json
 recursive-include tests/fixtures *.json
+recursive-include tools *.py
