@@ -42,6 +42,23 @@ def test_bot_delegates_gameplay_actions_to_controller():
     assert bot.attack_entity(42) == ("attack", 42)
 
 
+def test_path_moves_skip_start_and_target_block_centers():
+    bot = Bot({"version": "26.1.2", "game_mode": "creative"})
+    bot._world_state["position"].update({
+        "x": 55.63, "y": 68.0, "z": -135.63
+    })
+    bot._pathfinder.find_path = lambda *args, **kwargs: [
+        (55, 68, -136),
+        (54, 68, -136),
+    ]
+
+    assert bot.move_to((54, 68, -136)) is True
+
+    assert list(bot._executor._command_queue) == [{
+        "action": "move", "x": 54.5, "y": 68, "z": -135.5
+    }]
+
+
 def test_mine_block_selects_reachable_face_and_queues_dig_last():
     bot = Bot({
         "host": "localhost",
@@ -60,7 +77,9 @@ def test_mine_block_selects_reachable_face_and_queues_dig_last():
     assert commands[-1] == {
         "action": "mine", "x": 2, "y": 64, "z": 2, "face": 2, "duration": 0
     }
-    assert commands[-3] == {"action": "move", "x": 2, "y": 64, "z": 1}
+    assert commands[-3] == {
+        "action": "move", "x": 2.5, "y": 64, "z": 1.5
+    }
 
 
 def test_mine_nearest_finds_log_hidden_below_leaf_canopy():

@@ -18,6 +18,12 @@ class GameplayController:
     def set_mode(self, mode):
         self.input_mode = mode
 
+    def _enqueue_path(self, path):
+        for x, y, z in path[1:]:
+            self.executor.enque_command({
+                "action": "move", "x": x + 0.5, "y": y, "z": z + 0.5
+            })
+
     def move_to(self, goal):
         pos = self.world_state["position"]
         start = (pos["x"], pos["y"], pos["z"])
@@ -33,8 +39,7 @@ class GameplayController:
             print(f"No path found to {goal}")
             return False
 
-        for x, y, z in path:
-            self.executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
+        self._enqueue_path(path)
 
         return True
 
@@ -81,8 +86,7 @@ class GameplayController:
             return False
 
         _, path, face, standing = min(choices, key=lambda choice: choice[0])
-        for x, y, z in path:
-            self.executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
+        self._enqueue_path(path)
 
         if plan and plan["inventory_slot"] is not None:
             if plan["inventory_slot"] < 36:
@@ -115,9 +119,9 @@ class GameplayController:
         radius = max(1, min(int(radius), 16))
         position = self.world_state["position"]
         origin = (
-            int(position["x"]),
-            int(position["y"]),
-            int(position["z"]),
+            math.floor(position["x"]),
+            math.floor(position["y"]),
+            math.floor(position["z"]),
         )
 
         def matches(block_name):
@@ -204,8 +208,7 @@ class GameplayController:
             return False
 
         _, path, standing, support, face = min(choices, key=lambda choice: choice[0])
-        for x, y, z in path:
-            self.executor.enque_command({"action": "move", "x": x, "y": y, "z": z})
+        self._enqueue_path(path)
         if source_slot < 36:
             self.executor.enque_command({
                 "action": "swap_hotbar", "source_slot": source_slot,

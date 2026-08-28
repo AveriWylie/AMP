@@ -58,6 +58,16 @@ def test_find_path_basic():
         assert sum(abs(a - b) for a, b in zip(start, end)) == 1
 
 
+def test_find_path_floors_negative_fractional_start_coordinates():
+    pathfinder = Pathfinder({
+        "map": {(0, -1): FakeChunk(), (-1, -1): FakeChunk()}
+    })
+
+    path = pathfinder.find_path((0.6, 64.0, -0.6), (-1, 64, -1))
+
+    assert path[0] == (0, 64, -1)
+
+
 def test_mode_expansion_difference():
     wall = {}
     for z in range(8):

@@ -27,6 +27,7 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 """
 # imports
 import json
+import math
 import threading
 import queue
 from amp.command_data import planner_command_error
@@ -74,9 +75,9 @@ class Planner:
     """
     def _build_snapshot(self, radius=8):
         pos = self._world_state["position"]
-        bx = int(pos["x"])
-        by = int(pos["y"])
-        bz = int(pos["z"])
+        bx = math.floor(pos["x"])
+        by = math.floor(pos["y"])
+        bz = math.floor(pos["z"])
 
         nearby = {}
         for dx in range(-radius, radius + 1):

@@ -22,6 +22,7 @@ something to stand on.
 """
 # imports
 import heapq
+import math
 
 # non-solid blocks the bot can move through or stand in
 PASSABLE = {
@@ -171,8 +172,8 @@ class Pathfinder:
         gx, gy, gz = goal
 
         # snap start and goal to integer coordinates
-        sx, sy, sz = int(sx), int(sy), int(sz)
-        gx, gy, gz = int(gx), int(gy), int(gz)
+        sx, sy, sz = math.floor(sx), math.floor(sy), math.floor(sz)
+        gx, gy, gz = math.floor(gx), math.floor(gy), math.floor(gz)
 
         if (sx, sy, sz) == (gx, gy, gz):
             return self._finish(0, [(sx, sy, sz)], weight)
