@@ -8,6 +8,16 @@ from amp.movement import MovementController
 
 
 class GameplayController:
+    ATTACK_SPEEDS = {
+        "sword": 1.6,
+        "pickaxe": 1.2,
+        "shovel": 1.0,
+        "axe": 0.8,
+        "hoe": 1.0,
+        "trident": 1.1,
+        "mace": 0.6,
+    }
+
     def __init__(self, world_state, pathfinder, executor, version, game_mode):
         self.world_state = world_state
         self.pathfinder = pathfinder
@@ -293,7 +303,19 @@ class GameplayController:
                 continue
             attacked = True
             self.executor.wait_until_idle()
-            time.sleep(0.6)
+            time.sleep(self._attack_cooldown())
 
         print(f"Entity {entity_id} survived {max_attacks} attacks")
         return False
+
+    def _attack_cooldown(self):
+        inventory = self.world_state.get("inventory", {})
+        selected = inventory.get("selected_hotbar_slot", 0)
+        item = inventory.get("slots", {}).get(36 + selected)
+        name = item.get("name", "") if item else ""
+        speed = 4.0
+        for suffix, candidate in self.ATTACK_SPEEDS.items():
+            if name == suffix or name.endswith(f"_{suffix}"):
+                speed = candidate
+                break
+        return 1.0 / speed + 0.05

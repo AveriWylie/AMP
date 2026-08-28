@@ -69,8 +69,24 @@ def test_kill_entity_approaches_and_repeats_until_target_is_removed(monkeypatch)
     controller = GameplayController(
         world, Pathfinder(), executor, "26.2", "survival"
     )
-    monkeypatch.setattr("amp.gameplay.time.sleep", lambda duration: None)
+    delays = []
+    monkeypatch.setattr("amp.gameplay.time.sleep", delays.append)
 
     assert controller.kill_entity(42) is True
     assert executor.attacks == 3
     assert any(command["action"] == "move" for command in executor.commands)
+    assert delays == [0.3, 0.3, 0.3]
+
+
+def test_kill_cooldown_accounts_for_held_weapon_speed():
+    bot = _bot_with_entity()
+    inventory = bot._world_state["inventory"]
+
+    inventory["slots"][36] = {"name": "wooden_axe", "id": 1, "count": 1}
+    assert bot._gameplay._attack_cooldown() == 1.3
+
+    inventory["slots"][36] = {"name": "iron_sword", "id": 2, "count": 1}
+    assert bot._gameplay._attack_cooldown() == 0.675
+
+    inventory["slots"][36] = {"name": "mace", "id": 3, "count": 1}
+    assert round(bot._gameplay._attack_cooldown(), 4) == 1.7167
