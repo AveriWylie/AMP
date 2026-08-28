@@ -61,9 +61,16 @@ def test_path_moves_skip_start_and_target_block_centers():
 
     assert bot.move_to((54, 68, -136)) is True
 
-    assert list(bot._executor._command_queue) == [{
-        "action": "move", "x": 54.5, "y": 68, "z": -135.5
-    }]
+    commands = list(bot._executor._command_queue)
+    assert len(commands) == 5
+    assert commands[-1]["x"] == 54.5
+    assert commands[-1]["z"] == -135.5
+    assert all(command["y"] == 68 for command in commands)
+    assert all(command["delay"] == 0.05 for command in commands)
+    assert all(
+        abs(current["x"] - previous["x"]) <= 0.200001
+        for previous, current in zip(commands, commands[1:])
+    )
 
 
 def test_move_to_uses_nearby_walkable_height_when_exact_goal_is_blocked():
@@ -94,6 +101,11 @@ def test_step_up_uses_airborne_intermediate_positions():
     assert commands[0]["y"] > 64
     assert commands[0]["on_ground"] is False
     assert all(command["delay"] == 0.05 for command in commands)
+    assert all(
+        command["y"] >= 65
+        for command in commands
+        if command["x"] + 0.3 > 1
+    )
     assert commands[-1] == {
         "action": "move", "x": 1.5, "y": 65, "z": 0.5,
         "on_ground": True, "delay": 0.05,
@@ -111,11 +123,48 @@ def test_step_down_uses_airborne_intermediate_positions():
 
     commands = list(bot._executor._command_queue)
     assert len(commands) > 2
-    assert commands[0]["on_ground"] is False
+    assert commands[0]["on_ground"] is True
+    assert all(
+        command["x"] - 0.3 >= 1
+        for command in commands
+        if command["y"] < 65
+    )
     assert commands[-1] == {
         "action": "move", "x": 1.5, "y": 64, "z": 0.5,
         "on_ground": True, "delay": 0.05,
     }
+
+
+def test_idle_physics_falls_after_server_teleport_into_air():
+    bot = Bot({"version": "26.2", "game_mode": "survival"})
+    bot._world_state["map"][(0, 0)] = FlatChunk()
+    bot._world_state["position"].update({"x": 0.5, "y": 66, "z": 0.5})
+    bot._world_state["position_revision"] = 4
+
+    assert bot._gameplay.tick() is True
+
+    command = bot._executor._command_queue[-1]
+    assert command["x"] == 0.5
+    assert command["y"] == 65.9216
+    assert command["z"] == 0.5
+    assert command["on_ground"] is False
+
+
+def test_idle_physics_does_nothing_while_grounded():
+    bot = Bot({"version": "26.2", "game_mode": "survival"})
+    bot._world_state["map"][(0, 0)] = FlatChunk()
+    bot._world_state["position"].update({"x": 0.5, "y": 64, "z": 0.5})
+
+    assert bot._gameplay.tick() is False
+    assert not bot._executor._command_queue
+
+
+def test_idle_physics_waits_for_the_current_chunk():
+    bot = Bot({"version": "26.2", "game_mode": "survival"})
+    bot._world_state["position"].update({"x": 0.5, "y": 66, "z": 0.5})
+
+    assert bot._gameplay.tick() is False
+    assert not bot._executor._command_queue
 
 
 def test_mine_block_selects_reachable_face_and_queues_dig_last():
@@ -136,9 +185,10 @@ def test_mine_block_selects_reachable_face_and_queues_dig_last():
     assert commands[-1] == {
         "action": "mine", "x": 2, "y": 64, "z": 2, "face": 2, "duration": 0
     }
-    assert commands[-3] == {
-        "action": "move", "x": 2.5, "y": 64, "z": 1.5
-    }
+    assert commands[-3]["action"] == "move"
+    assert commands[-3]["x"] == 2.5
+    assert commands[-3]["y"] == 64
+    assert commands[-3]["z"] == 1.5
 
 
 def test_mine_nearest_finds_log_hidden_below_leaf_canopy():

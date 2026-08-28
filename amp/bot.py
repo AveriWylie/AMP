@@ -149,6 +149,7 @@ class Bot:
             self._connection,
             self._executor,
             (self._username, self._host, self._port),
+            on_idle=self._gameplay.tick,
         )
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform. Search from the
@@ -260,7 +261,7 @@ class Bot:
                 break
         summaries = planning_results + [
             ("Succeeded: " if result["success"] else "Failed: ") + result["message"]
-            for result in execution_results
+            for result in execution_results if not result.get("internal")
         ]
         return "; ".join(summaries) or "No actions were queued"
 

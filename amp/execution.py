@@ -188,7 +188,11 @@ class Execute:
                 self._world_state["inventory"]["selected_hotbar_slot"] = slot
 
         if success:
-            print(f"Executed {command} in {self._game_mode} mode.")
+            if command.get("report", True):
+                print(f"Executed {command} in {self._game_mode} mode.")
         else:
             print(f"Failed {command}: {message}")
-        return {"action": action, "success": success, "message": message}
+        result = {"action": action, "success": success, "message": message}
+        if success and not command.get("report", True):
+            result["internal"] = True
+        return result

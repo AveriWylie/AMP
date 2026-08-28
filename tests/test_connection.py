@@ -559,3 +559,42 @@ def test_start_execution_does_not_duplicate_live_worker():
         release.set()
         for worker in started:
             worker.join(1)
+
+
+def test_execution_worker_sleeps_only_while_idle(monkeypatch):
+    results = iter(({"success": True}, None))
+    executor = type("Executor", (), {
+        "execute_queue": lambda self: next(results),
+    })()
+    lifecycle = LifecycleManager(
+        type("Connected", (), {"_connected": True})(),
+        executor,
+        ("TestBot", "localhost", 25565),
+    )
+    sleeps = []
+    monkeypatch.setattr("amp.lifecycle.time.sleep", sleeps.append)
+
+    lifecycle._execution_step()
+    lifecycle._execution_step()
+
+    assert sleeps == [0.05]
+
+
+def test_execution_worker_runs_idle_physics_without_extra_sleep(monkeypatch):
+    executor = type("Executor", (), {
+        "execute_queue": lambda self: None,
+    })()
+    physics_ticks = []
+    lifecycle = LifecycleManager(
+        type("Connected", (), {"_connected": True})(),
+        executor,
+        ("TestBot", "localhost", 25565),
+        on_idle=lambda: physics_ticks.append("tick") or True,
+    )
+    sleeps = []
+    monkeypatch.setattr("amp.lifecycle.time.sleep", sleeps.append)
+
+    lifecycle._execution_step()
+
+    assert physics_ticks == ["tick"]
+    assert sleeps == []

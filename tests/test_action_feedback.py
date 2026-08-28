@@ -83,6 +83,26 @@ def test_movement_is_paced_after_sending(monkeypatch):
     assert events == ["send", ("sleep", 0.25)]
 
 
+def test_successful_internal_movement_tick_is_silent(monkeypatch, capsys):
+    world = {
+        "position": {"x": 0.0, "y": 64.0, "z": 0.0},
+        "position_revision": 0,
+        "inventory": {"slots": {}, "selected_hotbar_slot": 0, "state_id": 0},
+        "map": {},
+    }
+    executor = _executor(world)
+    monkeypatch.setattr("amp.execution.time.sleep", lambda seconds: None)
+
+    result = executor._execute({
+        "action": "move", "x": 0.2, "y": 64, "z": 0,
+        "delay": 0.05, "report": False,
+    })
+
+    assert result["success"] is True
+    assert result["internal"] is True
+    assert capsys.readouterr().out == ""
+
+
 def test_wait_until_idle_reports_timeout_when_queue_is_not_drained():
     executor = _executor()
     executor.enque_command({"action": "chat", "message": "queued"})
@@ -137,6 +157,28 @@ def test_high_level_actions_execute_before_the_next_action_is_planned():
         ("plan_place", (4, 64, 5), "dirt"),
         ("wait", 2),
     ]
+
+
+def test_internal_movement_ticks_do_not_fill_planner_feedback():
+    bot = Bot({"version": "26.1.2", "model_optional": True})
+    bot.move_to = lambda goal: True
+    bot._executor.result_count = lambda: 0
+    bot._executor.wait_until_idle = lambda result_start: [
+        {
+            "action": "move", "success": True,
+            "message": "move packet sent", "internal": True,
+        },
+        {
+            "action": "move", "success": True,
+            "message": "move packet sent",
+        },
+    ]
+
+    result = bot._on_step([
+        {"action": "go_to", "x": 4, "y": 64, "z": 5},
+    ])
+
+    assert result == "Succeeded: move packet sent"
 
 
 def test_disconnected_send_is_reported_as_a_failed_result():

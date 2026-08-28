@@ -5,10 +5,11 @@ import time
 
 
 class LifecycleManager:
-    def __init__(self, connection, executor, identity):
+    def __init__(self, connection, executor, identity, on_idle=None):
         self._connection = connection
         self._executor = executor
         self._identity = identity
+        self._on_idle = on_idle
         self._execution_thread = None
 
     def start(self):
@@ -39,11 +40,17 @@ class LifecycleManager:
     def _execution_loop(self):
         while True:
             try:
-                self._executor.execute_queue()
-                time.sleep(0.05)
+                self._execution_step()
             except Exception as error:
                 print(f"Execution error: {error}")
                 return
+
+    def _execution_step(self):
+        if self._executor.execute_queue() is not None:
+            return
+        if self._on_idle is not None and self._on_idle():
+            return
+        time.sleep(0.05)
 
     def handle_failure(self, error):
         if not isinstance(error, ConnectionError):
