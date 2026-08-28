@@ -41,10 +41,26 @@ def test_java26_inventory_handles_direct_slot_cursor_and_hotbar_packets():
     tracker._on_packet(adapter.play_clientbound["held_item_slot"], b"\x08")
 
     inventory = tracker.state["inventory"]
-    assert inventory["slots"][5]["count"] == 2
+    assert inventory["slots"][41]["count"] == 2
     assert inventory["carried"]["id"] == 4
     assert inventory["selected_hotbar_slot"] == 8
     assert inventory["state_id"] == 9
+
+
+def test_java26_inventory_maps_player_slots_to_container_slots():
+    adapter, tracker = setup_inventory()
+
+    for player_slot in (0, 8, 9, 35, 36, 39, 40):
+        tracker._on_packet(
+            adapter.play_clientbound["set_player_inventory"],
+            Connection._encode_varint(player_slot) + stack(player_slot + 1),
+        )
+
+    slots = tracker.state["inventory"]["slots"]
+    assert {slot: item["id"] for slot, item in slots.items()} == {
+        36: 1, 44: 9, 9: 10, 35: 36,
+        8: 37, 5: 40, 45: 41,
+    }
 
 
 def test_java26_inventory_rejects_unknown_component_without_desynchronizing():

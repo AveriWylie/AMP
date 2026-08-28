@@ -216,7 +216,9 @@ class Java26ProtocolAdapter:
         if packet_id == ids["set_player_inventory"]:
             slot, consumed = self.connection._decode_varint_bytes(payload, 0)
             item, _ = self._decode_slot(payload, consumed)
-            return [SlotChanged(0, None, slot, item)]
+            return [SlotChanged(
+                0, None, self._player_inventory_screen_slot(slot), item
+            )]
         if packet_id == ids["set_cursor_item"]:
             item, _ = self._decode_slot(payload, 0)
             return [SlotChanged(-1, None, -1, item)]
@@ -226,6 +228,18 @@ class Java26ProtocolAdapter:
                 raise ConnectionError("Malformed selected-hotbar packet")
             return [HotbarSelected(slot)]
         return []
+
+    @staticmethod
+    def _player_inventory_screen_slot(slot):
+        if slot in range(9):
+            return slot + 36
+        if slot in range(9, 36):
+            return slot
+        if slot in range(36, 40):
+            return 44 - slot
+        if slot == 40:
+            return 45
+        raise ConnectionError(f"Invalid player inventory slot {slot}")
 
     def _skip_string(self, payload, offset):
         length, consumed = self.connection._decode_varint_bytes(payload, offset)
