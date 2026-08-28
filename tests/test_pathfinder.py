@@ -27,12 +27,24 @@ def test_walkable_rule():
     assert blocked_feet._is_walkable(0, 64, 0) is False
 
 
-def test_leaf_canopy_is_not_safe_pathfinding_footing():
+def test_leaf_canopy_remains_traversable_for_recovery():
     canopy = Pathfinder({
         "map": {(0, 0): FakeChunk({(0, 63, 0): "oak_leaves"})}
     })
 
-    assert canopy._is_walkable(0, 64, 0) is False
+    assert canopy._is_walkable(0, 64, 0) is True
+    assert canopy._has_stable_floor(0, 64, 0) is False
+
+
+def test_pathfinder_prefers_ground_detour_over_leaf_canopy():
+    pathfinder = Pathfinder({
+        "map": {(0, 0): FakeChunk({(1, 63, 0): "oak_leaves"})}
+    })
+
+    path = pathfinder.find_path((0, 64, 0), (2, 64, 0))
+
+    assert path
+    assert (1, 64, 0) not in path
 
 
 def test_find_path_basic():

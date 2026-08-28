@@ -85,8 +85,15 @@ class Pathfinder:
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
         # The 2-block hitbox needs passable feet and head positions plus a solid floor.
-        safe_floor = floor not in PASSABLE and not floor.endswith("_leaves")
-        return feet in PASSABLE and head in PASSABLE and safe_floor
+        return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
+
+    def _has_stable_floor(self, x, y, z):
+        floor = self._get_block(x, y - 1, z)
+        return floor not in PASSABLE and not floor.endswith("_leaves")
+
+    def _movement_cost(self, x, y, z):
+        floor = self._get_block(x, y - 1, z)
+        return 6 if floor.endswith("_leaves") else 1
 
     """
     --------------------------------------------------------------------------------------------
@@ -106,15 +113,15 @@ class Pathfinder:
 
             # flat walk
             if self._is_walkable(nx, y, nz):
-                yield nx, y, nz, 1
+                yield nx, y, nz, self._movement_cost(nx, y, nz)
 
             # step up one block
             elif self._is_walkable(nx, y + 1, nz):
-                yield nx, y + 1, nz, 1
+                yield nx, y + 1, nz, self._movement_cost(nx, y + 1, nz)
 
             # drop down one block
             elif self._is_walkable(nx, y - 1, nz):
-                yield nx, y - 1, nz, 1
+                yield nx, y - 1, nz, self._movement_cost(nx, y - 1, nz)
 
     """
     --------------------------------------------------------------------------------------------

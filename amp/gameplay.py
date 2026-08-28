@@ -61,7 +61,10 @@ class GameplayController:
         for dy in (0, 1, -1):
             for (dx, dz), face in faces.items():
                 standing = (tx + dx, ty + dy, tz + dz)
-                if not self.pathfinder._is_walkable(*standing):
+                if (
+                    not self.pathfinder._is_walkable(*standing)
+                    or not self.pathfinder._has_stable_floor(*standing)
+                ):
                     continue
                 eye_distance = math.dist(
                     (standing[0] + 0.5, standing[1] + 1.62, standing[2] + 0.5),
