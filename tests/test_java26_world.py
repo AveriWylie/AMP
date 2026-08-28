@@ -42,7 +42,7 @@ def test_java26_health_and_block_updates_are_normalized():
     assert events[0].state_id == 5
 
 
-def test_java26_respawn_discards_world_scoped_state():
+def test_java26_respawn_discards_world_caches_but_preserves_tracked_entities():
     adapter, tracker = setup_world()
     tracker.state["position_revision"] = 3
     tracker.state["entities"][42] = {"name": "pig"}
@@ -53,7 +53,7 @@ def test_java26_respawn_discards_world_scoped_state():
     tracker._on_packet(adapter.play_clientbound["respawn"], b"")
 
     assert tracker.state["position_revision"] == 4
-    assert tracker.state["entities"] == {}
+    assert tracker.state["entities"] == {42: {"name": "pig"}}
     assert tracker.state["map"] == {}
     assert tracker.state["blocks"] == {}
     assert tracker.state["inventory"]["slots"] == {}

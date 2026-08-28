@@ -105,7 +105,6 @@ class WorldStateTracker:
 
     def _reset_world_state(self):
         self.state["position_revision"] += 1
-        self.state["entities"].clear()
         self.state["map"].clear()
         self.state["blocks"].clear()
         self.state["inventory"].update({
