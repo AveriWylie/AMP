@@ -13,6 +13,7 @@ from amp.protocol_types import (
     PositionChanged,
     SelfEntityIdentified,
     SlotChanged,
+    WorldReset,
 )
 
 
@@ -56,6 +57,8 @@ class WorldStateTracker:
                 self._respawn()
         elif isinstance(event, SelfEntityIdentified):
             self.state["self_entity_id"] = event.entity_id
+        elif isinstance(event, WorldReset):
+            self._reset_world_state()
         elif isinstance(event, EntitySpawned):
             self.state["entities"][event.entity_id] = {
                 "uuid": event.uuid, "type": event.type_id, "name": event.name,
@@ -99,6 +102,15 @@ class WorldStateTracker:
         self.connection._send(self.connection._encode_varint(len(packet_id + data)) + packet_id + data)
         self.state["health"] = 20.0
         self.state["food"] = 20
+
+    def _reset_world_state(self):
+        self.state["position_revision"] += 1
+        self.state["entities"].clear()
+        self.state["map"].clear()
+        self.state["blocks"].clear()
+        self.state["inventory"].update({
+            "slots": {}, "carried": None, "state_id": 0,
+        })
 
     def _apply_block_change(self, event):
         chunk = self.state["map"].get((event.x >> 4, event.z >> 4))

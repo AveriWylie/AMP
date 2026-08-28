@@ -11,6 +11,7 @@ from amp.protocol_data import packet_ids_for_protocol
 from amp.protocol_types import (
     BlockChanged, ChunkLoaded, EntitiesRemoved, EntityMoved, EntitySpawned,
     EntityTeleported, HealthChanged, PositionChanged, SelfEntityIdentified,
+    WorldReset,
     HotbarSelected, InventoryReplaced, SlotChanged,
     ChatAction, EncodedAction, LookAction, MoveAction, PacketStep, SneakAction,
     SwingAction,
@@ -164,6 +165,8 @@ class Java26ProtocolAdapter:
             return [self._decode_chunk(payload)]
         if packet_id == ids["login"]:
             return [SelfEntityIdentified(struct.unpack_from(">i", payload, 0)[0])]
+        if packet_id == ids["respawn"]:
+            return [WorldReset()]
         if packet_id == ids["spawn_entity"]:
             entity_id, consumed = self.connection._decode_varint_bytes(payload, 0)
             entity_uuid = str(uuid.UUID(bytes=payload[consumed:consumed + 16]))

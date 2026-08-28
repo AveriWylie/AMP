@@ -42,6 +42,23 @@ def test_java26_health_and_block_updates_are_normalized():
     assert events[0].state_id == 5
 
 
+def test_java26_respawn_discards_world_scoped_state():
+    adapter, tracker = setup_world()
+    tracker.state["position_revision"] = 3
+    tracker.state["entities"][42] = {"name": "pig"}
+    tracker.state["map"][(0, 0)] = object()
+    tracker.state["blocks"][(1, 2, 3)] = "stone"
+    tracker.state["inventory"]["slots"][36] = {"id": 1, "count": 1}
+
+    tracker._on_packet(adapter.play_clientbound["respawn"], b"")
+
+    assert tracker.state["position_revision"] == 4
+    assert tracker.state["entities"] == {}
+    assert tracker.state["map"] == {}
+    assert tracker.state["blocks"] == {}
+    assert tracker.state["inventory"]["slots"] == {}
+
+
 def test_java26_chunk_wrapper_decodes_section_data():
     adapter, tracker = setup_world()
     section = struct.pack(">hh", 0, 0) + b"\x00\x00\x00\x00"

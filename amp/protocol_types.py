@@ -27,6 +27,11 @@ class SelfEntityIdentified:
 
 
 @dataclass(frozen=True)
+class WorldReset:
+    pass
+
+
+@dataclass(frozen=True)
 class EntitySpawned:
     entity_id: int
     uuid: str

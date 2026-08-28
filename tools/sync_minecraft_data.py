@@ -49,6 +49,7 @@ PLAY_PACKETS = {
         "keep_alive",
         "map_chunk",
         "position",
+        "respawn",
         "update_health",
         "window_items",
         "set_slot",
