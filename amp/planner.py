@@ -45,7 +45,7 @@ class Planner:
     MAX_TOKENS = 1024
 
     # commands the executor handles directly, no planner resolution needed
-    LOW_LEVEL_ACTIONS = {"move", "chat", "look"}
+    LOW_LEVEL_ACTIONS = {"chat", "look"}
 
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {
@@ -148,7 +148,6 @@ class Planner:
             "You must respond with ONLY a valid JSON array of command objects and nothing else. "
             "No explanation, no markdown, no preamble. Just the raw JSON array.\n\n"
             "Available actions:\n"
-            "  {\"action\": \"move\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"chat\", \"message\": string}\n"
             "  {\"action\": \"look\", \"yaw\": number, \"pitch\": number}\n"
             "  {\"action\": \"go_to\", \"x\": int, \"y\": int, \"z\": int}\n"

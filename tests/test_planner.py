@@ -60,6 +60,17 @@ def test_call_api_exposes_nearest_loaded_block_mining():
     assert '"block": "log"' in system
 
 
+def test_call_api_does_not_expose_raw_position_packets_to_model():
+    client = FakeModelClient()
+    planner = Planner({}, model_client=client)
+
+    planner._call_api("Walk ten blocks")
+
+    system = client.calls[0][0]
+    assert '{"action": "move"' not in system
+    assert '{"action": "go_to"' in system
+
+
 def test_call_api_without_credentials_degrades_gracefully(capsys):
     planner = Planner({})
 
@@ -92,6 +103,13 @@ def test_parse_commands_rejects_unknown_or_malformed_actions(capsys):
     output = capsys.readouterr().out
     assert "unknown action" in output
     assert "invalid fields" in output
+
+
+def test_parse_commands_rejects_raw_position_packets(capsys):
+    raw = '[{"action":"move","x":76,"y":65,"z":-139}]'
+
+    assert Planner._parse_commands(raw) == []
+    assert "unknown action: 'move'" in capsys.readouterr().out
 
 
 def test_parse_commands_accepts_valid_array_with_trailing_model_junk(capsys):

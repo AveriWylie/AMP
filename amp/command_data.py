@@ -2,7 +2,6 @@
 
 
 PLANNER_COMMAND_FIELDS = {
-    "move": {"x": int, "y": int, "z": int},
     "chat": {"message": str},
     "look": {"yaw": (int, float), "pitch": (int, float)},
     "go_to": {"x": int, "y": int, "z": int},
