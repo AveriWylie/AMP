@@ -66,7 +66,8 @@ class WorldStateTracker:
         elif isinstance(event, WorldReset):
             self._trace(
                 f"respawn dimension={event.dimension_id} "
-                f"tracked={sorted(self.state['entities'])}"
+                f"position={self.state['position']} "
+                f"saved_players={self._players_before_respawn}"
             )
             self._reset_world_state(event.dimension_id)
         elif isinstance(event, EntitySpawned):
@@ -85,10 +86,20 @@ class WorldStateTracker:
                 entity["x"] += event.dx
                 entity["y"] += event.dy
                 entity["z"] += event.dz
+                if entity.get("name") == "player":
+                    self._trace(
+                        f"move player={event.entity_id} "
+                        f"pos=({entity['x']}, {entity['y']}, {entity['z']})"
+                    )
         elif isinstance(event, EntityTeleported):
             entity = self.state["entities"].get(event.entity_id)
             if entity is not None:
                 entity.update({"x": event.x, "y": event.y, "z": event.z})
+                if entity.get("name") == "player":
+                    self._trace(
+                        f"teleport player={event.entity_id} "
+                        f"pos=({event.x}, {event.y}, {event.z})"
+                    )
         elif isinstance(event, EntitiesRemoved):
             removed_players = {
                 entity_id: self.state["entities"].get(entity_id)
