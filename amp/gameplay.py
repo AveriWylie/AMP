@@ -8,6 +8,8 @@ from amp.movement import MovementController
 
 
 class GameplayController:
+    TARGET_HURT_COOLDOWN = 0.55
+
     ATTACK_SPEEDS = {
         "sword": 1.6,
         "pickaxe": 1.2,
@@ -318,4 +320,5 @@ class GameplayController:
             if name == suffix or name.endswith(f"_{suffix}"):
                 speed = candidate
                 break
-        return 1.0 / speed + 0.05
+        weapon_cooldown = 1.0 / speed + 0.05
+        return max(weapon_cooldown, self.TARGET_HURT_COOLDOWN)
