@@ -50,8 +50,12 @@ class LifecycleManager:
     def _execution_step(self):
         started = time.monotonic()
         result = self._executor.execute_queue()
-        if result is None and self._on_idle is not None:
-            self._on_idle()
+        if (
+            result is None
+            and self._on_idle is not None
+            and self._on_idle()
+        ):
+            self._executor.execute_queue()
         self._executor.end_tick()
         remaining = self.TICK_SECONDS - (time.monotonic() - started)
         if remaining > 0:
