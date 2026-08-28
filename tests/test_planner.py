@@ -71,6 +71,21 @@ def test_call_api_does_not_expose_raw_position_packets_to_model():
     system = client.calls[0][0]
     assert '{"action": "move"' not in system
     assert '{"action": "go_to"' in system
+    assert "Never return an empty array for a guided instruction" in system
+
+
+def test_guided_plan_replaces_model_noop_with_explanation():
+    world = {
+        "position": {"x": 0, "y": 64, "z": 0},
+        "health": 20, "food": 20, "map": {}, "entities": {},
+        "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    }
+    planner = Planner(world, model_client=FakeModelClient("[]"))
+
+    assert planner.plan("Place an iron block") == [{
+        "action": "chat",
+        "message": "I could not determine a valid action for that instruction.",
+    }]
 
 
 def test_call_api_without_credentials_degrades_gracefully(capsys):

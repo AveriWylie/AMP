@@ -160,6 +160,10 @@ class Planner:
             "mine_nearest. Use {\"block\": \"log\"} only when any tree species is "
             "acceptable. Preserve a requested species with its exact block name, such as "
             "{\"block\": \"dark_oak_log\"} for dark oak. "
+            "Never return an empty array for a guided instruction. If the requested "
+            "action cannot be performed, return one chat command that clearly explains "
+            "why. Return [] only when an autonomous prompt explicitly says its goal is "
+            "complete. "
             "Keep command lists concise and purposeful."
         )
 
@@ -273,6 +277,11 @@ class Planner:
         )
         raw = self._call_api(user_message)
         commands = self._parse_commands(raw)
+        if not commands:
+            commands = [{
+                "action": "chat",
+                "message": "I could not determine a valid action for that instruction.",
+            }]
         resolved = []
         for cmd in commands:
             if cmd.get("action") in self.LOW_LEVEL_ACTIONS:
