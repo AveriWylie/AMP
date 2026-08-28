@@ -135,6 +135,26 @@ def test_java26_respawn_discards_stale_players_and_reports_loaded():
     assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
 
 
+def test_java26_same_dimension_respawn_reuses_loaded_position_chunk():
+    adapter, tracker = setup_world()
+    tracker.connection._send = lambda packet: None
+    sent = []
+    tracker.connection._send_protocol_packet = (
+        lambda packet_id, payload=b"": sent.append((packet_id, payload))
+    )
+    tracker.state["dimension_id"] = 0
+    tracker.state["map"][(6, -8)] = object()
+
+    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    position = (
+        b"\x01"
+        + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
+    )
+    tracker._on_packet(adapter.play_clientbound["position"], position)
+
+    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
+
+
 def test_java26_chunk_wrapper_decodes_section_data():
     adapter, tracker = setup_world()
     section = struct.pack(">hh", 0, 0) + b"\x00\x00\x00\x00"

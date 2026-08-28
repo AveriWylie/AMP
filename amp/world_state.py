@@ -1,5 +1,6 @@
 """Apply version-neutral protocol events to AMP's live world state."""
 
+import math
 import os
 
 from amp.protocol_types import (
@@ -145,11 +146,14 @@ class WorldStateTracker:
         self._terrain_received = False
 
     def _send_player_loaded_if_ready(self):
-        if not (
-            self._player_loaded_pending
-            and self._load_position_received
-            and self._terrain_received
-        ):
+        if not (self._player_loaded_pending and self._load_position_received):
+            return
+        position = self.state["position"]
+        position_chunk = (
+            math.floor(position["x"]) >> 4,
+            math.floor(position["z"]) >> 4,
+        )
+        if not (self._terrain_received or position_chunk in self.state["map"]):
             return
         self.connection._send_protocol_packet(
             self.connection.play_ids["player_loaded"]
