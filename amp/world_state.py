@@ -28,6 +28,7 @@ class WorldStateTracker:
             "food": 20,
             "entities": {},
             "self_entity_id": None,
+            "dimension_id": None,
             "map": {},
             "blocks": {},
             "inventory": {
@@ -57,8 +58,9 @@ class WorldStateTracker:
                 self._respawn()
         elif isinstance(event, SelfEntityIdentified):
             self.state["self_entity_id"] = event.entity_id
+            self.state["dimension_id"] = event.dimension_id
         elif isinstance(event, WorldReset):
-            self._reset_world_state()
+            self._reset_world_state(event.dimension_id)
         elif isinstance(event, EntitySpawned):
             self.state["entities"][event.entity_id] = {
                 "uuid": event.uuid, "type": event.type_id, "name": event.name,
@@ -103,10 +105,18 @@ class WorldStateTracker:
         self.state["health"] = 20.0
         self.state["food"] = 20
 
-    def _reset_world_state(self):
+    def _reset_world_state(self, dimension_id):
+        dimension_changed = (
+            self.state["dimension_id"] is not None
+            and dimension_id is not None
+            and dimension_id != self.state["dimension_id"]
+        )
+        self.state["dimension_id"] = dimension_id
         self.state["position_revision"] += 1
-        self.state["map"].clear()
-        self.state["blocks"].clear()
+        if dimension_changed:
+            self.state["entities"].clear()
+            self.state["map"].clear()
+            self.state["blocks"].clear()
         self.state["inventory"].update({
             "slots": {}, "carried": None, "state_id": 0,
         })

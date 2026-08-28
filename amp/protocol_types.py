@@ -24,11 +24,12 @@ class HealthChanged:
 @dataclass(frozen=True)
 class SelfEntityIdentified:
     entity_id: int
+    dimension_id: int | None = None
 
 
 @dataclass(frozen=True)
 class WorldReset:
-    pass
+    dimension_id: int | None = None
 
 
 @dataclass(frozen=True)

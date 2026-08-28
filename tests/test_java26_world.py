@@ -42,21 +42,38 @@ def test_java26_health_and_block_updates_are_normalized():
     assert events[0].state_id == 5
 
 
-def test_java26_respawn_discards_world_caches_but_preserves_tracked_entities():
+def test_java26_death_respawn_preserves_same_dimension_world_state():
     adapter, tracker = setup_world()
+    tracker.state["dimension_id"] = 0
     tracker.state["position_revision"] = 3
     tracker.state["entities"][42] = {"name": "pig"}
-    tracker.state["map"][(0, 0)] = object()
+    chunk = object()
+    tracker.state["map"][(0, 0)] = chunk
     tracker.state["blocks"][(1, 2, 3)] = "stone"
     tracker.state["inventory"]["slots"][36] = {"id": 1, "count": 1}
 
-    tracker._on_packet(adapter.play_clientbound["respawn"], b"")
+    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
 
     assert tracker.state["position_revision"] == 4
     assert tracker.state["entities"] == {42: {"name": "pig"}}
+    assert tracker.state["map"] == {(0, 0): chunk}
+    assert tracker.state["blocks"] == {(1, 2, 3): "stone"}
+    assert tracker.state["inventory"]["slots"] == {}
+
+
+def test_java26_dimension_change_discards_world_state():
+    adapter, tracker = setup_world()
+    tracker.state["dimension_id"] = 0
+    tracker.state["entities"][42] = {"name": "pig"}
+    tracker.state["map"][(0, 0)] = object()
+    tracker.state["blocks"][(1, 2, 3)] = "stone"
+
+    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x01")
+
+    assert tracker.state["dimension_id"] == 1
+    assert tracker.state["entities"] == {}
     assert tracker.state["map"] == {}
     assert tracker.state["blocks"] == {}
-    assert tracker.state["inventory"]["slots"] == {}
 
 
 def test_java26_chunk_wrapper_decodes_section_data():

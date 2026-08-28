@@ -38,8 +38,19 @@ def test_java26_entity_lifecycle_updates_normalized_world_state():
 
 def test_java26_play_login_identifies_the_bot_entity():
     adapter, tracker = setup_entities()
-    tracker._on_packet(adapter.play_clientbound["login"], struct.pack(">i", 123))
+    world = b"minecraft:overworld"
+    payload = (
+        struct.pack(">i?", 123, False)
+        + b"\x01"
+        + bytes((len(world),))
+        + world
+        + b"\x14\x08\x08"
+        + b"\x00\x01\x00"
+        + b"\x02"
+    )
+    tracker._on_packet(adapter.play_clientbound["login"], payload)
     assert tracker.state["self_entity_id"] == 123
+    assert tracker.state["dimension_id"] == 2
 
 
 def test_java26_sync_entity_position_is_absolute():

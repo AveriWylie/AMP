@@ -164,9 +164,23 @@ class Java26ProtocolAdapter:
         if packet_id == ids["map_chunk"]:
             return [self._decode_chunk(payload)]
         if packet_id == ids["login"]:
-            return [SelfEntityIdentified(struct.unpack_from(">i", payload, 0)[0])]
+            entity_id = struct.unpack_from(">i", payload, 0)[0]
+            offset = 5
+            world_count, consumed = self.connection._decode_varint_bytes(
+                payload, offset
+            )
+            offset += consumed
+            for _ in range(world_count):
+                offset = self._skip_string(payload, offset)
+            for _ in range(3):
+                _, consumed = self.connection._decode_varint_bytes(payload, offset)
+                offset += consumed
+            offset += 3
+            dimension_id, _ = self.connection._decode_varint_bytes(payload, offset)
+            return [SelfEntityIdentified(entity_id, dimension_id)]
         if packet_id == ids["respawn"]:
-            return [WorldReset()]
+            dimension_id, _ = self.connection._decode_varint_bytes(payload, 0)
+            return [WorldReset(dimension_id)]
         if packet_id == ids["spawn_entity"]:
             entity_id, consumed = self.connection._decode_varint_bytes(payload, 0)
             entity_uuid = str(uuid.UUID(bytes=payload[consumed:consumed + 16]))
@@ -210,6 +224,13 @@ class Java26ProtocolAdapter:
                 raise ConnectionError("Malformed selected-hotbar packet")
             return [HotbarSelected(slot)]
         return []
+
+    def _skip_string(self, payload, offset):
+        length, consumed = self.connection._decode_varint_bytes(payload, offset)
+        end = offset + consumed + length
+        if end > len(payload):
+            raise ConnectionError("Truncated Java 26 string")
+        return end
 
     def _decode_slot(self, payload, offset):
         start = offset
