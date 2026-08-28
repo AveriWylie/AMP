@@ -94,6 +94,8 @@ compatibility promise or delivery commitment.
   attachment face, waterlogging, and neighbor-dependent state.
 - Add bridging, scaffolding, excavation volumes, vein mining, and area-clearing
   strategies.
+- Add connected-structure tasks such as felling a complete tree from the ground,
+  with block discovery and replanning after every confirmed break.
 
 ## Blueprints and construction
 

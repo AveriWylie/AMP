@@ -85,7 +85,8 @@ class Pathfinder:
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
         # The 2-block hitbox needs passable feet and head positions plus a solid floor.
-        return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
+        safe_floor = floor not in PASSABLE and not floor.endswith("_leaves")
+        return feet in PASSABLE and head in PASSABLE and safe_floor
 
     """
     --------------------------------------------------------------------------------------------
