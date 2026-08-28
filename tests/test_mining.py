@@ -159,6 +159,17 @@ def test_idle_physics_does_nothing_while_grounded():
     assert not bot._executor._command_queue
 
 
+def test_idle_physics_accepts_server_grounding_epsilon():
+    bot = Bot({"version": "26.2", "game_mode": "survival"})
+    bot._world_state["map"][(0, 0)] = FlatChunk()
+    bot._world_state["position"].update({
+        "x": 0.5, "y": 64.026, "z": 0.5,
+    })
+
+    assert bot._gameplay.tick() is False
+    assert not bot._executor._command_queue
+
+
 def test_idle_physics_waits_for_the_current_chunk():
     bot = Bot({"version": "26.2", "game_mode": "survival"})
     bot._world_state["position"].update({"x": 0.5, "y": 66, "z": 0.5})

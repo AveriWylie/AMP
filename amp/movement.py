@@ -6,6 +6,7 @@ import math
 class MovementController:
     TICK_SECONDS = 0.05
     PLAYER_RADIUS = 0.3
+    GROUND_TOLERANCE = 0.0625
     WALK_TICKS_PER_BLOCK = 5
 
     def __init__(self):
@@ -85,7 +86,7 @@ class MovementController:
         if (block_x >> 4, block_z >> 4) not in world_state["map"]:
             self._vertical_velocity = 0.0
             return None
-        floor_y = math.floor(y - 0.001)
+        floor_y = math.floor(y - self.GROUND_TOLERANCE)
         if not pathfinder._is_passable(
             pathfinder._get_block(block_x, floor_y, block_z)
         ):
