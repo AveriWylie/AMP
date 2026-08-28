@@ -77,7 +77,7 @@ def test_java26_death_respawn_preserves_same_dimension_world_state():
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
 
     assert tracker.state["position_revision"] == 4
-    assert tracker.state["entities"] == {42: {"name": "pig"}}
+    assert tracker.state["entities"] == {}
     assert tracker.state["map"] == {(0, 0): chunk}
     assert tracker.state["blocks"] == {(1, 2, 3): "stone"}
     assert tracker.state["inventory"]["slots"] == {}
@@ -98,9 +98,13 @@ def test_java26_dimension_change_discards_world_state():
     assert tracker.state["blocks"] == {}
 
 
-def test_java26_death_keeps_player_updates_during_respawn():
+def test_java26_respawn_discards_stale_players_and_reports_loaded():
     adapter, tracker = setup_world()
     tracker.connection._send = lambda packet: None
+    sent = []
+    tracker.connection._send_protocol_packet = (
+        lambda packet_id, payload=b"": sent.append((packet_id, payload))
+    )
     tracker.state["dimension_id"] = 0
     player = {
         "uuid": "player-uuid", "type": 156, "name": "player",
@@ -117,15 +121,14 @@ def test_java26_death_keeps_player_updates_during_respawn():
     tracker._on_packet(
         adapter.play_clientbound["entity_destroy"], b"\x02\x69\x83\x01"
     )
-    tracker._on_packet(
-        adapter.play_clientbound["rel_entity_move"],
-        b"\x69" + struct.pack(">hhh?", 4096, 0, 0, True),
-    )
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    position = (
+        b"\x01" + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
+    )
+    tracker._on_packet(adapter.play_clientbound["position"], position)
 
-    assert tracker.state["entities"] == {
-        105: {**player, "x": 84.5},
-    }
+    assert tracker.state["entities"] == {}
+    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
 
 
 def test_java26_chunk_wrapper_decodes_section_data():

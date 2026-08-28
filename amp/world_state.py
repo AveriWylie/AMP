@@ -24,7 +24,7 @@ class WorldStateTracker:
         self.protocol_adapter = protocol_adapter
         self.connection = connection
         self._trace_entities = os.environ.get("AMP_TRACE_ENTITIES") == "1"
-        self._players_before_respawn = {}
+        self._player_loaded_pending = False
         self.state = {
             "position": {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0},
             "position_revision": 0,
@@ -55,6 +55,11 @@ class WorldStateTracker:
                 "pitch": previous["pitch"] + event.pitch if event.relative_flags & 16 else event.pitch,
             }
             self.state["position_revision"] += 1
+            if self._player_loaded_pending:
+                self.connection._send_protocol_packet(
+                    self.connection.play_ids["player_loaded"]
+                )
+                self._player_loaded_pending = False
         elif isinstance(event, HealthChanged):
             self.state["health"] = event.health
             self.state["food"] = event.food
@@ -63,11 +68,11 @@ class WorldStateTracker:
         elif isinstance(event, SelfEntityIdentified):
             self.state["self_entity_id"] = event.entity_id
             self.state["dimension_id"] = event.dimension_id
+            self._player_loaded_pending = True
         elif isinstance(event, WorldReset):
             self._trace(
                 f"respawn dimension={event.dimension_id} "
-                f"position={self.state['position']} "
-                f"saved_players={self._players_before_respawn}"
+                f"position={self.state['position']}"
             )
             self._reset_world_state(event.dimension_id)
         elif isinstance(event, EntitySpawned):
@@ -109,8 +114,6 @@ class WorldStateTracker:
             if removed_players:
                 self._trace(f"remove players={removed_players}")
             for entity_id in event.entity_ids:
-                if entity_id in self._players_before_respawn:
-                    continue
                 self.state["entities"].pop(entity_id, None)
         elif isinstance(event, ChunkLoaded):
             self.state["map"][(event.chunk_x, event.chunk_z)] = event.chunk
@@ -136,11 +139,6 @@ class WorldStateTracker:
             print(f"Entity trace: {message}", flush=True)
 
     def _respawn(self):
-        self._players_before_respawn = {
-            entity_id: dict(entity)
-            for entity_id, entity in self.state["entities"].items()
-            if entity.get("name") == "player"
-        }
         packet_id = self.connection._encode_varint(self.connection.play_ids["client_command"])
         data = self.connection._encode_varint(0)
         self.connection._send(self.connection._encode_varint(len(packet_id + data)) + packet_id + data)
@@ -155,14 +153,11 @@ class WorldStateTracker:
         )
         self.state["dimension_id"] = dimension_id
         self.state["position_revision"] += 1
+        self.state["entities"].clear()
+        self._player_loaded_pending = True
         if dimension_changed:
-            self.state["entities"].clear()
             self.state["map"].clear()
             self.state["blocks"].clear()
-        else:
-            for entity_id, entity in self._players_before_respawn.items():
-                self.state["entities"].setdefault(entity_id, entity)
-        self._players_before_respawn.clear()
         self.state["inventory"].update({
             "slots": {}, "carried": None, "state_id": 0,
         })

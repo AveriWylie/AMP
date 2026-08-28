@@ -80,6 +80,7 @@ JAVA_26_PLAY_PACKETS = {
     ),
     "serverbound": (
         "configuration_acknowledged", "player_input", "attack", "tick_end",
+        "player_loaded",
     ),
 }
 
