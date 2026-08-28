@@ -76,6 +76,30 @@ def test_java26_dimension_change_discards_world_state():
     assert tracker.state["blocks"] == {}
 
 
+def test_java26_death_restores_player_removed_before_respawn():
+    adapter, tracker = setup_world()
+    tracker.connection._send = lambda packet: None
+    tracker.state["dimension_id"] = 0
+    player = {
+        "uuid": "player-uuid", "type": 156, "name": "player",
+        "x": 83.5, "y": 65.0, "z": -123.0,
+    }
+    tracker.state["entities"] = {
+        105: player,
+        131: {"uuid": "pig-uuid", "type": 100, "name": "pig",
+              "x": 80.0, "y": 65.0, "z": -120.0},
+    }
+    health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
+
+    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+    tracker._on_packet(
+        adapter.play_clientbound["entity_destroy"], b"\x02\x69\x83\x01"
+    )
+    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+
+    assert tracker.state["entities"] == {105: player}
+
+
 def test_java26_chunk_wrapper_decodes_section_data():
     adapter, tracker = setup_world()
     section = struct.pack(">hh", 0, 0) + b"\x00\x00\x00\x00"
