@@ -136,10 +136,11 @@ amp/command_data.py    planner and executor action validation
 ```
 
 The planner receives a bounded world snapshot and returns JSON command objects.
-`amp/command_data.py` validates model output. `amp/planner.py` resolves `find`
-to a `go_to` command, while `amp/bot.py` sends gameplay actions to
-`amp/gameplay.py`. `amp/execution.py` serializes the resulting actions and
-waits for observable world-state changes where confirmation is available.
+`amp/command_data.py` validates model output. `amp/bot.py` sends navigation and
+gameplay actions to `amp/gameplay.py`, including a three-dimensional search for
+the nearest reachable block to mine. `amp/execution.py` serializes the resulting
+actions and waits for observable world-state changes where confirmation is
+available.
 
 Provider-specific API shapes stay in `amp/model_clients.py`. The Anthropic
 adapter uses the official [Anthropic Python

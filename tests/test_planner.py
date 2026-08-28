@@ -49,6 +49,17 @@ def test_call_api_uses_model_client_and_records_history():
     assert "Minecraft bot" in system
 
 
+def test_call_api_exposes_nearest_loaded_block_mining():
+    client = FakeModelClient()
+    planner = Planner({}, model_client=client)
+
+    planner._call_api("Get a log")
+
+    system = client.calls[0][0]
+    assert '"action": "mine_nearest"' in system
+    assert '"block": "log"' in system
+
+
 def test_call_api_without_credentials_degrades_gracefully(capsys):
     planner = Planner({})
 
@@ -96,3 +107,11 @@ def test_parse_commands_accepts_valid_array_with_trailing_model_junk(capsys):
         {"action": "go_to", "x": 59, "y": 64, "z": -132},
     ]
     assert "trailing content ignored" in capsys.readouterr().out
+
+
+def test_parse_commands_accepts_nearest_loaded_block_mining():
+    raw = '[{"action":"mine_nearest","block":"log","radius":8}]'
+
+    assert Planner._parse_commands(raw) == [
+        {"action": "mine_nearest", "block": "log", "radius": 8}
+    ]

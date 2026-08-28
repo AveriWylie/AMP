@@ -16,7 +16,7 @@ into the next API call. The planner reasons over what it just did and what to do
 until the high level goal is complete or max steps is reached.
 
 Commands returned by the planner are dicts with an action key. Low level actions (move,
-chat) go directly to the executor. High level intents (find, mine, place) are resolved
+chat) go directly to the executor. High level intents (mine, place, attack) are resolved
 by the planner itself using the pathfinder before being handed to the executor as move
 commands.
 
@@ -47,7 +47,9 @@ class Planner:
     LOW_LEVEL_ACTIONS = {"move", "chat", "look"}
 
     # commands the planner resolves into move sequences before passing to executor
-    HIGH_LEVEL_ACTIONS = {"find", "go_to", "mine", "place", "attack"}
+    HIGH_LEVEL_ACTIONS = {
+        "go_to", "mine_nearest", "mine", "place", "attack"
+    }
 
     def __init__(self, world_state, model_client=None):
         self._world_state = world_state
@@ -129,7 +131,7 @@ class Planner:
     move:    x, y, z (ints)
     chat:    message (string)
     go_to:   x, y, z (ints) - resolved by planner into move sequence
-    find:    block (string), radius (int) - resolved by planner into go_to
+    mine_nearest: block (string), radius (int) - searches loaded 3D block data
     mine:    x, y, z (ints) - resolved by planner into go_to + mine action
     place:   x, y, z (ints), block (string) - resolved by planner into go_to + place action
     --------------------------------------------------------------------------------------------
@@ -149,12 +151,13 @@ class Planner:
             "  {\"action\": \"chat\", \"message\": string}\n"
             "  {\"action\": \"look\", \"yaw\": number, \"pitch\": number}\n"
             "  {\"action\": \"go_to\", \"x\": int, \"y\": int, \"z\": int}\n"
-            "  {\"action\": \"find\", \"block\": string, \"radius\": int}\n"
+            "  {\"action\": \"mine_nearest\", \"block\": string, \"radius\": int}\n"
             "  {\"action\": \"mine\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"place\", \"x\": int, \"y\": int, \"z\": int, \"block\": string}\n\n"
             "  {\"action\": \"attack\", \"entity_id\": int}\n\n"
             "Use the world state snapshot to ground your decisions in real coordinates. "
-            "Prefer go_to over raw move sequences. Use find when you need to locate a block type. "
+            "Prefer go_to over raw move sequences. To find and mine a nearby block, use "
+            "mine_nearest. Use {\"block\": \"log\"} for any tree trunk type. "
             "Keep command lists concise and purposeful."
         )
 
@@ -218,14 +221,14 @@ class Planner:
     --------------------------------------------------------------------------------------------
     Function Header - Resolve high level commands
     --------------------------------------------------------------------------------------------
-    High level actions like go_to and find cannot be sent directly to the executor since the
+    High level actions like go_to cannot be sent directly to the executor since the
     executor only knows about move and chat packets. This method resolves them into sequences
     of low level move commands using the pathfinder.
 
     go_to: calls pathfinder.find_path from current position to target, expands into moves
-    find:  scans nearby_surface_blocks from the snapshot for the target block type, then
-           resolves as go_to once the coordinate is known
-    mine remains a high-level command for Bot.mine_block(), which selects a reachable adjacent
+    mine_nearest remains high-level for Bot.mine_nearest(), which searches all loaded
+    blocks in its radius before selecting a reachable target. Mine remains a high-level
+    command for Bot.mine_block(), which selects a reachable adjacent
     standing position before enqueueing the interaction. Place remains high-level for
     Bot.place_block(), which selects inventory and a valid support face.
     --------------------------------------------------------------------------------------------
@@ -236,16 +239,7 @@ class Planner:
         if action == "go_to":
             return [command]
 
-        elif action == "find":
-            target_block = command.get("block", "")
-            for coord_str, block_name in snapshot["nearby_surface_blocks"].items():
-                if block_name == target_block:
-                    x, y, z = map(int, coord_str.split(","))
-                    return [{"action": "go_to", "x": x, "y": y, "z": z}]
-            print(f"Block '{target_block}' not found in loaded chunks")
-            return []
-
-        elif action == "mine":
+        elif action in ("mine_nearest", "mine"):
             return [command]
 
         elif action == "place":

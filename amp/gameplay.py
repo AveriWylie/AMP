@@ -110,6 +110,41 @@ class GameplayController:
         })
         return True
 
+    def mine_nearest(self, requested_block, radius=8):
+        """Find and mine the nearest reachable matching block in loaded data."""
+        radius = max(1, min(int(radius), 16))
+        position = self.world_state["position"]
+        origin = (
+            int(position["x"]),
+            int(position["y"]),
+            int(position["z"]),
+        )
+
+        def matches(block_name):
+            if requested_block == "log":
+                return block_name.endswith("_log")
+            return block_name == requested_block
+
+        candidates = []
+        ox, oy, oz = origin
+        for x in range(ox - radius, ox + radius + 1):
+            for y in range(oy - radius, oy + radius + 1):
+                for z in range(oz - radius, oz + radius + 1):
+                    if matches(self.pathfinder._get_block(x, y, z)):
+                        distance = (x - ox) ** 2 + (y - oy) ** 2 + (z - oz) ** 2
+                        candidates.append((distance, (x, y, z)))
+
+        if not candidates:
+            print(f"Block '{requested_block}' not found in loaded blocks")
+            return False
+
+        for _, target in sorted(candidates)[:32]:
+            if self.mine_block(target):
+                return True
+
+        print(f"No reachable {requested_block} found in loaded blocks")
+        return False
+
     def place_block(self, target, block_name):
         """Walk within reach, equip a block stack, and place against a solid support."""
         tx, ty, tz = map(int, target)

@@ -6,7 +6,7 @@ PLANNER_COMMAND_FIELDS = {
     "chat": {"message": str},
     "look": {"yaw": (int, float), "pitch": (int, float)},
     "go_to": {"x": int, "y": int, "z": int},
-    "find": {"block": str, "radius": int},
+    "mine_nearest": {"block": str, "radius": int},
     "mine": {"x": int, "y": int, "z": int},
     "place": {"x": int, "y": int, "z": int, "block": str},
     "attack": {"entity_id": int},

@@ -167,6 +167,9 @@ class Bot:
     def mine_block(self, target):
         return self._gameplay.mine_block(target)
 
+    def mine_nearest(self, block_name, radius=8):
+        return self._gameplay.mine_nearest(block_name, radius)
+
     def place_block(self, target, block_name):
         return self._gameplay.place_block(target, block_name)
 
@@ -219,9 +222,14 @@ class Bot:
         result_start = self._executor.result_count()
         planning_results = []
         for cmd in commands:
-            if cmd.get("action") in ("go_to", "find"):
+            if cmd.get("action") == "go_to":
                 if not self.move_to((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"No path to {(cmd['x'], cmd['y'], cmd['z'])}")
+            elif cmd.get("action") == "mine_nearest":
+                if not self.mine_nearest(cmd["block"], cmd["radius"]):
+                    planning_results.append(
+                        f"Could not find a reachable {cmd['block']}"
+                    )
             elif cmd.get("action") == "mine":
                 if not self.mine_block((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"Could not plan mining at {(cmd['x'], cmd['y'], cmd['z'])}")

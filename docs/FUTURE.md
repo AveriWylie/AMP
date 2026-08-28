@@ -140,8 +140,8 @@ compatibility promise or delivery commitment.
 - Add explicit behavior policies only when they affect planning and execution.
 - Add adventure or spectator gameplay modes only with their required mechanics.
   World types such as superflat remain separate from bot gameplay modes.
-- Expand the planner command vocabulary beyond movement, chat, finding blocks,
-  mining, placement, and attacks.
+- Expand the planner command vocabulary beyond movement, chat, nearby block
+  acquisition, mining, placement, and attacks.
 - Add provider capabilities so adapters can request schema-constrained JSON when
   a model supports it while preserving the plain-text fallback.
 - Add model-specific prompt profiles and validation repair for smaller local

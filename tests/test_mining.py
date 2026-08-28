@@ -11,6 +11,15 @@ class FlatChunk:
         return "stone" if y <= 63 else "air"
 
 
+class CoveredTreeChunk:
+    def get_block(self, x, y, z):
+        if (x, y, z) == (2, 64, 0):
+            return "dark_oak_log"
+        if (x, y, z) == (2, 68, 0):
+            return "dark_oak_leaves"
+        return "stone" if y <= 63 else "air"
+
+
 def test_bot_delegates_gameplay_actions_to_controller():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "Miner",
@@ -20,11 +29,15 @@ def test_bot_delegates_gameplay_actions_to_controller():
     assert isinstance(bot._gameplay, GameplayController)
     bot._gameplay.move_to = lambda goal: ("move", goal)
     bot._gameplay.mine_block = lambda target: ("mine", target)
+    bot._gameplay.mine_nearest = lambda block, radius: (
+        "mine_nearest", block, radius
+    )
     bot._gameplay.place_block = lambda target, block: ("place", target, block)
     bot._gameplay.attack_entity = lambda entity_id: ("attack", entity_id)
 
     assert bot.move_to((1, 2, 3)) == ("move", (1, 2, 3))
     assert bot.mine_block((4, 5, 6)) == ("mine", (4, 5, 6))
+    assert bot.mine_nearest("log", 8) == ("mine_nearest", "log", 8)
     assert bot.place_block((7, 8, 9), "stone") == ("place", (7, 8, 9), "stone")
     assert bot.attack_entity(42) == ("attack", 42)
 
@@ -48,6 +61,26 @@ def test_mine_block_selects_reachable_face_and_queues_dig_last():
         "action": "mine", "x": 2, "y": 64, "z": 2, "face": 2, "duration": 0
     }
     assert commands[-3] == {"action": "move", "x": 2, "y": 64, "z": 1}
+
+
+def test_mine_nearest_finds_log_hidden_below_leaf_canopy():
+    bot = Bot({
+        "host": "localhost",
+        "port": 25565,
+        "username": "TestBot",
+        "version": "26.1.2",
+        "game_mode": "creative",
+    })
+    bot._world_state["map"][(0, 0)] = CoveredTreeChunk()
+    bot._world_state["position"].update({"x": 0.0, "y": 64.0, "z": 0.0})
+
+    assert bot.mine_nearest("log", radius=8) is True
+
+    commands = list(bot._executor._command_queue)
+    assert commands[-1]["action"] == "mine"
+    assert (commands[-1]["x"], commands[-1]["y"], commands[-1]["z"]) == (
+        2, 64, 0
+    )
 
 
 def test_mine_block_rejects_target_without_reachable_standing_position():
