@@ -27,6 +27,16 @@ def test_walkable_rule():
     assert blocked_feet._is_walkable(0, 64, 0) is False
 
 
+def test_java26_short_grass_is_not_mistaken_for_a_solid_floor():
+    world = {
+        "map": {(0, 0): FakeChunk({(0, 64, 0): "short_grass"})}
+    }
+    pathfinder = Pathfinder(world, version="26.2")
+
+    assert pathfinder._is_walkable(0, 64, 0) is True
+    assert pathfinder._is_walkable(0, 65, 0) is False
+
+
 def test_leaf_canopy_remains_traversable_for_recovery():
     canopy = Pathfinder({
         "map": {(0, 0): FakeChunk({(0, 63, 0): "oak_leaves"})}

@@ -3,7 +3,6 @@
 import math
 
 from amp.mining_data import mining_plan
-from amp.pathfinder import PASSABLE
 
 
 class GameplayController:
@@ -152,7 +151,9 @@ class GameplayController:
     def place_block(self, target, block_name):
         """Walk within reach, equip a block stack, and place against a solid support."""
         tx, ty, tz = map(int, target)
-        if self.pathfinder._get_block(tx, ty, tz) not in PASSABLE:
+        if not self.pathfinder._is_passable(
+            self.pathfinder._get_block(tx, ty, tz)
+        ):
             print(f"Placement target {(tx, ty, tz)} is occupied")
             return False
 
@@ -178,7 +179,9 @@ class GameplayController:
         solid_supports = []
         for (sx, sy, sz), face in supports:
             support = (tx + sx, ty + sy, tz + sz)
-            if self.pathfinder._get_block(*support) not in PASSABLE:
+            if not self.pathfinder._is_passable(
+                self.pathfinder._get_block(*support)
+            ):
                 solid_supports.append((support, face))
         if not solid_supports:
             print(f"No solid support beside placement target {(tx, ty, tz)}")

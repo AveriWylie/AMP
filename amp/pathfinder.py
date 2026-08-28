@@ -24,6 +24,8 @@ something to stand on.
 import heapq
 import math
 
+from amp.mining_data import block_data
+
 # non-solid blocks the bot can move through or stand in
 PASSABLE = {
     "air", "cave_air", "void_air", "water", "lava",
@@ -44,8 +46,14 @@ dict is keyed by (cx, cz) chunk coordinates and values are Chunk objects with ge
 --------------------------------------------------------------------------------------------
 """
 class Pathfinder:
-    def __init__(self, world_state):
+    def __init__(self, world_state, version=None):
         self._world_state = world_state
+        self._passable = set(PASSABLE)
+        if version is not None:
+            self._passable = {
+                name for name, data in block_data(version).items()
+                if data.get("boundingBox") == "empty"
+            }
         # last search's node-expansion count, set by find_path via _finish. Exposed so the
         # weighted-A* mode difference (guided w=1.0 vs autonomous w=1.5) is measurable at the
         # boundary rather than just asserted.
@@ -86,11 +94,21 @@ class Pathfinder:
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
         # The 2-block hitbox needs passable feet and head positions plus a solid floor.
-        return feet in PASSABLE and head in PASSABLE and floor not in PASSABLE
+        return (
+            feet in self._passable
+            and head in self._passable
+            and floor not in self._passable
+        )
+
+    def _is_passable(self, block_name):
+        return block_name in self._passable
 
     def _has_stable_floor(self, x, y, z):
         floor = self._get_block(x, y - 1, z)
-        return floor not in PASSABLE and not floor.endswith("_leaves")
+        return (
+            floor not in self._passable
+            and not floor.endswith("_leaves")
+        )
 
     def _movement_cost(self, x, y, z):
         floor = self._get_block(x, y - 1, z)

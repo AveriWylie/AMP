@@ -134,7 +134,7 @@ class Bot:
         self._world_state = self._world_tracker.state
         self._connection._packet_handler = self._world_tracker._on_packet
         self._input_mode = None
-        self._pathfinder = Pathfinder(self._world_state)
+        self._pathfinder = Pathfinder(self._world_state, self._version)
         self._executor = Execute(
             self._connection,
             game_mode=self._game_mode,
