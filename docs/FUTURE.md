@@ -148,6 +148,7 @@ compatibility promise or delivery commitment.
   models that do not reliably follow the JSON-only instruction.
 - Add goal decomposition, durable task state, resumable plans, priorities,
   cancellation at action boundaries, and explicit success criteria.
+- Add staged long-distance navigation that replans as movement loads new chunks.
 - Add memory and mapping that persist across sessions without exposing
   credentials or mixing state between servers or users.
 - Add token, request, time, and cost budgets with a global circuit breaker for

@@ -209,6 +209,30 @@ class Pathfinder:
 
         return self._finish(visited, [], weight)
 
+    def find_path_near(self, start, goal, weight=1.0):
+        """Find a path to the closest walkable cell around an approximate goal."""
+        gx, gy, gz = (
+            math.floor(goal[0]), math.floor(goal[1]), math.floor(goal[2])
+        )
+        candidates = []
+        for dx in range(-2, 3):
+            for dz in range(-2, 3):
+                for dy in (0, 1, -1, 2, -2, 3, -3):
+                    candidate = (gx + dx, gy + dy, gz + dz)
+                    if not self._is_walkable(*candidate):
+                        continue
+                    horizontal_distance = abs(dx) + abs(dz)
+                    unstable = not self._has_stable_floor(*candidate)
+                    candidates.append((
+                        horizontal_distance, abs(dy), unstable, candidate
+                    ))
+
+        for _, _, _, candidate in sorted(candidates)[:12]:
+            path = self.find_path(start, candidate, weight=weight)
+            if path:
+                return path
+        return []
+
     """
     --------------------------------------------------------------------------------------------
     Function Header - Path reconstruction

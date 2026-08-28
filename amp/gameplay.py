@@ -33,7 +33,7 @@ class GameplayController:
             print("Executed pathfinding without an explicit weight for "
                   "the manhattan distance heuristic")
             weight = 1.0
-        path = self.pathfinder.find_path(start, goal, weight=weight)
+        path = self.pathfinder.find_path_near(start, goal, weight=weight)
 
         if not path:
             print(f"No path found to {goal}")

@@ -20,6 +20,13 @@ class CoveredTreeChunk:
         return "stone" if y <= 63 else "air"
 
 
+class RaisedGoalChunk:
+    def get_block(self, x, y, z):
+        if x == 3 and y == 64:
+            return "stone"
+        return "stone" if y <= 63 else "air"
+
+
 def test_bot_delegates_gameplay_actions_to_controller():
     bot = Bot({
         "host": "localhost", "port": 25565, "username": "Miner",
@@ -47,7 +54,7 @@ def test_path_moves_skip_start_and_target_block_centers():
     bot._world_state["position"].update({
         "x": 55.63, "y": 68.0, "z": -135.63
     })
-    bot._pathfinder.find_path = lambda *args, **kwargs: [
+    bot._pathfinder.find_path_near = lambda *args, **kwargs: [
         (55, 68, -136),
         (54, 68, -136),
     ]
@@ -57,6 +64,19 @@ def test_path_moves_skip_start_and_target_block_centers():
     assert list(bot._executor._command_queue) == [{
         "action": "move", "x": 54.5, "y": 68, "z": -135.5
     }]
+
+
+def test_move_to_uses_nearby_walkable_height_when_exact_goal_is_blocked():
+    bot = Bot({"version": "26.1.2", "game_mode": "creative"})
+    bot._world_state["map"][(0, 0)] = RaisedGoalChunk()
+    bot._world_state["position"].update({"x": 0.5, "y": 64, "z": 0.5})
+
+    assert bot.move_to((3, 64, 0)) is True
+
+    commands = list(bot._executor._command_queue)
+    assert commands[-1] == {
+        "action": "move", "x": 3.5, "y": 65, "z": 0.5
+    }
 
 
 def test_mine_block_selects_reachable_face_and_queues_dig_last():
