@@ -30,6 +30,15 @@ def test_java26_movement_uses_flag_byte():
     assert struct.unpack(">dddB", payload) == (1.5, 64, -2, 1)
 
 
+def test_java26_airborne_movement_clears_on_ground_flag():
+    protocol, (packet_id, payload) = encode(
+        MoveAction(1.5, 64.42, -2, on_ground=False)
+    )
+
+    assert packet_id == protocol.play_serverbound["position"]
+    assert struct.unpack(">dddB", payload) == (1.5, 64.42, -2, 0)
+
+
 def test_java26_movement_packet_has_no_pre_send_delay():
     encoded = adapter().encode_action(MoveAction(1, 64, 2), {}, "survival")
 

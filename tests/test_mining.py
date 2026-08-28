@@ -75,7 +75,46 @@ def test_move_to_uses_nearby_walkable_height_when_exact_goal_is_blocked():
 
     commands = list(bot._executor._command_queue)
     assert commands[-1] == {
-        "action": "move", "x": 3.5, "y": 65, "z": 0.5
+        "action": "move", "x": 3.5, "y": 65, "z": 0.5,
+        "on_ground": True, "delay": 0.05,
+    }
+
+
+def test_step_up_uses_airborne_intermediate_positions():
+    bot = Bot({"version": "26.2", "game_mode": "creative"})
+    bot._pathfinder.find_path_near = lambda *args, **kwargs: [
+        (0, 64, 0),
+        (1, 65, 0),
+    ]
+
+    assert bot.move_to((1, 65, 0)) is True
+
+    commands = list(bot._executor._command_queue)
+    assert len(commands) > 2
+    assert commands[0]["y"] > 64
+    assert commands[0]["on_ground"] is False
+    assert all(command["delay"] == 0.05 for command in commands)
+    assert commands[-1] == {
+        "action": "move", "x": 1.5, "y": 65, "z": 0.5,
+        "on_ground": True, "delay": 0.05,
+    }
+
+
+def test_step_down_uses_airborne_intermediate_positions():
+    bot = Bot({"version": "26.2", "game_mode": "creative"})
+    bot._pathfinder.find_path_near = lambda *args, **kwargs: [
+        (0, 65, 0),
+        (1, 64, 0),
+    ]
+
+    assert bot.move_to((1, 64, 0)) is True
+
+    commands = list(bot._executor._command_queue)
+    assert len(commands) > 2
+    assert commands[0]["on_ground"] is False
+    assert commands[-1] == {
+        "action": "move", "x": 1.5, "y": 64, "z": 0.5,
+        "on_ground": True, "delay": 0.05,
     }
 
 

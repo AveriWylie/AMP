@@ -53,7 +53,10 @@ class Java26ProtocolAdapter:
     def encode_action(self, action, world_state, game_mode):
         encode = self.connection._encode_varint
         if isinstance(action, MoveAction):
-            packet = self._packet("position", struct.pack(">dddB", action.x, action.y, action.z, 1))
+            flags = 1 if action.on_ground else 0
+            packet = self._packet(
+                "position", struct.pack(">dddB", action.x, action.y, action.z, flags)
+            )
         elif isinstance(action, LookAction):
             packet = self._packet("look", struct.pack(">ffB", action.yaw, action.pitch, 1))
         elif isinstance(action, ChatAction):

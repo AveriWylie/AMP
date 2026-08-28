@@ -18,10 +18,39 @@ class GameplayController:
         self.input_mode = mode
 
     def _enqueue_path(self, path):
-        for x, y, z in path[1:]:
-            self.executor.enque_command({
-                "action": "move", "x": x + 0.5, "y": y, "z": z + 0.5
-            })
+        for previous, target in zip(path, path[1:]):
+            px, py, pz = previous
+            tx, ty, tz = target
+            if ty == py:
+                self.executor.enque_command({
+                    "action": "move", "x": tx + 0.5, "y": ty,
+                    "z": tz + 0.5,
+                })
+                continue
+
+            if ty > py:
+                samples = (
+                    (0.00, 0.4200), (0.00, 0.7532), (0.10, 1.0013),
+                    (0.25, 1.1661), (0.45, 1.2492), (0.65, 1.2522),
+                    (0.82, 1.1768), (0.94, 1.0244), (1.00, 1.0000),
+                )
+            else:
+                samples = (
+                    (0.15, 0.0000), (0.35, -0.0784), (0.55, -0.2336),
+                    (0.75, -0.4642), (0.90, -0.7685), (1.00, -1.0000),
+                )
+
+            start_x, start_z = px + 0.5, pz + 0.5
+            delta_x, delta_z = tx - px, tz - pz
+            for index, (progress, y_offset) in enumerate(samples):
+                self.executor.enque_command({
+                    "action": "move",
+                    "x": start_x + delta_x * progress,
+                    "y": py + y_offset,
+                    "z": start_z + delta_z * progress,
+                    "on_ground": index == len(samples) - 1,
+                    "delay": 0.05,
+                })
 
     def move_to(self, goal):
         pos = self.world_state["position"]

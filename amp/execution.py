@@ -145,7 +145,7 @@ class Execute:
         message = f"{action} packet sent"
 
         if action == "move":
-            time.sleep(0.25)
+            time.sleep(command.get("delay", 0.25))
             if (
                 self._world_state is not None
                 and self._world_state.get("position_revision", 0)

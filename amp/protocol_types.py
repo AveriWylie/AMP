@@ -103,6 +103,7 @@ class MoveAction:
     x: float
     y: float
     z: float
+    on_ground: bool = True
 
 
 @dataclass(frozen=True)
@@ -180,7 +181,10 @@ class EncodedAction:
 def action_from_command(command):
     action = command.get("action")
     if action == "move":
-        return MoveAction(command["x"], command["y"], command["z"])
+        return MoveAction(
+            command["x"], command["y"], command["z"],
+            command.get("on_ground", True),
+        )
     if action == "chat":
         return ChatAction(command["message"])
     if action == "look":
@@ -213,7 +217,12 @@ def action_from_command(command):
 
 def command_from_action(action):
     if isinstance(action, MoveAction):
-        return {"action": "move", "x": action.x, "y": action.y, "z": action.z}
+        command = {
+            "action": "move", "x": action.x, "y": action.y, "z": action.z
+        }
+        if not action.on_ground:
+            command["on_ground"] = False
+        return command
     if isinstance(action, ChatAction):
         return {"action": "chat", "message": action.message}
     if isinstance(action, LookAction):
