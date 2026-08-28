@@ -187,5 +187,8 @@ class Execute:
             if self._world_state is not None:
                 self._world_state["inventory"]["selected_hotbar_slot"] = slot
 
-        print(f"Executed {command} in {self._game_mode} mode.")
+        if success:
+            print(f"Executed {command} in {self._game_mode} mode.")
+        else:
+            print(f"Failed {command}: {message}")
         return {"action": action, "success": success, "message": message}

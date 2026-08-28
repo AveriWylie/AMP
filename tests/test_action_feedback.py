@@ -33,7 +33,7 @@ def test_wait_until_idle_returns_completed_command_result():
     assert results == [{"action": "move", "success": True, "message": "move packet sent"}]
 
 
-def test_server_movement_correction_cancels_stale_path(monkeypatch):
+def test_server_movement_correction_cancels_stale_path(monkeypatch, capsys):
     world = {
         "position": {"x": 0.0, "y": 64.0, "z": 0.0},
         "position_revision": 0,
@@ -57,6 +57,9 @@ def test_server_movement_correction_cancels_stale_path(monkeypatch):
     assert "corrected" in result["message"]
     assert world["position"] == {"x": 0.25, "y": 64.0, "z": 0.0}
     assert not executor._command_queue
+    output = capsys.readouterr().out
+    assert "Failed {'action': 'move'" in output
+    assert "cancelled stale actions" in output
 
 
 def test_movement_is_paced_after_sending(monkeypatch):
