@@ -12,6 +12,20 @@ def setup_entities():
     return adapter, WorldStateTracker(adapter, connection)
 
 
+def test_entity_trace_reports_spawn_and_removal(monkeypatch, capsys):
+    monkeypatch.setenv("AMP_TRACE_ENTITIES", "1")
+    adapter, tracker = setup_entities()
+    entity_uuid = uuid.UUID("12345678-1234-5678-1234-567812345678")
+    spawn = b"\x2a" + entity_uuid.bytes + b"\x01" + struct.pack(">ddd", 1, 64, -2)
+
+    tracker._on_packet(adapter.play_clientbound["spawn_entity"], spawn)
+    tracker._on_packet(adapter.play_clientbound["entity_destroy"], b"\x01\x2a")
+
+    output = capsys.readouterr().out
+    assert "Entity trace: spawn id=42" in output
+    assert "Entity trace: remove {42:" in output
+
+
 def test_java26_entity_lifecycle_updates_normalized_world_state():
     adapter, tracker = setup_entities()
     entity_uuid = uuid.UUID("12345678-1234-5678-1234-567812345678")

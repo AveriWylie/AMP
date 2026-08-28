@@ -1,5 +1,7 @@
 """Apply version-neutral protocol events to AMP's live world state."""
 
+import os
+
 from amp.protocol_types import (
     BlockChanged,
     ChunkLoaded,
@@ -21,6 +23,7 @@ class WorldStateTracker:
     def __init__(self, protocol_adapter, connection):
         self.protocol_adapter = protocol_adapter
         self.connection = connection
+        self._trace_entities = os.environ.get("AMP_TRACE_ENTITIES") == "1"
         self.state = {
             "position": {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0},
             "position_revision": 0,
@@ -60,12 +63,20 @@ class WorldStateTracker:
             self.state["self_entity_id"] = event.entity_id
             self.state["dimension_id"] = event.dimension_id
         elif isinstance(event, WorldReset):
+            self._trace(
+                f"respawn dimension={event.dimension_id} "
+                f"tracked={sorted(self.state['entities'])}"
+            )
             self._reset_world_state(event.dimension_id)
         elif isinstance(event, EntitySpawned):
             self.state["entities"][event.entity_id] = {
                 "uuid": event.uuid, "type": event.type_id, "name": event.name,
                 "x": event.x, "y": event.y, "z": event.z,
             }
+            self._trace(
+                f"spawn id={event.entity_id} type={event.name} "
+                f"uuid={event.uuid} pos=({event.x}, {event.y}, {event.z})"
+            )
         elif isinstance(event, EntityMoved):
             entity = self.state["entities"].get(event.entity_id)
             if entity is not None:
@@ -77,6 +88,11 @@ class WorldStateTracker:
             if entity is not None:
                 entity.update({"x": event.x, "y": event.y, "z": event.z})
         elif isinstance(event, EntitiesRemoved):
+            removed = {
+                entity_id: self.state["entities"].get(entity_id)
+                for entity_id in event.entity_ids
+            }
+            self._trace(f"remove {removed}")
             for entity_id in event.entity_ids:
                 self.state["entities"].pop(entity_id, None)
         elif isinstance(event, ChunkLoaded):
@@ -97,6 +113,10 @@ class WorldStateTracker:
             self.state["inventory"]["selected_hotbar_slot"] = event.slot
         else:
             raise TypeError(f"Unsupported world event: {type(event).__name__}")
+
+    def _trace(self, message):
+        if self._trace_entities:
+            print(f"Entity trace: {message}", flush=True)
 
     def _respawn(self):
         packet_id = self.connection._encode_varint(self.connection.play_ids["client_command"])
