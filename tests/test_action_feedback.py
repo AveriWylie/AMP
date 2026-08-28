@@ -3,6 +3,7 @@
 import threading
 
 from amp.connection import Connection
+from amp.bot import Bot
 from amp.execution import Execute
 from amp.java26_protocol import Java26ProtocolAdapter
 from amp.planner import Planner
@@ -38,6 +39,26 @@ def test_wait_until_idle_reports_timeout_when_queue_is_not_drained():
     results = executor.wait_until_idle(timeout=0.01)
     assert results[-1]["success"] is False
     assert "Timed out" in results[-1]["message"]
+
+
+def test_guided_prompt_waits_for_queued_actions():
+    bot = Bot({"version": "26.1.2", "model_optional": True})
+    bot._planner.plan = lambda prompt: [{"action": "chat", "message": "done"}]
+    events = []
+    bot._executor.result_count = lambda: events.append("count") or 0
+    bot._executor.enque_command = lambda command: events.append("enqueue")
+    bot._executor.wait_until_idle = (
+        lambda result_start: events.append("wait") or [{
+            "action": "chat",
+            "success": True,
+            "message": "chat packet sent",
+        }]
+    )
+
+    result = bot.prompt("say done")
+
+    assert events == ["count", "enqueue", "wait"]
+    assert result == "Succeeded: chat packet sent"
 
 
 def test_disconnected_send_is_reported_as_a_failed_result():

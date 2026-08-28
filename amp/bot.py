@@ -200,19 +200,7 @@ class Bot:
     """
     def prompt(self, user_prompt):
         commands = self._planner.plan(user_prompt)
-        for cmd in commands:
-            if cmd.get("action") in ("go_to", "find"):
-                self.move_to((cmd["x"], cmd["y"], cmd["z"]))
-            elif cmd.get("action") == "mine":
-                self.mine_block((cmd["x"], cmd["y"], cmd["z"]))
-            elif cmd.get("action") == "place":
-                self.place_block(
-                    (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
-                )
-            elif cmd.get("action") == "attack":
-                self.attack_entity(cmd["entity_id"])
-            else:
-                self._executor.enque_command(cmd)
+        return self._on_step(commands)
 
     """
     --------------------------------------------------------------------------------------------
