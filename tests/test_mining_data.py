@@ -33,6 +33,13 @@ def test_soft_block_uses_matching_tool_but_not_unrelated_item():
     assert mining_plan("26.1.2", "dirt", _inventory((1, pickaxe)))["inventory_slot"] is None
 
 
+def test_soft_block_can_be_mined_with_an_empty_hand():
+    plan = mining_plan("26.2", "dirt", _inventory())
+
+    assert plan is not None
+    assert plan["inventory_slot"] is None
+
+
 def test_best_tool_can_come_from_main_inventory():
     inventory = _inventory()
     inventory["slots"][10] = {"id": 939, "name": "diamond_pickaxe", "count": 1}

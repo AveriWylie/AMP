@@ -41,12 +41,12 @@ def mining_plan(version, block_name, inventory):
         return None
 
     harvest_tools = block.get("harvestTools")
-    candidates = [(True, 1.0, None, None)] if harvest_tools is None else []
+    candidates = [(True, 1.0, None, None)] if not harvest_tools else []
     for inventory_slot in range(9, 45):
         item = inventory["slots"].get(inventory_slot)
         if item is None:
             continue
-        can_harvest = harvest_tools is None or str(item["id"]) in harvest_tools
+        can_harvest = not harvest_tools or str(item["id"]) in harvest_tools
         speed = _tool_details(item, block.get("material"))
         candidates.append((can_harvest, speed, inventory_slot, item))
 
