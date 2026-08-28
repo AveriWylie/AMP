@@ -10,20 +10,11 @@ owner `AveriWylie`, repository `AMP`, workflow `release.yml`, and environment
 
 ## 1. Automated checks
 
-From a clean checkout, install the development dependencies and run:
-
-```bash
-python -m pip install --require-hashes -r requirements-lock.txt
-python -m pip install --no-deps .
-python -m pytest
-python tools/sync_minecraft_data.py --check
-python tools/check_version_data.py
-python -m build --no-isolation
-```
-
 Confirm that CI passes on every configured Python version, including the
 `audit` job that runs `pip-audit` against `requirements-lock.txt`. Review any
-outstanding security findings before continuing.
+outstanding security findings before continuing. Confirm that the passing run
+belongs to the exact release candidate commit; CI also checks the pinned
+upstream Minecraft data and the generated version data.
 
 ## 2. Human testing
 

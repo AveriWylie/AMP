@@ -48,7 +48,9 @@ jobs:
         run: python -m pytest
       - name: Check generated Minecraft data
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        run: python tools/check_version_data.py
+        run: |
+          python tools/sync_minecraft_data.py --check
+          python tools/check_version_data.py
 
   audit:
     if: github.event_name != 'push' || github.ref == 'refs/heads/master'
