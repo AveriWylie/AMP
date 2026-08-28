@@ -2,7 +2,7 @@ import struct
 
 from amp.connection import Connection
 from amp.java26_protocol import Java26ProtocolAdapter
-from amp.protocol_types import BlockChanged
+from amp.protocol_types import BlockChanged, ChunkLoaded
 from amp.world_state import WorldStateTracker
 
 
@@ -128,6 +128,10 @@ def test_java26_respawn_discards_stale_players_and_reports_loaded():
     tracker._on_packet(adapter.play_clientbound["position"], position)
 
     assert tracker.state["entities"] == {}
+    assert sent[-1] != (adapter.play_serverbound["player_loaded"], b"")
+
+    tracker.apply(ChunkLoaded(6, -8, object()))
+
     assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
 
 
