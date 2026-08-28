@@ -40,7 +40,8 @@ def test_kill_entity_approaches_and_repeats_until_target_is_removed(monkeypatch)
     }
 
     class Pathfinder:
-        def find_path_near(self, start, goal, weight=1.0):
+        def find_path_near(self, start, goal, weight=1.0, radius=2):
+            assert radius == 1
             return [
                 (0, 64, 0), (0, 64, 1),
                 (0, 64, 2), (0, 64, 3),

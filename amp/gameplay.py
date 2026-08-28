@@ -280,7 +280,10 @@ class GameplayController:
         """Approach and attack a tracked entity until the server removes it."""
         entity_id = int(entity_id)
         attacked = False
-        for _ in range(max_attacks):
+        attacks = 0
+        attempts = 0
+        while attacks < max_attacks and attempts < max_attacks * 3:
+            attempts += 1
             entity = self.world_state["entities"].get(entity_id)
             if entity is None:
                 return attacked
@@ -293,7 +296,7 @@ class GameplayController:
                 weight = 1.5 if self.input_mode == "autonomous" else 1.0
                 path = self.pathfinder.find_path_near(
                     start, (entity["x"], entity["y"], entity["z"]),
-                    weight=weight,
+                    weight=weight, radius=1,
                 )
                 if not path:
                     print(f"No path into attack reach of entity {entity_id}")
@@ -304,10 +307,11 @@ class GameplayController:
             if not self.attack_entity(entity_id):
                 continue
             attacked = True
+            attacks += 1
             self.executor.wait_until_idle()
             time.sleep(self._attack_cooldown())
 
-        print(f"Entity {entity_id} survived {max_attacks} attacks")
+        print(f"Entity {entity_id} survived {attacks} attacks")
         return False
 
     def _attack_cooldown(self):
