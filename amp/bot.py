@@ -219,20 +219,25 @@ class Bot:
     --------------------------------------------------------------------------------------------
     """
     def _on_step(self, commands):
-        result_start = self._executor.result_count()
         planning_results = []
+        execution_results = []
         for cmd in commands:
+            result_start = self._executor.result_count()
+            planned = True
             if cmd.get("action") == "go_to":
                 if not self.move_to((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"No path to {(cmd['x'], cmd['y'], cmd['z'])}")
+                    planned = False
             elif cmd.get("action") == "mine_nearest":
                 if not self.mine_nearest(cmd["block"], cmd["radius"]):
                     planning_results.append(
                         f"Could not find a reachable {cmd['block']}"
                     )
+                    planned = False
             elif cmd.get("action") == "mine":
                 if not self.mine_block((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"Could not plan mining at {(cmd['x'], cmd['y'], cmd['z'])}")
+                    planned = False
             elif cmd.get("action") == "place":
                 if not self.place_block(
                     (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
@@ -240,15 +245,22 @@ class Bot:
                     planning_results.append(
                         f"Could not plan placing {cmd['block']} at {(cmd['x'], cmd['y'], cmd['z'])}"
                     )
+                    planned = False
             elif cmd.get("action") == "attack":
                 if not self.attack_entity(cmd["entity_id"]):
                     planning_results.append(f"Could not attack entity {cmd['entity_id']}")
+                    planned = False
             else:
                 self._executor.enque_command(cmd)
-        results = self._executor.wait_until_idle(result_start=result_start)
+            if not planned:
+                break
+            results = self._executor.wait_until_idle(result_start=result_start)
+            execution_results.extend(results)
+            if any(not result["success"] for result in results):
+                break
         summaries = planning_results + [
             ("Succeeded: " if result["success"] else "Failed: ") + result["message"]
-            for result in results
+            for result in execution_results
         ]
         return "; ".join(summaries) or "No actions were queued"
 

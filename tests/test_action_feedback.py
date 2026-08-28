@@ -108,6 +108,34 @@ def test_guided_prompt_waits_for_queued_actions():
     assert result == "Succeeded: chat packet sent"
 
 
+def test_high_level_actions_execute_before_the_next_action_is_planned():
+    bot = Bot({"version": "26.1.2", "model_optional": True})
+    events = []
+    bot.move_to = lambda goal: events.append(("plan_move", goal)) or True
+    bot.place_block = lambda target, block: (
+        events.append(("plan_place", target, block)) or True
+    )
+    bot._executor.result_count = lambda: len(events)
+    bot._executor.wait_until_idle = (
+        lambda result_start: events.append(("wait", result_start)) or []
+    )
+
+    bot._on_step([
+        {"action": "go_to", "x": 4, "y": 64, "z": 5},
+        {
+            "action": "place", "x": 4, "y": 64, "z": 5,
+            "block": "dirt",
+        },
+    ])
+
+    assert events == [
+        ("plan_move", (4, 64, 5)),
+        ("wait", 0),
+        ("plan_place", (4, 64, 5), "dirt"),
+        ("wait", 2),
+    ]
+
+
 def test_disconnected_send_is_reported_as_a_failed_result():
     connection = Connection("localhost", 25565, "26.1.2", "Feedback", None, 775)
     adapter = Java26ProtocolAdapter("java-26.1", "26.1.2", connection)
