@@ -94,8 +94,16 @@ class Planner:
                     block = chunk.get_block(wx, sy, wz)
                     nearby[f"{wx},{sy},{wz}"] = block
 
+        yaw = pos.get("yaw", 0.0)
+        directions = ("south", "west", "north", "east")
+        facing = directions[round(yaw / 90) % 4]
+
         return {
-            "position": {"x": bx, "y": by, "z": bz},
+            "position": {
+                "x": bx, "y": by, "z": bz,
+                "yaw": yaw, "pitch": pos.get("pitch", 0.0),
+                "facing": facing,
+            },
             "health": self._world_state["health"],
             "food": self._world_state["food"],
             "inventory": {

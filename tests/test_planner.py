@@ -68,6 +68,24 @@ def test_call_api_exposes_nearest_loaded_block_mining():
     assert "only when any tree species is acceptable" in system
 
 
+def test_snapshot_includes_view_direction():
+    world = {
+        "position": {
+            "x": 1.5, "y": 64.0, "z": 2.5,
+            "yaw": -90.0, "pitch": 12.5,
+        },
+        "health": 20, "food": 20, "map": {}, "entities": {},
+        "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    }
+
+    snapshot = Planner(world)._build_snapshot()
+
+    assert snapshot["position"] == {
+        "x": 1, "y": 64, "z": 2,
+        "yaw": -90.0, "pitch": 12.5, "facing": "east",
+    }
+
+
 def test_call_api_does_not_expose_raw_position_packets_to_model():
     client = FakeModelClient()
     planner = Planner({}, model_client=client)
