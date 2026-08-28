@@ -103,6 +103,9 @@ class Java26ProtocolAdapter:
             raise TypeError(f"Unsupported Java 26 action: {type(action).__name__}")
         return EncodedAction((PacketStep(packet),))
 
+    def encode_tick_end(self):
+        return self._packet("tick_end", b"")
+
     def _hashed_slot(self, item):
         if item is None:
             return b"\x00"

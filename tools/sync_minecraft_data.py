@@ -78,7 +78,9 @@ JAVA_26_PLAY_PACKETS = {
     "clientbound": ("start_configuration",
         "sync_entity_position", "set_player_inventory", "set_cursor_item",
     ),
-    "serverbound": ("configuration_acknowledged", "player_input", "attack"),
+    "serverbound": (
+        "configuration_acknowledged", "player_input", "attack", "tick_end",
+    ),
 }
 
 JAVA_26_CONFIGURATION_PACKETS = {

@@ -5,6 +5,8 @@ import time
 
 
 class LifecycleManager:
+    TICK_SECONDS = 0.05
+
     def __init__(self, connection, executor, identity, on_idle=None):
         self._connection = connection
         self._executor = executor
@@ -46,11 +48,14 @@ class LifecycleManager:
                 return
 
     def _execution_step(self):
-        if self._executor.execute_queue() is not None:
-            return
-        if self._on_idle is not None and self._on_idle():
-            return
-        time.sleep(0.05)
+        started = time.monotonic()
+        result = self._executor.execute_queue()
+        if result is None and self._on_idle is not None:
+            self._on_idle()
+        self._executor.end_tick()
+        remaining = self.TICK_SECONDS - (time.monotonic() - started)
+        if remaining > 0:
+            time.sleep(remaining)
 
     def handle_failure(self, error):
         if not isinstance(error, ConnectionError):

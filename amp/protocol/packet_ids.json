@@ -44,6 +44,7 @@
         "player_input": 43,
         "position": 30,
         "teleport_confirm": 0,
+        "tick_end": 13,
         "use_entity": 26,
         "use_item": 67,
         "window_click": 18
@@ -144,6 +145,7 @@
         "player_input": 43,
         "position": 30,
         "teleport_confirm": 0,
+        "tick_end": 13,
         "use_entity": 26,
         "use_item": 67,
         "window_click": 18
@@ -244,6 +246,7 @@
         "player_input": 43,
         "position": 30,
         "teleport_confirm": 0,
+        "tick_end": 13,
         "use_entity": 26,
         "use_item": 67,
         "window_click": 18
@@ -344,6 +347,7 @@
         "player_input": 43,
         "position": 30,
         "teleport_confirm": 0,
+        "tick_end": 13,
         "use_entity": 26,
         "use_item": 67,
         "window_click": 18

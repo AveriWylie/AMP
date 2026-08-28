@@ -58,6 +58,9 @@ class Execute:
         with self._condition:
             return len(self._results)
 
+    def end_tick(self):
+        self._connection._send(self._protocol_adapter.encode_tick_end())
+
     def wait_until_idle(self, result_start=0, timeout=30):
         """Wait for queued and active work, returning results added since result_start."""
         deadline = time.monotonic() + timeout

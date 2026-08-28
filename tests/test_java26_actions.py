@@ -59,6 +59,14 @@ def test_java26_attack_and_hotbar_selection_use_dedicated_packets():
     assert struct.unpack(">h", payload)[0] == 7
 
 
+def test_java26_tick_end_closes_each_client_tick():
+    protocol = adapter()
+    packet_id, payload = packet_body(protocol.encode_tick_end())
+
+    assert packet_id == protocol.play_serverbound["tick_end"]
+    assert payload == b""
+
+
 def test_java26_hotbar_swap_uses_hashed_slots_for_plain_items():
     protocol = adapter()
     world = {"inventory": {"state_id": 4, "slots": {

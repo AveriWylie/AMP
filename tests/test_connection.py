@@ -565,6 +565,7 @@ def test_execution_worker_sleeps_only_while_idle(monkeypatch):
     results = iter(({"success": True}, None))
     executor = type("Executor", (), {
         "execute_queue": lambda self: next(results),
+        "end_tick": lambda self: None,
     })()
     lifecycle = LifecycleManager(
         type("Connected", (), {"_connected": True})(),
@@ -577,12 +578,13 @@ def test_execution_worker_sleeps_only_while_idle(monkeypatch):
     lifecycle._execution_step()
     lifecycle._execution_step()
 
-    assert sleeps == [0.05]
+    assert sleeps == [0.05, 0.05]
 
 
 def test_execution_worker_runs_idle_physics_without_extra_sleep(monkeypatch):
     executor = type("Executor", (), {
         "execute_queue": lambda self: None,
+        "end_tick": lambda self: None,
     })()
     physics_ticks = []
     lifecycle = LifecycleManager(
@@ -597,4 +599,4 @@ def test_execution_worker_runs_idle_physics_without_extra_sleep(monkeypatch):
     lifecycle._execution_step()
 
     assert physics_ticks == ["tick"]
-    assert sleeps == []
+    assert sleeps == [0.05]
