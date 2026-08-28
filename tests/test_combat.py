@@ -60,7 +60,7 @@ def test_kill_entity_approaches_and_repeats_until_target_is_removed(monkeypatch)
                 })
             elif command["action"] == "attack":
                 self.attacks += 1
-                if self.attacks == 3:
+                if self.attacks == 25:
                     world["entities"].pop(42)
 
         def wait_until_idle(self):
@@ -74,9 +74,9 @@ def test_kill_entity_approaches_and_repeats_until_target_is_removed(monkeypatch)
     monkeypatch.setattr("amp.gameplay.time.sleep", delays.append)
 
     assert controller.kill_entity(42) is True
-    assert executor.attacks == 3
+    assert executor.attacks == 25
     assert any(command["action"] == "move" for command in executor.commands)
-    assert delays == [0.55, 0.55, 0.55]
+    assert delays == [0.55] * 25
 
 
 def test_kill_cooldown_accounts_for_held_weapon_speed():

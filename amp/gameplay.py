@@ -276,14 +276,13 @@ class GameplayController:
         self.executor.enque_command({"action": "attack", "entity_id": int(entity_id)})
         return True
 
-    def kill_entity(self, entity_id, max_attacks=20):
+    def kill_entity(self, entity_id, timeout=60):
         """Approach and attack a tracked entity until the server removes it."""
         entity_id = int(entity_id)
         attacked = False
         attacks = 0
-        attempts = 0
-        while attacks < max_attacks and attempts < max_attacks * 3:
-            attempts += 1
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             entity = self.world_state["entities"].get(entity_id)
             if entity is None:
                 return attacked
@@ -311,7 +310,10 @@ class GameplayController:
             self.executor.wait_until_idle()
             time.sleep(self._attack_cooldown())
 
-        print(f"Entity {entity_id} survived {attacks} attacks")
+        print(
+            f"Timed out trying to kill entity {entity_id} "
+            f"after {attacks} attacks"
+        )
         return False
 
     def _attack_cooldown(self):
