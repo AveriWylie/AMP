@@ -2,6 +2,7 @@ import struct
 
 from amp.connection import Connection
 from amp.java26_protocol import Java26ProtocolAdapter
+from amp.protocol_types import BlockChanged
 from amp.world_state import WorldStateTracker
 
 
@@ -40,6 +41,27 @@ def test_java26_health_and_block_updates_are_normalized():
     assert (tracker.state["health"], tracker.state["food"]) == (12.5, 14)
     assert events[0].position == (-1, 64, 2)
     assert events[0].state_id == 5
+
+
+def test_java26_multi_block_updates_are_normalized():
+    adapter, _ = setup_world()
+    section_x, section_y, section_z = 4, 4, -8
+    packed = (
+        ((section_x & 0x3FFFFF) << 42)
+        | ((section_z & 0x3FFFFF) << 20)
+        | (section_y & 0xFFFFF)
+    )
+    record = (5 << 12) | (13 << 8) | (2 << 4) | 1
+    payload = (
+        struct.pack(">Q", packed) + b"\x01"
+        + Connection._encode_varint(record)
+    )
+
+    events = adapter.decode_play(
+        adapter.play_clientbound["multi_block_change"], payload
+    )
+
+    assert events == [BlockChanged(77, 65, -126, 5)]
 
 
 def test_java26_death_respawn_preserves_same_dimension_world_state():

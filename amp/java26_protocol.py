@@ -161,6 +161,8 @@ class Java26ProtocolAdapter:
                 y -= 1 << 12
             state_id, _ = self.connection._decode_varint_bytes(payload, 8)
             return [BlockChanged(x, y, z, state_id)]
+        if packet_id == ids["multi_block_change"]:
+            return self._decode_multi_block_change(payload)
         if packet_id == ids["map_chunk"]:
             return [self._decode_chunk(payload)]
         if packet_id == ids["login"]:
@@ -231,6 +233,32 @@ class Java26ProtocolAdapter:
         if end > len(payload):
             raise ConnectionError("Truncated Java 26 string")
         return end
+
+    def _decode_multi_block_change(self, payload):
+        packed_section = struct.unpack_from(">Q", payload, 0)[0]
+        section_x = self._signed(packed_section >> 42, 22)
+        section_z = self._signed((packed_section >> 20) & 0x3FFFFF, 22)
+        section_y = self._signed(packed_section & 0xFFFFF, 20)
+        count, consumed = self.connection._decode_varint_bytes(payload, 8)
+        offset = 8 + consumed
+        events = []
+        for _ in range(count):
+            record, consumed = self.connection._decode_varint_bytes(payload, offset)
+            offset += consumed
+            events.append(BlockChanged(
+                (section_x << 4) | ((record >> 8) & 0xF),
+                (section_y << 4) | (record & 0xF),
+                (section_z << 4) | ((record >> 4) & 0xF),
+                record >> 12,
+            ))
+        if offset != len(payload):
+            raise ConnectionError("Trailing bytes in Java 26 multi-block update")
+        return events
+
+    @staticmethod
+    def _signed(value, bits):
+        sign = 1 << (bits - 1)
+        return value - (1 << bits) if value & sign else value
 
     def _decode_slot(self, payload, offset):
         start = offset

@@ -46,6 +46,7 @@ PLAY_PACKETS = {
         "entity_destroy",
         "entity_teleport",
         "block_change",
+        "multi_block_change",
         "keep_alive",
         "map_chunk",
         "position",

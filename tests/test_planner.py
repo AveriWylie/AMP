@@ -58,6 +58,8 @@ def test_call_api_exposes_nearest_loaded_block_mining():
     system = client.calls[0][0]
     assert '"action": "mine_nearest"' in system
     assert '"block": "log"' in system
+    assert '"block": "dark_oak_log"' in system
+    assert "only when any tree species is acceptable" in system
 
 
 def test_call_api_does_not_expose_raw_position_packets_to_model():

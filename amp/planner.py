@@ -157,7 +157,9 @@ class Planner:
             "  {\"action\": \"attack\", \"entity_id\": int}\n\n"
             "Use the world state snapshot to ground your decisions in real coordinates. "
             "Prefer go_to over raw move sequences. To find and mine a nearby block, use "
-            "mine_nearest. Use {\"block\": \"log\"} for any tree trunk type. "
+            "mine_nearest. Use {\"block\": \"log\"} only when any tree species is "
+            "acceptable. Preserve a requested species with its exact block name, such as "
+            "{\"block\": \"dark_oak_log\"} for dark oak. "
             "Keep command lists concise and purposeful."
         )
 
