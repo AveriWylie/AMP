@@ -109,6 +109,8 @@ class WorldStateTracker:
             if removed_players:
                 self._trace(f"remove players={removed_players}")
             for entity_id in event.entity_ids:
+                if entity_id in self._players_before_respawn:
+                    continue
                 self.state["entities"].pop(entity_id, None)
         elif isinstance(event, ChunkLoaded):
             self.state["map"][(event.chunk_x, event.chunk_z)] = event.chunk
@@ -158,7 +160,8 @@ class WorldStateTracker:
             self.state["map"].clear()
             self.state["blocks"].clear()
         else:
-            self.state["entities"].update(self._players_before_respawn)
+            for entity_id, entity in self._players_before_respawn.items():
+                self.state["entities"].setdefault(entity_id, entity)
         self._players_before_respawn.clear()
         self.state["inventory"].update({
             "slots": {}, "carried": None, "state_id": 0,

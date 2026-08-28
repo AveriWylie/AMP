@@ -98,7 +98,7 @@ def test_java26_dimension_change_discards_world_state():
     assert tracker.state["blocks"] == {}
 
 
-def test_java26_death_restores_player_removed_before_respawn():
+def test_java26_death_keeps_player_updates_during_respawn():
     adapter, tracker = setup_world()
     tracker.connection._send = lambda packet: None
     tracker.state["dimension_id"] = 0
@@ -117,9 +117,15 @@ def test_java26_death_restores_player_removed_before_respawn():
     tracker._on_packet(
         adapter.play_clientbound["entity_destroy"], b"\x02\x69\x83\x01"
     )
+    tracker._on_packet(
+        adapter.play_clientbound["rel_entity_move"],
+        b"\x69" + struct.pack(">hhh?", 4096, 0, 0, True),
+    )
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
 
-    assert tracker.state["entities"] == {105: player}
+    assert tracker.state["entities"] == {
+        105: {**player, "x": 84.5},
+    }
 
 
 def test_java26_chunk_wrapper_decodes_section_data():
