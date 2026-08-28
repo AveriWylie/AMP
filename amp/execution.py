@@ -120,17 +120,42 @@ class Execute:
         encoded = self._protocol_adapter.encode_action(
             action_value, self._world_state, self._game_mode
         )
-        for step in encoded.steps:
-            if step.delay_before:
-                time.sleep(step.delay_before)
-            self._connection._send(step.packet)
+        movement_revision = None
+        previous_position = None
+        if action == "move" and self._world_state is not None:
+            movement_revision = self._world_state.get("position_revision", 0)
+            previous_position = dict(self._world_state["position"])
+            self._world_state["position"].update({
+                "x": command["x"], "y": command["y"], "z": command["z"]
+            })
+        try:
+            for step in encoded.steps:
+                if step.delay_before:
+                    time.sleep(step.delay_before)
+                self._connection._send(step.packet)
+        except Exception:
+            if (
+                previous_position is not None
+                and self._world_state.get("position_revision", 0)
+                == movement_revision
+            ):
+                self._world_state["position"] = previous_position
+            raise
         success = True
         message = f"{action} packet sent"
 
         if action == "move":
-            x, y, z = command["x"], command["y"], command["z"]
-            if self._world_state is not None:
-                self._world_state["position"].update({"x": x, "y": y, "z": z})
+            time.sleep(0.25)
+            if (
+                self._world_state is not None
+                and self._world_state.get("position_revision", 0)
+                != movement_revision
+            ):
+                success = False
+                message = "Server corrected movement; cancelled stale actions"
+                with self._condition:
+                    self._command_queue.clear()
+                    self._condition.notify_all()
 
         elif action == "attack":
             message = f"Attack sent to entity {command['entity_id']}"

@@ -33,6 +33,53 @@ def test_wait_until_idle_returns_completed_command_result():
     assert results == [{"action": "move", "success": True, "message": "move packet sent"}]
 
 
+def test_server_movement_correction_cancels_stale_path(monkeypatch):
+    world = {
+        "position": {"x": 0.0, "y": 64.0, "z": 0.0},
+        "position_revision": 0,
+        "inventory": {"slots": {}, "selected_hotbar_slot": 0, "state_id": 0},
+        "map": {},
+    }
+    executor = _executor(world)
+    monkeypatch.setattr("amp.execution.time.sleep", lambda seconds: None)
+
+    def correct_position(packet):
+        world["position"].update({"x": 0.25, "y": 64.0, "z": 0.0})
+        world["position_revision"] += 1
+
+    executor._connection._send = correct_position
+    executor.enque_command({"action": "move", "x": 1, "y": 64, "z": 0})
+    executor.enque_command({"action": "move", "x": 2, "y": 64, "z": 0})
+
+    result = executor.execute_queue()
+
+    assert result["success"] is False
+    assert "corrected" in result["message"]
+    assert world["position"] == {"x": 0.25, "y": 64.0, "z": 0.0}
+    assert not executor._command_queue
+
+
+def test_movement_is_paced_after_sending(monkeypatch):
+    world = {
+        "position": {"x": 0.0, "y": 64.0, "z": 0.0},
+        "position_revision": 0,
+        "inventory": {"slots": {}, "selected_hotbar_slot": 0, "state_id": 0},
+        "map": {},
+    }
+    executor = _executor(world)
+    events = []
+    executor._connection._send = lambda packet: events.append("send")
+    monkeypatch.setattr(
+        "amp.execution.time.sleep",
+        lambda seconds: events.append(("sleep", seconds)),
+    )
+
+    result = executor._execute({"action": "move", "x": 1, "y": 64, "z": 0})
+
+    assert result["success"] is True
+    assert events == ["send", ("sleep", 0.25)]
+
+
 def test_wait_until_idle_reports_timeout_when_queue_is_not_drained():
     executor = _executor()
     executor.enque_command({"action": "chat", "message": "queued"})

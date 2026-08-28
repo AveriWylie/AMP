@@ -22,6 +22,7 @@ class WorldStateTracker:
         self.connection = connection
         self.state = {
             "position": {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0},
+            "position_revision": 0,
             "health": 20.0,
             "food": 20,
             "entities": {},
@@ -47,6 +48,7 @@ class WorldStateTracker:
                 "yaw": previous["yaw"] + event.yaw if event.relative_flags & 8 else event.yaw,
                 "pitch": previous["pitch"] + event.pitch if event.relative_flags & 16 else event.pitch,
             }
+            self.state["position_revision"] += 1
         elif isinstance(event, HealthChanged):
             self.state["health"] = event.health
             self.state["food"] = event.food

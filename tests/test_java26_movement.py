@@ -30,10 +30,10 @@ def test_java26_movement_uses_flag_byte():
     assert struct.unpack(">dddB", payload) == (1.5, 64, -2, 1)
 
 
-def test_java26_movement_is_throttled_to_walking_rate():
+def test_java26_movement_packet_has_no_pre_send_delay():
     encoded = adapter().encode_action(MoveAction(1, 64, 2), {}, "survival")
 
-    assert encoded.steps[0].delay_before >= 0.2
+    assert encoded.steps[0].delay_before == 0
 
 
 def test_java26_look_swing_and_sneak_use_current_schemas():

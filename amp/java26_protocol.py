@@ -52,10 +52,8 @@ class Java26ProtocolAdapter:
 
     def encode_action(self, action, world_state, game_mode):
         encode = self.connection._encode_varint
-        delay = 0
         if isinstance(action, MoveAction):
             packet = self._packet("position", struct.pack(">dddB", action.x, action.y, action.z, 1))
-            delay = 0.25
         elif isinstance(action, LookAction):
             packet = self._packet("look", struct.pack(">ffB", action.yaw, action.pitch, 1))
         elif isinstance(action, ChatAction):
@@ -99,7 +97,7 @@ class Java26ProtocolAdapter:
             packet = self._encode_hotbar_swap(action, world_state)
         else:
             raise TypeError(f"Unsupported Java 26 action: {type(action).__name__}")
-        return EncodedAction((PacketStep(packet, delay),))
+        return EncodedAction((PacketStep(packet),))
 
     def _hashed_slot(self, item):
         if item is None:
