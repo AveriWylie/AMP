@@ -41,12 +41,14 @@ def test_bot_delegates_gameplay_actions_to_controller():
     )
     bot._gameplay.place_block = lambda target, block: ("place", target, block)
     bot._gameplay.attack_entity = lambda entity_id: ("attack", entity_id)
+    bot._gameplay.kill_entity = lambda entity_id: ("kill", entity_id)
 
     assert bot.move_to((1, 2, 3)) == ("move", (1, 2, 3))
     assert bot.mine_block((4, 5, 6)) == ("mine", (4, 5, 6))
     assert bot.mine_nearest("log", 8) == ("mine_nearest", "log", 8)
     assert bot.place_block((7, 8, 9), "stone") == ("place", (7, 8, 9), "stone")
     assert bot.attack_entity(42) == ("attack", 42)
+    assert bot.kill_entity(42) == ("kill", 42)
 
 
 def test_path_moves_skip_start_and_target_block_centers():

@@ -1,4 +1,5 @@
 from amp.bot import Bot
+from amp.gameplay import GameplayController
 
 
 def _bot_with_entity(distance=2.0):
@@ -27,3 +28,49 @@ def test_attack_entity_rejects_missing_or_out_of_reach_target():
     assert bot.attack_entity(42) is False
     assert bot.attack_entity(999) is False
     assert not bot._executor._command_queue
+
+
+def test_kill_entity_approaches_and_repeats_until_target_is_removed(monkeypatch):
+    world = {
+        "position": {"x": 0.5, "y": 64.0, "z": 0.5},
+        "entities": {42: {
+            "uuid": "test", "type": 100, "name": "pig",
+            "x": 0.5, "y": 64.0, "z": 5.5,
+        }},
+    }
+
+    class Pathfinder:
+        def find_path_near(self, start, goal, weight=1.0):
+            return [
+                (0, 64, 0), (0, 64, 1),
+                (0, 64, 2), (0, 64, 3),
+            ]
+
+    class Executor:
+        def __init__(self):
+            self.commands = []
+            self.attacks = 0
+
+        def enque_command(self, command):
+            self.commands.append(command)
+            if command["action"] == "move":
+                world["position"].update({
+                    "x": command["x"], "y": command["y"], "z": command["z"],
+                })
+            elif command["action"] == "attack":
+                self.attacks += 1
+                if self.attacks == 3:
+                    world["entities"].pop(42)
+
+        def wait_until_idle(self):
+            return []
+
+    executor = Executor()
+    controller = GameplayController(
+        world, Pathfinder(), executor, "26.2", "survival"
+    )
+    monkeypatch.setattr("amp.gameplay.time.sleep", lambda duration: None)
+
+    assert controller.kill_entity(42) is True
+    assert executor.attacks == 3
+    assert any(command["action"] == "move" for command in executor.commands)

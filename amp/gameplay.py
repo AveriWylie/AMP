@@ -1,6 +1,7 @@
 """Resolve high-level gameplay actions into executable command sequences."""
 
 import math
+import time
 
 from amp.mining_data import mining_plan
 from amp.movement import MovementController
@@ -262,3 +263,37 @@ class GameplayController:
         self.executor.enque_command({"action": "swing", "hand": 0})
         self.executor.enque_command({"action": "attack", "entity_id": int(entity_id)})
         return True
+
+    def kill_entity(self, entity_id, max_attacks=20):
+        """Approach and attack a tracked entity until the server removes it."""
+        entity_id = int(entity_id)
+        attacked = False
+        for _ in range(max_attacks):
+            entity = self.world_state["entities"].get(entity_id)
+            if entity is None:
+                return attacked
+
+            position = self.world_state["position"]
+            eye = (position["x"], position["y"] + 1.62, position["z"])
+            target = (entity["x"], entity["y"] + 0.9, entity["z"])
+            if math.dist(eye, target) > 3.0:
+                start = (position["x"], position["y"], position["z"])
+                weight = 1.5 if self.input_mode == "autonomous" else 1.0
+                path = self.pathfinder.find_path_near(
+                    start, (entity["x"], entity["y"], entity["z"]),
+                    weight=weight,
+                )
+                if not path:
+                    print(f"No path into attack reach of entity {entity_id}")
+                    return False
+                self._enqueue_path(path)
+                self.executor.wait_until_idle()
+
+            if not self.attack_entity(entity_id):
+                continue
+            attacked = True
+            self.executor.wait_until_idle()
+            time.sleep(0.6)
+
+        print(f"Entity {entity_id} survived {max_attacks} attacks")
+        return False

@@ -34,6 +34,12 @@ def test_attack_resolution_preserves_tracked_entity_id():
     assert planner._resolve(command, {}) == [command]
 
 
+def test_kill_resolution_preserves_tracked_entity_id():
+    planner = Planner({})
+    command = {"action": "kill", "entity_id": 42}
+    assert planner._resolve(command, {}) == [command]
+
+
 def test_call_api_uses_model_client_and_records_history():
     client = FakeModelClient('[{"action":"chat","message":"hi"}]')
     planner = Planner({}, model_client=client)
@@ -72,6 +78,8 @@ def test_call_api_does_not_expose_raw_position_packets_to_model():
     assert '{"action": "move"' not in system
     assert '{"action": "go_to"' in system
     assert "Never return an empty array for a guided instruction" in system
+    assert '"action": "kill"' in system
+    assert "kill approaches the target and attacks until it dies" in system
 
 
 def test_guided_plan_replaces_model_noop_with_explanation():

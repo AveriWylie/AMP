@@ -49,7 +49,7 @@ class Planner:
 
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {
-        "go_to", "mine_nearest", "mine", "place", "attack"
+        "go_to", "mine_nearest", "mine", "place", "attack", "kill"
     }
 
     def __init__(self, world_state, model_client=None):
@@ -155,6 +155,7 @@ class Planner:
             "  {\"action\": \"mine\", \"x\": int, \"y\": int, \"z\": int}\n"
             "  {\"action\": \"place\", \"x\": int, \"y\": int, \"z\": int, \"block\": string}\n\n"
             "  {\"action\": \"attack\", \"entity_id\": int}\n\n"
+            "  {\"action\": \"kill\", \"entity_id\": int}\n\n"
             "Use the world state snapshot to ground your decisions in real coordinates. "
             "Prefer go_to over raw move sequences. To find and mine a nearby block, use "
             "mine_nearest. Use {\"block\": \"log\"} only when any tree species is "
@@ -164,6 +165,8 @@ class Planner:
             "action cannot be performed, return one chat command that clearly explains "
             "why. Return [] only when an autonomous prompt explicitly says its goal is "
             "complete. "
+            "Use attack for one hit. Use kill when asked to kill or defeat an entity; "
+            "kill approaches the target and attacks until it dies. "
             "Keep command lists concise and purposeful."
         )
 
@@ -251,7 +254,7 @@ class Planner:
         elif action == "place":
             return [command]
 
-        elif action == "attack":
+        elif action in ("attack", "kill"):
             return [command]
 
         return [command]

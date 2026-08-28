@@ -177,6 +177,9 @@ class Bot:
     def attack_entity(self, entity_id):
         return self._gameplay.attack_entity(entity_id)
 
+    def kill_entity(self, entity_id):
+        return self._gameplay.kill_entity(entity_id)
+
     # entrance for cli
     def start(self):
         if not all(self._valid_flags.values()):
@@ -250,6 +253,10 @@ class Bot:
             elif cmd.get("action") == "attack":
                 if not self.attack_entity(cmd["entity_id"]):
                     planning_results.append(f"Could not attack entity {cmd['entity_id']}")
+                    planned = False
+            elif cmd.get("action") == "kill":
+                if not self.kill_entity(cmd["entity_id"]):
+                    planning_results.append(f"Could not kill entity {cmd['entity_id']}")
                     planned = False
             else:
                 self._executor.enque_command(cmd)

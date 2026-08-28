@@ -9,6 +9,7 @@ PLANNER_COMMAND_FIELDS = {
     "mine": {"x": int, "y": int, "z": int},
     "place": {"x": int, "y": int, "z": int, "block": str},
     "attack": {"entity_id": int},
+    "kill": {"entity_id": int},
 }
 
 EXECUTOR_ACTIONS = {
