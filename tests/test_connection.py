@@ -163,13 +163,17 @@ def test_connection_composition():
 def test_bot_disconnect_uses_public_connection_lifecycle():
     bot = Bot.__new__(Bot)
     calls = []
+    bot._planner = type(
+        "PlannerSpy", (), {"stop": lambda self: calls.append("stop planner")}
+    )()
     bot._lifecycle = type(
         "LifecycleSpy", (), {"disconnect": lambda self: calls.append("disconnect")}
     )()
+    bot._run_thread = None
 
     bot.disconnect()
 
-    assert calls == ["disconnect"]
+    assert calls == ["stop planner", "disconnect"]
 
 
 

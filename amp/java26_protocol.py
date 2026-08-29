@@ -80,8 +80,7 @@ class Java26ProtocolAdapter:
                     + encode(self._next_sequence()),
                 )
             steps = [PacketStep(digging(0))]
-            if game_mode != "creative":
-                steps.append(PacketStep(digging(2), action.duration))
+            steps.append(PacketStep(digging(2), action.duration))
             return EncodedAction(tuple(steps))
         elif isinstance(action, PlaceAction):
             data = (encode(0) + struct.pack(">Q", self._packed_position(action.x, action.y, action.z))

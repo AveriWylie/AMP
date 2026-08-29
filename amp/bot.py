@@ -195,7 +195,11 @@ class Bot:
 
     def disconnect(self):
         """Disconnect through the Bot lifecycle boundary."""
+        self._planner.stop()
         self._lifecycle.disconnect()
+        worker = self._run_thread
+        if worker and worker is not threading.current_thread():
+            worker.join(1)
 
     def set_mode(self, mode):
         self._input_mode = mode
@@ -278,6 +282,7 @@ class Bot:
         return "; ".join(summaries) or "No actions were queued"
 
     def run(self, goal, max_steps=20):
+        self._planner.reset_stop()
         self._run_thread = threading.Thread(
             target=self._planner.plan_loop,
             args=(goal,),
@@ -286,14 +291,16 @@ class Bot:
         )
         self._run_thread.start()
 
+    def is_running(self):
+        return self._run_thread is not None and self._run_thread.is_alive()
+
     def inject(self, prompt):
         # injects a mid-task prompt into the autonomous loop while it is running
         self._planner.inject(prompt)
 
     def stop_run(self):
-        # signals the autonomous loop to stop after the current step completes
-        # by injecting a stop signal into the planner history
-        self._planner.inject("Stop the current task immediately. Return [].")
+        self._planner.stop()
+        self._executor.cancel_pending()
 
         # ------------------------------------------------------------------------------------------
 

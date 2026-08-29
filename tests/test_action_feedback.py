@@ -251,3 +251,25 @@ def test_autonomous_loop_passes_real_step_result_to_next_turn():
 
     assert len(messages) == 2
     assert "Last step result: Succeeded: chat reached server" in messages[1]
+
+
+def test_autonomous_loop_stops_before_reporting_or_planning_another_step(capsys):
+    planner = Planner({
+        "position": {"x": 0, "y": 64, "z": 0}, "health": 20, "food": 20,
+        "map": {}, "entities": {}, "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    })
+    calls = []
+
+    def call_api(message):
+        calls.append(message)
+        return '[{"action":"chat","message":"working"}]'
+
+    def stop_after_step(commands):
+        planner.stop()
+        return "Succeeded: chat reached server"
+
+    planner._call_api = call_api
+    planner.plan_loop("keep working", on_step=stop_after_step)
+
+    assert len(calls) == 1
+    assert "Step 1:" not in capsys.readouterr().out

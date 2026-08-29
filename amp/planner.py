@@ -59,6 +59,13 @@ class Planner:
         self._history = []
         # thread-safe queue for mid-task prompt injection in autonomous mode
         self._inject_queue = queue.Queue()
+        self._stop_event = threading.Event()
+
+    def reset_stop(self):
+        self._stop_event.clear()
+
+    def stop(self):
+        self._stop_event.set()
 
     """
     --------------------------------------------------------------------------------------------
@@ -216,10 +223,22 @@ class Planner:
         if clean.startswith("```"):
             clean = clean.split("\n", 1)[-1]
             clean = clean.rsplit("```", 1)[0]
+        candidates = [clean]
+        if clean.startswith("[") and not clean.endswith("]"):
+            candidates.append(clean + "]")
+        commands = None
+        end = 0
+        for candidate in candidates:
+            try:
+                commands, end = json.JSONDecoder().raw_decode(candidate)
+                clean = candidate
+                break
+            except json.JSONDecodeError:
+                continue
+        if commands is None:
+            print(f"Planner parse error: {raw}")
+            return []
         try:
-            commands, end = json.JSONDecoder().raw_decode(clean)
-            if clean[end:].strip():
-                print("Planner warning: trailing content ignored")
             if not isinstance(commands, list):
                 return []
             valid = []
@@ -230,7 +249,7 @@ class Planner:
                 else:
                     valid.append(command)
             return valid
-        except json.JSONDecodeError:
+        except (TypeError, ValueError):
             print(f"Planner parse error: {raw}")
             return []
 
@@ -325,6 +344,8 @@ class Planner:
         last_result = "Starting task."
 
         for step in range(max_steps):
+            if self._stop_event.is_set():
+                break
             # drain any mid-task prompts injected by the user and add to history
             while not self._inject_queue.empty():
                 injected = self._inject_queue.get_nowait()
@@ -341,6 +362,8 @@ class Planner:
             )
 
             raw = self._call_api(user_message)
+            if self._stop_event.is_set():
+                break
             commands = self._parse_commands(raw)
 
             if not commands:
@@ -358,6 +381,8 @@ class Planner:
                 last_result = on_step(resolved)
             else:
                 last_result = f"Planned {len(resolved)} commands without an executor"
+            if self._stop_event.is_set():
+                break
             print(f"Step {step + 1}: {last_result}")
 
         else:

@@ -31,6 +31,21 @@ def test_java26_survival_mining_emits_start_and_delayed_finish():
                for step in encoded.steps)
 
 
+def test_java26_creative_mining_emits_immediate_start_and_finish():
+    protocol = adapter()
+
+    encoded = protocol.encode_action(
+        MineAction(1, 64, 2, 5, 0), {}, "creative"
+    )
+
+    assert [step.delay_before for step in encoded.steps] == [0, 0]
+    statuses = [
+        Connection._decode_varint_bytes(packet_body(step.packet)[1], 0)[0]
+        for step in encoded.steps
+    ]
+    assert statuses == [0, 2]
+
+
 def test_java26_place_and_use_item_include_new_fields():
     protocol = adapter()
     place = protocol.encode_action(PlaceAction(1, 64, 2, 1), {}, "survival")

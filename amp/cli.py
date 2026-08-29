@@ -122,8 +122,12 @@ def autonomous_loop(bot):
                 print("Stop signal sent.")
                 break
 
-            bot.inject(user_input)
-            print(f"Injected: '{user_input}'")
+            if bot.is_running():
+                bot.inject(user_input)
+                print(f"Injected: '{user_input}'")
+            else:
+                bot.run(user_input)
+                print(f"Started new goal: '{user_input}'")
 
     except KeyboardInterrupt:
         return

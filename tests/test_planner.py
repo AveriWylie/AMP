@@ -155,7 +155,7 @@ def test_parse_commands_rejects_raw_position_packets(capsys):
     assert "unknown action: 'move'" in capsys.readouterr().out
 
 
-def test_parse_commands_accepts_valid_array_with_trailing_model_junk(capsys):
+def test_parse_commands_silently_accepts_valid_array_with_trailing_model_junk(capsys):
     raw = (
         '[{"action":"chat","message":"Turning around."},'
         '{"action":"look","yaw":180,"pitch":0},'
@@ -167,7 +167,7 @@ def test_parse_commands_accepts_valid_array_with_trailing_model_junk(capsys):
         {"action": "look", "yaw": 180, "pitch": 0},
         {"action": "go_to", "x": 59, "y": 64, "z": -132},
     ]
-    assert "trailing content ignored" in capsys.readouterr().out
+    assert capsys.readouterr().out == ""
 
 
 def test_parse_commands_accepts_nearest_loaded_block_mining():
@@ -176,3 +176,16 @@ def test_parse_commands_accepts_nearest_loaded_block_mining():
     assert Planner._parse_commands(raw) == [
         {"action": "mine_nearest", "block": "log", "radius": 8}
     ]
+
+
+def test_parse_commands_recovers_array_missing_only_final_bracket(capsys):
+    raw = (
+        '[{"action":"go_to","x":76,"y":64,"z":-128},'
+        '{"action":"mine_nearest","block":"log","radius":8}'
+    )
+
+    assert Planner._parse_commands(raw) == [
+        {"action": "go_to", "x": 76, "y": 64, "z": -128},
+        {"action": "mine_nearest", "block": "log", "radius": 8},
+    ]
+    assert "Planner parse error" not in capsys.readouterr().out

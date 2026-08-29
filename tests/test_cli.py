@@ -18,6 +18,9 @@ class BotStub:
     def run(self, goal):
         self.goals.append(goal)
 
+    def is_running(self):
+        return True
+
 
 def test_collect_config_exposes_only_implemented_game_modes(monkeypatch, capsys):
     answers = iter([
@@ -66,3 +69,16 @@ def test_autonomous_q_returns_to_connection_owner(monkeypatch):
 
     assert bot.goals == ["find diamonds"]
     assert bot.disconnections == 0
+
+
+def test_autonomous_input_restarts_a_completed_task(monkeypatch, capsys):
+    bot = BotStub()
+    replies = iter(("find diamonds", "break trees", "q"))
+    running = iter((False,))
+    bot.is_running = lambda: next(running)
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(replies))
+
+    autonomous_loop(bot)
+
+    assert bot.goals == ["find diamonds", "break trees"]
+    assert "Started new goal: 'break trees'" in capsys.readouterr().out
