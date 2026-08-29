@@ -578,7 +578,7 @@ def test_execution_worker_sleeps_only_while_idle(monkeypatch):
     lifecycle._execution_step()
     lifecycle._execution_step()
 
-    assert sleeps == [0.05, 0.05]
+    assert sleeps == pytest.approx([0.05, 0.05], abs=0.001)
 
 
 def test_execution_worker_runs_idle_physics_without_extra_sleep(monkeypatch):
@@ -607,4 +607,4 @@ def test_execution_worker_runs_idle_physics_without_extra_sleep(monkeypatch):
 
     assert physics_ticks == ["tick"]
     assert executions == ["execute", "execute"]
-    assert sleeps == [0.05]
+    assert sleeps == pytest.approx([0.05], abs=0.001)

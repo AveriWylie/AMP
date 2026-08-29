@@ -58,6 +58,12 @@ class Execute:
         with self._condition:
             return len(self._results)
 
+    def cancel_pending(self):
+        """Discard commands planned for a world state that is no longer valid."""
+        with self._condition:
+            self._command_queue.clear()
+            self._condition.notify_all()
+
     def end_tick(self):
         self._connection._send(self._protocol_adapter.encode_tick_end())
 

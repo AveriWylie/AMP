@@ -83,6 +83,18 @@ def test_java26_death_respawn_preserves_same_dimension_world_state():
     assert tracker.state["inventory"]["slots"] == {}
 
 
+def test_java26_death_cancels_commands_from_the_previous_life():
+    adapter, tracker = setup_world()
+    cancellations = []
+    tracker.on_respawn = lambda: cancellations.append("cancelled")
+    tracker.connection._send = lambda packet: None
+    health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
+
+    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+
+    assert cancellations == ["cancelled"]
+
+
 def test_java26_dimension_change_discards_world_state():
     adapter, tracker = setup_world()
     tracker.state["dimension_id"] = 0
@@ -122,17 +134,19 @@ def test_java26_respawn_discards_stale_players_and_reports_loaded():
         adapter.play_clientbound["entity_destroy"], b"\x02\x69\x83\x01"
     )
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    assert tracker.state["entities"] == {}
+    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
+
     position = (
         b"\x01" + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
     )
     tracker._on_packet(adapter.play_clientbound["position"], position)
 
-    assert tracker.state["entities"] == {}
-    assert sent[-1] != (adapter.play_serverbound["player_loaded"], b"")
+    assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
 
     tracker.apply(ChunkLoaded(6, -8, object()))
 
-    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
+    assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
 
 
 def test_java26_same_dimension_respawn_reuses_loaded_position_chunk():
@@ -152,7 +166,7 @@ def test_java26_same_dimension_respawn_reuses_loaded_position_chunk():
     )
     tracker._on_packet(adapter.play_clientbound["position"], position)
 
-    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
+    assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
 
 
 def test_java26_chunk_wrapper_decodes_section_data():

@@ -141,6 +141,7 @@ class Bot:
             protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )
+        self._world_tracker.on_respawn = self._executor.cancel_pending
         self._gameplay = GameplayController(
             self._world_state, self._pathfinder, self._executor,
             self._version, self._game_mode,

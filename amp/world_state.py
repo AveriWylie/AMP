@@ -28,6 +28,7 @@ class WorldStateTracker:
         self._player_loaded_pending = False
         self._load_position_received = False
         self._terrain_received = False
+        self.on_respawn = None
         self.state = {
             "position": {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0},
             "position_revision": 0,
@@ -161,6 +162,8 @@ class WorldStateTracker:
         self._player_loaded_pending = False
 
     def _respawn(self):
+        if self.on_respawn is not None:
+            self.on_respawn()
         packet_id = self.connection._encode_varint(self.connection.play_ids["client_command"])
         data = self.connection._encode_varint(0)
         self.connection._send(self.connection._encode_varint(len(packet_id + data)) + packet_id + data)
@@ -183,6 +186,10 @@ class WorldStateTracker:
         self.state["inventory"].update({
             "slots": {}, "carried": None, "state_id": 0,
         })
+        self.connection._send_protocol_packet(
+            self.connection.play_ids["player_loaded"]
+        )
+        self._player_loaded_pending = False
 
     def _apply_block_change(self, event):
         chunk = self.state["map"].get((event.x >> 4, event.z >> 4))
