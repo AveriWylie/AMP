@@ -237,9 +237,12 @@ def resolve_startup(args, input_fn=input, output_fn=print):
 
     if args.mode is None:
         if interactive:
-            args.mode = input_fn(
-                "AMP mode [guided] (guided/autonomous/idle): "
-            ).strip().lower() or "guided"
+            mode = input_fn(
+                "AMP mode ([G]uided/[a]utonomous/[i]dle): "
+            ).strip().lower()
+            args.mode = {
+                "": "guided", "g": "guided", "a": "autonomous", "i": "idle",
+            }.get(mode, mode)
         else:
             args.mode = "guided"
     if args.mode not in {"guided", "autonomous", "idle"}:
@@ -247,9 +250,12 @@ def resolve_startup(args, input_fn=input, output_fn=print):
 
     if args.amp_game_mode is None:
         if interactive:
-            args.amp_game_mode = input_fn(
-                "AMP gameplay mode [survival] (survival/creative): "
-            ).strip().lower() or "survival"
+            game_mode = input_fn(
+                "AMP gameplay mode ([S]urvival/[c]reative): "
+            ).strip().lower()
+            args.amp_game_mode = {
+                "": "survival", "s": "survival", "c": "creative",
+            }.get(game_mode, game_mode)
         else:
             args.amp_game_mode = "survival"
     if args.amp_game_mode not in {"survival", "creative"}:

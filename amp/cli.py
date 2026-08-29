@@ -2,6 +2,9 @@ import argparse
 
 from amp.bot import Bot
 
+
+QUIT_COMMANDS = {"q", "quit"}
+
 """
 --------------------------------------------------------------------------------------------
 File Header - Interactive CLI
@@ -79,7 +82,7 @@ def select_mode():
 
 def guided_loop(bot):
     print("\n=== Guided Mode ===")
-    print("Type your instructions. 'quit' to exit.\n")
+    print("Type your instructions. 'q' or 'quit' to exit.\n")
 
     while True:
         user_prompt = input("> ").strip()
@@ -87,9 +90,7 @@ def guided_loop(bot):
         if not user_prompt:
             continue
 
-        if user_prompt.lower() == "quit":
-            bot.disconnect()
-            print("Disconnected.")
+        if user_prompt.lower() in QUIT_COMMANDS:
             break
 
         bot.prompt(user_prompt)
@@ -97,7 +98,7 @@ def guided_loop(bot):
 def autonomous_loop(bot):
     print("\n=== Autonomous Mode ===")
     print("Enter a high level goal. The bot will reason and act until complete.")
-    print("While running: type new instructions to inject mid-task, 'stop' to end task, 'quit' to disconnect.\n")
+    print("While running: type new instructions to inject mid-task, 'stop' to end task, 'q' or 'quit' to disconnect.\n")
 
     goal = input("Goal: ").strip()
     if not goal:
@@ -113,9 +114,7 @@ def autonomous_loop(bot):
             if not user_input:
                 continue
 
-            if user_input.lower() == "quit":
-                bot.disconnect()
-                print("Disconnected.")
+            if user_input.lower() in QUIT_COMMANDS:
                 break
 
             if user_input.lower() == "stop":
@@ -127,8 +126,7 @@ def autonomous_loop(bot):
             print(f"Injected: '{user_input}'")
 
     except KeyboardInterrupt:
-        bot.disconnect()
-        print("\nDisconnected.")
+        return
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -142,10 +140,13 @@ def main(argv=None):
     mode = select_mode()
     bot.set_mode(mode)
 
-    if mode == "guided":
-        guided_loop(bot)
-    else:
-        autonomous_loop(bot)
+    try:
+        if mode == "guided":
+            guided_loop(bot)
+        else:
+            autonomous_loop(bot)
+    finally:
+        bot.disconnect()
 
 if __name__ == "__main__":
     main()

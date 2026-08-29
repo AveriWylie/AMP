@@ -167,6 +167,27 @@ def test_two_blank_mode_answers_start_with_defaults(tmp_path, monkeypatch):
     assert args.amp_game_mode == "survival"
 
 
+def test_mode_prompts_show_and_accept_shortcuts(tmp_path, monkeypatch):
+    source = make_world(tmp_path / "world")
+    monkeypatch.setattr(run_local_world, "DATA_ROOT", tmp_path)
+    args = parse_args([
+        "--world", str(source), "--java", sys.executable, "--accept-eula",
+    ])
+    prompts = []
+    answers = iter(["n", "a", "c"])
+
+    def answer(prompt):
+        prompts.append(prompt)
+        return next(answers)
+
+    resolve_startup(args, answer)
+
+    assert args.mode == "autonomous"
+    assert args.amp_game_mode == "creative"
+    assert "AMP mode ([G]uided/[a]utonomous/[i]dle): " in prompts
+    assert "AMP gameplay mode ([S]urvival/[c]reative): " in prompts
+
+
 def test_unsupported_version_is_rejected_before_profile_creation(
     tmp_path,
     monkeypatch,

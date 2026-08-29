@@ -561,6 +561,47 @@ def test_start_execution_does_not_duplicate_live_worker():
             worker.join(1)
 
 
+def test_disconnect_stops_execution_before_the_next_tick():
+    action_started = threading.Event()
+    release_action = threading.Event()
+
+    class Connection:
+        _connected = True
+
+        def disconnect(self):
+            self._connected = False
+
+    class Executor:
+        def __init__(self):
+            self.ticks = 0
+            self.cancelled = False
+
+        def execute_queue(self):
+            action_started.set()
+            release_action.wait(1)
+            return {"success": True}
+
+        def cancel_pending(self):
+            self.cancelled = True
+
+        def end_tick(self):
+            self.ticks += 1
+
+    executor = Executor()
+    lifecycle = LifecycleManager(
+        Connection(), executor, ("TestBot", "localhost", 25565)
+    )
+    lifecycle.start_execution()
+    assert action_started.wait(1)
+
+    lifecycle.disconnect()
+    release_action.set()
+    lifecycle._execution_thread.join(1)
+
+    assert executor.cancelled is True
+    assert executor.ticks == 0
+
+
 def test_execution_worker_sleeps_only_while_idle(monkeypatch):
     results = iter(({"success": True}, None))
     executor = type("Executor", (), {

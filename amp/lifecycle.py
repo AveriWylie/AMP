@@ -16,6 +16,7 @@ class LifecycleManager:
         self._on_idle = on_idle
         self._before_reconnect = before_reconnect
         self._execution_thread = None
+        self._execution_stop = threading.Event()
         self._reconnect_thread = None
         self._reconnect_lock = threading.Lock()
 
@@ -33,7 +34,14 @@ class LifecycleManager:
             self._connection.disconnect()
 
     def disconnect(self):
+        self._stop_execution()
         self._connection.disconnect()
+
+    def _stop_execution(self):
+        self._execution_stop.set()
+        cancel_pending = getattr(self._executor, "cancel_pending", None)
+        if callable(cancel_pending):
+            cancel_pending()
 
     def reconnect_after_death(self):
         """Replace the dead play session without blocking the packet listener."""
@@ -47,6 +55,7 @@ class LifecycleManager:
 
     def _reconnect_after_death(self):
         print("Death detected; reconnecting to rebuild world and entity state")
+        self._stop_execution()
         self._connection.disconnect()
         worker = self._execution_thread
         if worker and worker is not threading.current_thread():
@@ -60,17 +69,18 @@ class LifecycleManager:
         current = self._execution_thread
         if not self._connection._connected or (current and current.is_alive()):
             return
+        self._execution_stop.clear()
         self._execution_thread = threading.Thread(
             target=self._execution_loop, daemon=True
         )
         self._execution_thread.start()
 
     def _execution_loop(self):
-        while True:
+        while not self._execution_stop.is_set():
             try:
                 self._execution_step()
             except Exception as error:
-                if not self._connection._connected:
+                if self._execution_stop.is_set() or not self._connection._connected:
                     return
                 print(f"Execution error: {error}")
                 return
@@ -81,9 +91,12 @@ class LifecycleManager:
         if (
             result is None
             and self._on_idle is not None
+            and not self._execution_stop.is_set()
             and self._on_idle()
         ):
             self._executor.execute_queue()
+        if self._execution_stop.is_set():
+            return
         self._executor.end_tick()
         remaining = self.TICK_SECONDS - (time.monotonic() - started)
         if remaining > 0:
