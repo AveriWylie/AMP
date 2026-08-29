@@ -106,6 +106,16 @@ class Java26ProtocolAdapter:
     def encode_tick_end(self):
         return self._packet("tick_end", b"")
 
+    def acknowledge_position(self, position):
+        self.connection._send_protocol_packet(
+            self.play_serverbound["position_look"],
+            struct.pack(
+                ">dddffB",
+                position["x"], position["y"], position["z"],
+                position["yaw"], position["pitch"], 0,
+            ),
+        )
+
     def _hashed_slot(self, item):
         if item is None:
             return b"\x00"

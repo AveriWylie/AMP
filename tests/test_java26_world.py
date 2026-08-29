@@ -2,7 +2,7 @@ import struct
 
 from amp.connection import Connection
 from amp.java26_protocol import Java26ProtocolAdapter
-from amp.protocol_types import BlockChanged, ChunkLoaded
+from amp.protocol_types import BlockChanged, ChunkLoaded, EntitySpawned
 from amp.world_state import WorldStateTracker
 
 
@@ -13,7 +13,7 @@ def setup_world():
     return adapter, WorldStateTracker(adapter, connection)
 
 
-def test_java26_position_correction_applies_relative_flags_and_confirms():
+def test_java26_position_correction_confirms_and_echoes_resolved_position():
     connection = Connection("localhost", 25565, "26.1", "AMP", None, 775)
     sent = []
     connection._send_protocol_packet = lambda packet_id, payload=b"": sent.append((packet_id, payload))
@@ -25,7 +25,13 @@ def test_java26_position_correction_applies_relative_flags_and_confirms():
     tracker._on_packet(adapter.play_clientbound["position"], payload)
 
     assert tracker.state["position"] == {"x": 11, "y": 66, "z": 3, "yaw": 35, "pitch": 4}
-    assert sent == [(adapter.play_serverbound["teleport_confirm"], b"\x07")]
+    assert sent == [
+        (adapter.play_serverbound["teleport_confirm"], b"\x07"),
+        (
+            adapter.play_serverbound["position_look"],
+            struct.pack(">dddffB", 11, 66, 3, 35, 4, 0),
+        ),
+    ]
 
 
 def test_java26_health_and_block_updates_are_normalized():
@@ -77,7 +83,7 @@ def test_java26_death_respawn_preserves_same_dimension_world_state():
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
 
     assert tracker.state["position_revision"] == 4
-    assert tracker.state["entities"] == {}
+    assert tracker.state["entities"] == {42: {"name": "pig"}}
     assert tracker.state["map"] == {(0, 0): chunk}
     assert tracker.state["blocks"] == {(1, 2, 3): "stone"}
     assert tracker.state["inventory"]["slots"] == {}
@@ -95,6 +101,62 @@ def test_java26_death_cancels_commands_from_the_previous_life():
     assert cancellations == ["cancelled"]
 
 
+def test_java26_death_recovery_respawns_before_reconnecting():
+    adapter, tracker = setup_world()
+    raw_packets = []
+    tracker.connection._send = raw_packets.append
+    recoveries = []
+    tracker.on_respawn = lambda: recoveries.append("cancel")
+    tracker.on_respawn_complete = lambda: recoveries.append("reconnect")
+    health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
+
+    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+
+    assert recoveries == ["cancel"]
+    assert len(raw_packets) == 1
+
+    alive = struct.pack(">f", 20.0) + b"\x14" + struct.pack(">f", 5.0)
+    tracker._on_packet(adapter.play_clientbound["update_health"], alive)
+
+    assert recoveries == ["cancel", "reconnect"]
+
+
+def test_reconnect_reset_discards_the_previous_network_session_state():
+    _, tracker = setup_world()
+    tracker.state["position"].update({"x": 1, "y": 2, "z": 3})
+    tracker.state["entities"][42] = {"name": "player"}
+    tracker.state["map"][(0, 0)] = object()
+    tracker.state["blocks"][(1, 2, 3)] = "stone"
+    tracker.state["inventory"]["slots"][36] = {"name": "dirt"}
+
+    tracker.reset_for_reconnect()
+
+    assert tracker.state["position"]["x"] == 0.0
+    assert tracker.state["entities"] == {}
+    assert tracker.state["map"] == {}
+    assert tracker.state["blocks"] == {}
+    assert tracker.state["inventory"]["slots"] == {}
+
+
+def test_death_sends_one_respawn_request_while_waiting_for_alive_state():
+    adapter, tracker = setup_world()
+    raw_packets = []
+    tracker.connection._send = raw_packets.append
+    cancellations = []
+    reconnects = []
+    tracker.on_respawn = lambda: cancellations.append("cancel")
+    tracker.on_respawn_complete = lambda: reconnects.append("reconnect")
+    dead = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
+
+    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
+    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
+    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
+
+    assert cancellations == ["cancel"]
+    assert reconnects == []
+    assert len(raw_packets) == 1
+
+
 def test_java26_dimension_change_discards_world_state():
     adapter, tracker = setup_world()
     tracker.state["dimension_id"] = 0
@@ -110,7 +172,7 @@ def test_java26_dimension_change_discards_world_state():
     assert tracker.state["blocks"] == {}
 
 
-def test_java26_respawn_discards_stale_players_and_reports_loaded():
+def test_java26_respawn_waits_for_alive_state_and_fresh_player_spawn():
     adapter, tracker = setup_world()
     tracker.connection._send = lambda packet: None
     sent = []
@@ -135,21 +197,34 @@ def test_java26_respawn_discards_stale_players_and_reports_loaded():
     )
     tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
     assert tracker.state["entities"] == {}
-    assert sent[-1] == (adapter.play_serverbound["player_loaded"], b"")
+    assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
     position = (
         b"\x01" + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
     )
     tracker._on_packet(adapter.play_clientbound["position"], position)
 
-    assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
+    assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
     tracker.apply(ChunkLoaded(6, -8, object()))
 
+    assert (adapter.play_serverbound["player_loaded"], b"") not in sent
+
+    alive = struct.pack(">f", 20.0) + b"\x14" + struct.pack(">f", 5.0)
+    tracker._on_packet(adapter.play_clientbound["update_health"], alive)
+
     assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
 
+    tracker.apply(EntitySpawned(
+        105, "player-uuid", 156, "player", 101.0, 69.0, -118.0
+    ))
 
-def test_java26_same_dimension_respawn_reuses_loaded_position_chunk():
+    assert tracker.state["entities"][105] == dict(
+        player, x=101.0, y=69.0, z=-118.0
+    )
+
+
+def test_java26_same_dimension_respawn_does_not_report_loaded_from_old_chunk():
     adapter, tracker = setup_world()
     tracker.connection._send = lambda packet: None
     sent = []
@@ -166,7 +241,7 @@ def test_java26_same_dimension_respawn_reuses_loaded_position_chunk():
     )
     tracker._on_packet(adapter.play_clientbound["position"], position)
 
-    assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
+    assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
 
 def test_java26_chunk_wrapper_decodes_section_data():

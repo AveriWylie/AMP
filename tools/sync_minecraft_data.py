@@ -62,6 +62,7 @@ PLAY_PACKETS = {
         "client_command",
         "keep_alive",
         "position",
+        "position_look",
         "look",
         "block_dig",
         "entity_action",

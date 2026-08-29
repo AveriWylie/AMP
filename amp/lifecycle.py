@@ -6,13 +6,18 @@ import time
 
 class LifecycleManager:
     TICK_SECONDS = 0.05
+    DEATH_RECONNECT_DELAY_SECONDS = 1.0
 
-    def __init__(self, connection, executor, identity, on_idle=None):
+    def __init__(self, connection, executor, identity, on_idle=None,
+                 before_reconnect=None):
         self._connection = connection
         self._executor = executor
         self._identity = identity
         self._on_idle = on_idle
+        self._before_reconnect = before_reconnect
         self._execution_thread = None
+        self._reconnect_thread = None
+        self._reconnect_lock = threading.Lock()
 
     def start(self):
         try:
@@ -30,6 +35,27 @@ class LifecycleManager:
     def disconnect(self):
         self._connection.disconnect()
 
+    def reconnect_after_death(self):
+        """Replace the dead play session without blocking the packet listener."""
+        with self._reconnect_lock:
+            if self._reconnect_thread and self._reconnect_thread.is_alive():
+                return
+            self._reconnect_thread = threading.Thread(
+                target=self._reconnect_after_death, daemon=True
+            )
+            self._reconnect_thread.start()
+
+    def _reconnect_after_death(self):
+        print("Death detected; reconnecting to rebuild world and entity state")
+        self._connection.disconnect()
+        worker = self._execution_thread
+        if worker and worker is not threading.current_thread():
+            worker.join(1)
+        if self._before_reconnect is not None:
+            self._before_reconnect()
+        time.sleep(self.DEATH_RECONNECT_DELAY_SECONDS)
+        self.handle_failure(ConnectionError("death recovery"))
+
     def start_execution(self):
         current = self._execution_thread
         if not self._connection._connected or (current and current.is_alive()):
@@ -44,6 +70,8 @@ class LifecycleManager:
             try:
                 self._execution_step()
             except Exception as error:
+                if not self._connection._connected:
+                    return
                 print(f"Execution error: {error}")
                 return
 

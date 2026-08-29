@@ -1,6 +1,5 @@
 """Apply version-neutral protocol events to AMP's live world state."""
 
-import math
 import os
 
 from amp.protocol_types import (
@@ -26,9 +25,10 @@ class WorldStateTracker:
         self.connection = connection
         self._trace_entities = os.environ.get("AMP_TRACE_ENTITIES") == "1"
         self._player_loaded_pending = False
-        self._load_position_received = False
-        self._terrain_received = False
+        self._reconnect_after_respawn_pending = False
+        self._respawn_requested = False
         self.on_respawn = None
+        self.on_respawn_complete = None
         self.state = {
             "position": {"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0},
             "position_revision": 0,
@@ -59,13 +59,28 @@ class WorldStateTracker:
                 "pitch": previous["pitch"] + event.pitch if event.relative_flags & 16 else event.pitch,
             }
             self.state["position_revision"] += 1
-            self._load_position_received = True
-            self._send_player_loaded_if_ready()
+            self.protocol_adapter.acknowledge_position(self.state["position"])
+            self._trace(
+                f"position acknowledged pos={self.state['position']} "
+                f"load_pending={self._player_loaded_pending}"
+            )
         elif isinstance(event, HealthChanged):
             self.state["health"] = event.health
             self.state["food"] = event.food
+            self._trace(
+                f"health={event.health} food={event.food} "
+                f"load_pending={self._player_loaded_pending}"
+            )
             if event.health <= 0:
                 self._respawn()
+            else:
+                self._respawn_requested = False
+                if self._reconnect_after_respawn_pending:
+                    self._reconnect_after_respawn_pending = False
+                    if self.on_respawn_complete is not None:
+                        self.on_respawn_complete()
+                        return
+                self._send_player_loaded_if_ready()
         elif isinstance(event, SelfEntityIdentified):
             self.state["self_entity_id"] = event.entity_id
             self.state["dimension_id"] = event.dimension_id
@@ -97,6 +112,11 @@ class WorldStateTracker:
                         f"move player={event.entity_id} "
                         f"pos=({entity['x']}, {entity['y']}, {entity['z']})"
                     )
+            else:
+                self._trace(
+                    f"move unknown={event.entity_id} "
+                    f"delta=({event.dx}, {event.dy}, {event.dz})"
+                )
         elif isinstance(event, EntityTeleported):
             entity = self.state["entities"].get(event.entity_id)
             if entity is not None:
@@ -106,6 +126,11 @@ class WorldStateTracker:
                         f"teleport player={event.entity_id} "
                         f"pos=({event.x}, {event.y}, {event.z})"
                     )
+            else:
+                self._trace(
+                    f"teleport unknown={event.entity_id} "
+                    f"pos=({event.x}, {event.y}, {event.z})"
+                )
         elif isinstance(event, EntitiesRemoved):
             removed_players = {
                 entity_id: self.state["entities"].get(entity_id)
@@ -118,8 +143,6 @@ class WorldStateTracker:
                 self.state["entities"].pop(entity_id, None)
         elif isinstance(event, ChunkLoaded):
             self.state["map"][(event.chunk_x, event.chunk_z)] = event.chunk
-            self._terrain_received = True
-            self._send_player_loaded_if_ready()
         elif isinstance(event, BlockChanged):
             self._apply_block_change(event)
         elif isinstance(event, InventoryReplaced):
@@ -143,32 +166,51 @@ class WorldStateTracker:
 
     def _begin_player_load(self):
         self._player_loaded_pending = True
-        self._load_position_received = False
-        self._terrain_received = False
 
     def _send_player_loaded_if_ready(self):
-        if not (self._player_loaded_pending and self._load_position_received):
-            return
-        position = self.state["position"]
-        position_chunk = (
-            math.floor(position["x"]) >> 4,
-            math.floor(position["z"]) >> 4,
-        )
-        if not (self._terrain_received or position_chunk in self.state["map"]):
+        if not self._player_loaded_pending:
             return
         self.connection._send_protocol_packet(
             self.connection.play_ids["player_loaded"]
         )
         self._player_loaded_pending = False
+        self._trace("player_loaded sent")
 
     def _respawn(self):
+        if self._respawn_requested:
+            return
         if self.on_respawn is not None:
             self.on_respawn()
+        self._reconnect_after_respawn_pending = True
+        self._respawn_requested = True
         packet_id = self.connection._encode_varint(self.connection.play_ids["client_command"])
         data = self.connection._encode_varint(0)
         self.connection._send(self.connection._encode_varint(len(packet_id + data)) + packet_id + data)
         self.state["health"] = 20.0
         self.state["food"] = 20
+
+    def reset_for_reconnect(self):
+        """Discard all state owned by the previous network session."""
+        self._player_loaded_pending = False
+        self._reconnect_after_respawn_pending = False
+        self._respawn_requested = False
+        self.state.update({
+            "position": {
+                "x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0,
+            },
+            "health": 20.0,
+            "food": 20,
+            "self_entity_id": None,
+            "dimension_id": None,
+        })
+        self.state["position_revision"] += 1
+        self.state["entities"].clear()
+        self.state["map"].clear()
+        self.state["blocks"].clear()
+        self.state["inventory"].update({
+            "slots": {}, "selected_hotbar_slot": 0,
+            "carried": None, "state_id": 0,
+        })
 
     def _reset_world_state(self, dimension_id):
         dimension_changed = (
@@ -178,18 +220,14 @@ class WorldStateTracker:
         )
         self.state["dimension_id"] = dimension_id
         self.state["position_revision"] += 1
-        self.state["entities"].clear()
         self._begin_player_load()
         if dimension_changed:
+            self.state["entities"].clear()
             self.state["map"].clear()
             self.state["blocks"].clear()
         self.state["inventory"].update({
             "slots": {}, "carried": None, "state_id": 0,
         })
-        self.connection._send_protocol_packet(
-            self.connection.play_ids["player_loaded"]
-        )
-        self._player_loaded_pending = False
 
     def _apply_block_change(self, event):
         chunk = self.state["map"].get((event.x >> 4, event.z >> 4))

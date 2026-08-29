@@ -141,7 +141,6 @@ class Bot:
             protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )
-        self._world_tracker.on_respawn = self._executor.cancel_pending
         self._gameplay = GameplayController(
             self._world_state, self._pathfinder, self._executor,
             self._version, self._game_mode,
@@ -151,6 +150,11 @@ class Bot:
             self._executor,
             (self._username, self._host, self._port),
             on_idle=self._gameplay.tick,
+            before_reconnect=self._world_tracker.reset_for_reconnect,
+        )
+        self._world_tracker.on_respawn = self._executor.cancel_pending
+        self._world_tracker.on_respawn_complete = (
+            self._lifecycle.reconnect_after_death
         )
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform. Search from the
