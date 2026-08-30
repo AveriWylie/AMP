@@ -152,6 +152,22 @@ def test_idle_physics_falls_after_server_teleport_into_air():
     assert command["on_ground"] is False
 
 
+def test_idle_physics_waits_one_tick_after_a_movement_correction():
+    bot = Bot({"version": "26.2", "game_mode": "survival"})
+    bot._world_state["map"][(0, 0)] = FlatChunk()
+    bot._world_state["position"].update({"x": 0.5, "y": 66, "z": 0.5})
+
+    assert bot._gameplay.tick() is True
+    bot._executor._command_queue.clear()
+
+    bot._world_state["position_revision"] += 1
+    bot._world_state["position"].update({"x": 0.5, "y": 66, "z": 0.5})
+
+    assert bot._gameplay.tick() is False
+    assert not bot._executor._command_queue
+    assert bot._gameplay.tick() is True
+
+
 def test_idle_physics_does_nothing_while_grounded():
     bot = Bot({"version": "26.2", "game_mode": "survival"})
     bot._world_state["map"][(0, 0)] = FlatChunk()

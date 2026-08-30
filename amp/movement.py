@@ -194,8 +194,15 @@ class MovementController:
 
         # the server moved us, so the velocity belongs to a fall that no longer happened
         if revision != self._position_revision:
+            had_previous_position = self._position_revision is not None
             self._vertical_velocity = 0.0
             self._position_revision = revision
+
+            # Give an established session one tick to accept the corrected position before
+            # deriving another move from it. Otherwise every correction immediately recreates
+            # the same first gravity step the server just rejected.
+            if had_previous_position:
+                return None
 
         x, y, z = position["x"], position["y"], position["z"]
         block_x, block_z = math.floor(x), math.floor(z)
