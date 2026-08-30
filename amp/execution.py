@@ -287,6 +287,10 @@ class Execute:
         # done when the block is gone, all three air variants count
         elif action == "mine":
             x, y, z = command["x"], command["y"], command["z"]
+            if self._game_mode == "creative" and self._world_state is not None:
+                chunk = self._world_state["map"].get((x >> 4, z >> 4))
+                if chunk is not None:
+                    chunk.patch_block(x, y, z, 0)
             success = self._wait_for_block((x, y, z), lambda block: block in ("air", "cave_air", "void_air"))
             message = (f"Mined block at {(x, y, z)}" if success else f"Block at {(x, y, z)} did not disappear")
 

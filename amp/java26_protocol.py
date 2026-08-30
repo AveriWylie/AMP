@@ -163,8 +163,9 @@ class Java26ProtocolAdapter:
             def digging(status):
                 return self._packet(
                     "block_dig",
-                    encode(status) + encode(self._next_sequence())
-                    + struct.pack(">Qb", self._packed_position(action.x, action.y, action.z), action.face),
+                    encode(status)
+                    + struct.pack(">Qb", self._packed_position(action.x, action.y, action.z), action.face)
+                    + encode(self._next_sequence()),
                 )
 
             steps = [PacketStep(digging(0))]

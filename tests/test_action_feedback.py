@@ -9,11 +9,11 @@ from amp.java26_protocol import Java26ProtocolAdapter
 from amp.planner import Planner
 
 
-def _executor(world_state=None):
+def _executor(world_state=None, game_mode="survival"):
     connection = Connection("localhost", 25565, "26.1.2", "Feedback", None, 775)
     connection._send = lambda packet: None
     adapter = Java26ProtocolAdapter("java-26.1", "26.1.2", connection)
-    return Execute(connection, "survival", adapter, world_state=world_state)
+    return Execute(connection, game_mode, adapter, world_state=world_state)
 
 
 def test_wait_until_idle_returns_completed_command_result():
@@ -221,6 +221,34 @@ def test_mining_result_uses_world_block_confirmation():
     })
     assert result["success"] is True
     assert "Mined block" in result["message"]
+
+
+def test_creative_mining_predicts_air_before_waiting_for_server_update(monkeypatch):
+    class Chunk:
+        block = "stone"
+
+        def get_block(self, x, y, z):
+            return self.block
+
+        def patch_block(self, x, y, z, state_id):
+            if state_id == 0:
+                self.block = "air"
+
+    chunk = Chunk()
+    executor = _executor({"map": {(0, 0): chunk}}, game_mode="creative")
+    monkeypatch.setattr(
+        executor,
+        "_wait_for_block",
+        lambda position, expected, timeout=2: expected(chunk.get_block(*position)),
+    )
+
+    result = executor._execute({
+        "action": "mine", "x": 1, "y": 64, "z": 1,
+        "face": 1, "duration": 0,
+    })
+
+    assert result["success"] is True
+    assert chunk.block == "air"
 
 
 def test_placement_result_reports_missing_server_update(monkeypatch):

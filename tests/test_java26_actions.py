@@ -29,6 +29,12 @@ def test_java26_survival_mining_emits_start_and_delayed_finish():
     assert statuses == [0, 2]
     assert all(packet_body(step.packet)[0] == protocol.play_serverbound["block_dig"]
                for step in encoded.steps)
+    packed = protocol._packed_position(-1, 64, -2)
+    payloads = [packet_body(step.packet)[1] for step in encoded.steps]
+    assert payloads == [
+        b"\x00" + struct.pack(">Qb", packed, 5) + b"\x00",
+        b"\x02" + struct.pack(">Qb", packed, 5) + b"\x01",
+    ]
 
 
 def test_java26_creative_mining_emits_immediate_start_and_finish():

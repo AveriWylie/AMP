@@ -435,11 +435,6 @@ class Chunk:
             return "air"
 
         section = self._sections[section_y]
-        # single value section, entire section is one block type, no palette or longs to unpack
-        if section["bits_per_entry"] == 0:
-            state_id = section["single_state"]
-            return self._state_to_block.get(state_id, "unknown")
-
         # check for block updates patched over the parsed data, these are newer than the packet
         patched = section.get("patched", {})
         lx_check = x & 0xF
@@ -448,6 +443,11 @@ class Chunk:
 
         if (lx_check, ly_check, lz_check) in patched:
             return self._state_to_block.get(patched[(lx_check, ly_check, lz_check)], "unknown")
+
+        # single value section, entire section is one block type, no palette or longs to unpack
+        if section["bits_per_entry"] == 0:
+            state_id = section["single_state"]
+            return self._state_to_block.get(state_id, "unknown")
 
         bits = section["bits_per_entry"]
         palette = section["palette"]
