@@ -86,6 +86,25 @@ class Connection:
         self._protocol_adapter = adapter
 
 
+    # Same idiom as set_protocol_adapter. The handler cannot be passed to the constructor
+    # because the tracker that provides it needs the adapter, which needs the connection.
+    def set_packet_handler(self, handler):
+        self._packet_handler = handler
+
+
+    # Compression is enabled by the server mid-login, and the adapter decodes that packet. It
+    # asks here rather than writing the field, because the threshold changes how every later
+    # packet is framed and that framing belongs to this class.
+    def enable_compression(self, threshold):
+        self._compression_threshold = threshold
+
+
+    # Liveness as a question rather than an attribute, so callers outside this class do not
+    # have to reach past it to ask.
+    def is_connected(self):
+        return self._connected
+
+
     def authenticate_server(self, server_id, public_key, verify_token):
 
         if self._auth_session is None:

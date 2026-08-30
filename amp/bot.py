@@ -130,7 +130,7 @@ class Bot:
         self._connection.set_protocol_adapter(self._protocol_adapter)
         self._world_tracker = WorldStateTracker(self._protocol_adapter, self._connection)
         self._world_state = self._world_tracker.state
-        self._connection._packet_handler = self._world_tracker._on_packet
+        self._connection.set_packet_handler(self._world_tracker.on_packet)
         self._input_mode = None
         self._pathfinder = Pathfinder(self._world_state, self._version)
 
@@ -329,6 +329,12 @@ class Bot:
 
     # Lets the CLI tell a live autonomous run from a finished one, so typed input becomes a
     # mid-task injection or a fresh goal rather than being silently dropped.
+    # Asked by the local-world runner, which would otherwise reach through Bot into the
+    # connection to find out whether the login actually succeeded.
+    def is_connected(self):
+        return self._connection.is_connected()
+
+
     def is_running(self):
         return self._run_thread is not None and self._run_thread.is_alive()
 

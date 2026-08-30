@@ -584,7 +584,7 @@ def run_amp(args):
     })
     bot.start()
 
-    if not bot._connection._connected:
+    if not bot.is_connected():
         raise RuntimeError("AMP did not connect to the server")
 
     try:

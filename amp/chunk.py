@@ -396,6 +396,36 @@ class Chunk:
     mines anything, so the patch dict wins.
     --------------------------------------------------------------------------------------------
     """
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Patch block
+    --------------------------------------------------------------------------------------------
+    Records a single block update over the already-parsed section data, so get_block answers
+    with the world as it is now rather than as the chunk packet described it.
+
+    It lives here because _sections and the "patched" dict inside it are this class's own
+    structure, and get_block is the only thing that reads them back. World state used to reach
+    in and write the dict itself, which meant two modules shared an undocumented shape with
+    nothing enforcing it.
+
+    Patching rather than reparsing because the packed long array is effectively read-only,
+    unpacking, editing one entry and repacking on every block break would be far more work than
+    keeping a small overlay that get_block consults first.
+
+    A change in a section the server never sent is dropped. There is nothing to correct, since
+    nothing can see that section anyway.
+    --------------------------------------------------------------------------------------------
+    """
+    def patch_block(self, x, y, z, state_id):
+        section_y = (y + 64) >> 4
+
+        # section was never sent, so there is nothing here to correct
+        if section_y not in self._sections:
+            return
+
+        self._sections[section_y].setdefault("patched", {})[(x & 0xF, y & 0xF, z & 0xF)] = state_id
+
+
     def get_block(self, x, y, z):
         # world starts at y=-64, section 0 is y=-64 to y=-49
         section_y = (y + 64) >> 4

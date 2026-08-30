@@ -72,7 +72,7 @@ class WorldStateTracker:
 
     # One packet can decode to several events, a chunk packet carries block data and entities
     # together, so this drains whatever the adapter produced rather than expecting one event.
-    def _on_packet(self, packet_id, payload):
+    def on_packet(self, packet_id, payload):
         for event in self.protocol_adapter.decode_play(packet_id, payload):
             self.apply(event)
 
@@ -415,11 +415,7 @@ class WorldStateTracker:
         if chunk is None:
             return
 
-        section_y = (event.y + 64) >> 4
-
-        if section_y in chunk._sections:
-            section = chunk._sections[section_y]
-            section.setdefault("patched", {})[(event.x & 0xF, event.y & 0xF, event.z & 0xF)] = event.state_id
+        chunk.patch_block(event.x, event.y, event.z, event.state_id)
 
 
     """

@@ -22,7 +22,7 @@ def test_java26_position_correction_confirms_and_echoes_resolved_position():
     tracker.state["position"].update({"x": 10, "y": 64, "z": -2, "yaw": 30, "pitch": 5})
     payload = Connection._encode_varint(7) + struct.pack(">ddddddffI", 1, 2, 3, 0, 0, 0, 5, -1, 0b11011)
 
-    tracker._on_packet(adapter.play_clientbound["position"], payload)
+    tracker.on_packet(adapter.play_clientbound["position"], payload)
 
     assert tracker.state["position"] == {"x": 11, "y": 66, "z": 3, "yaw": 35, "pitch": 4}
     assert sent == [
@@ -37,7 +37,7 @@ def test_java26_position_correction_confirms_and_echoes_resolved_position():
 def test_java26_health_and_block_updates_are_normalized():
     adapter, tracker = setup_world()
     health = struct.pack(">f", 12.5) + b"\x0e" + struct.pack(">f", 3.0)
-    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+    tracker.on_packet(adapter.play_clientbound["update_health"], health)
 
     packed = ((-1 & 0x3FFFFFF) << 38) | ((2 & 0x3FFFFFF) << 12) | (64 & 0xFFF)
     events = adapter.decode_play(
@@ -80,7 +80,7 @@ def test_java26_death_respawn_preserves_same_dimension_world_state():
     tracker.state["blocks"][(1, 2, 3)] = "stone"
     tracker.state["inventory"]["slots"][36] = {"id": 1, "count": 1}
 
-    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    tracker.on_packet(adapter.play_clientbound["respawn"], b"\x00")
 
     assert tracker.state["position_revision"] == 4
     assert tracker.state["entities"] == {42: {"name": "pig"}}
@@ -96,7 +96,7 @@ def test_java26_death_cancels_commands_from_the_previous_life():
     tracker.connection._send = lambda packet: None
     health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
 
-    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+    tracker.on_packet(adapter.play_clientbound["update_health"], health)
 
     assert cancellations == ["cancelled"]
 
@@ -110,13 +110,13 @@ def test_java26_death_recovery_respawns_before_reconnecting():
     tracker.on_respawn_complete = lambda: recoveries.append("reconnect")
     health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
 
-    tracker._on_packet(adapter.play_clientbound["update_health"], health)
+    tracker.on_packet(adapter.play_clientbound["update_health"], health)
 
     assert recoveries == ["cancel"]
     assert len(raw_packets) == 1
 
     alive = struct.pack(">f", 20.0) + b"\x14" + struct.pack(">f", 5.0)
-    tracker._on_packet(adapter.play_clientbound["update_health"], alive)
+    tracker.on_packet(adapter.play_clientbound["update_health"], alive)
 
     assert recoveries == ["cancel", "reconnect"]
 
@@ -148,9 +148,9 @@ def test_death_sends_one_respawn_request_while_waiting_for_alive_state():
     tracker.on_respawn_complete = lambda: reconnects.append("reconnect")
     dead = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
 
-    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
-    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
-    tracker._on_packet(adapter.play_clientbound["update_health"], dead)
+    tracker.on_packet(adapter.play_clientbound["update_health"], dead)
+    tracker.on_packet(adapter.play_clientbound["update_health"], dead)
+    tracker.on_packet(adapter.play_clientbound["update_health"], dead)
 
     assert cancellations == ["cancel"]
     assert reconnects == []
@@ -164,7 +164,7 @@ def test_java26_dimension_change_discards_world_state():
     tracker.state["map"][(0, 0)] = object()
     tracker.state["blocks"][(1, 2, 3)] = "stone"
 
-    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x01")
+    tracker.on_packet(adapter.play_clientbound["respawn"], b"\x01")
 
     assert tracker.state["dimension_id"] == 1
     assert tracker.state["entities"] == {}
@@ -191,18 +191,18 @@ def test_java26_respawn_waits_for_alive_state_and_fresh_player_spawn():
     }
     health = struct.pack(">f", 0.0) + b"\x14" + struct.pack(">f", 0.0)
 
-    tracker._on_packet(adapter.play_clientbound["update_health"], health)
-    tracker._on_packet(
+    tracker.on_packet(adapter.play_clientbound["update_health"], health)
+    tracker.on_packet(
         adapter.play_clientbound["entity_destroy"], b"\x02\x69\x83\x01"
     )
-    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    tracker.on_packet(adapter.play_clientbound["respawn"], b"\x00")
     assert tracker.state["entities"] == {}
     assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
     position = (
         b"\x01" + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
     )
-    tracker._on_packet(adapter.play_clientbound["position"], position)
+    tracker.on_packet(adapter.play_clientbound["position"], position)
 
     assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
@@ -211,7 +211,7 @@ def test_java26_respawn_waits_for_alive_state_and_fresh_player_spawn():
     assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
     alive = struct.pack(">f", 20.0) + b"\x14" + struct.pack(">f", 5.0)
-    tracker._on_packet(adapter.play_clientbound["update_health"], alive)
+    tracker.on_packet(adapter.play_clientbound["update_health"], alive)
 
     assert sent.count((adapter.play_serverbound["player_loaded"], b"")) == 1
 
@@ -234,12 +234,12 @@ def test_java26_same_dimension_respawn_does_not_report_loaded_from_old_chunk():
     tracker.state["dimension_id"] = 0
     tracker.state["map"][(6, -8)] = object()
 
-    tracker._on_packet(adapter.play_clientbound["respawn"], b"\x00")
+    tracker.on_packet(adapter.play_clientbound["respawn"], b"\x00")
     position = (
         b"\x01"
         + struct.pack(">ddddddffI", 100, 69, -119, 0, 0, 0, 0, 0, 0)
     )
-    tracker._on_packet(adapter.play_clientbound["position"], position)
+    tracker.on_packet(adapter.play_clientbound["position"], position)
 
     assert (adapter.play_serverbound["player_loaded"], b"") not in sent
 
@@ -250,7 +250,7 @@ def test_java26_chunk_wrapper_decodes_section_data():
     sections = section * 24
     payload = struct.pack(">ii", 2, -3) + b"\x00" + Connection._encode_varint(len(sections)) + sections
 
-    tracker._on_packet(adapter.play_clientbound["map_chunk"], payload)
+    tracker.on_packet(adapter.play_clientbound["map_chunk"], payload)
 
     chunk = tracker.state["map"][(2, -3)]
     assert len(chunk._sections) == 24

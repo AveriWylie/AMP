@@ -22,7 +22,7 @@ def test_java26_inventory_decodes_component_item_stacks():
     adapter, tracker = setup_inventory()
     payload = b"\x00\x07\x02" + stack(1, 12) + stack(2, 1, damage=5) + b"\x00"
 
-    tracker._on_packet(adapter.play_clientbound["window_items"], payload)
+    tracker.on_packet(adapter.play_clientbound["window_items"], payload)
 
     inventory = tracker.state["inventory"]
     assert inventory["state_id"] == 7
@@ -34,11 +34,11 @@ def test_java26_inventory_handles_direct_slot_cursor_and_hotbar_packets():
     adapter, tracker = setup_inventory()
     tracker.state["inventory"]["state_id"] = 9
 
-    tracker._on_packet(
+    tracker.on_packet(
         adapter.play_clientbound["set_player_inventory"], b"\x05" + stack(3, 2)
     )
-    tracker._on_packet(adapter.play_clientbound["set_cursor_item"], stack(4, 1))
-    tracker._on_packet(adapter.play_clientbound["held_item_slot"], b"\x08")
+    tracker.on_packet(adapter.play_clientbound["set_cursor_item"], stack(4, 1))
+    tracker.on_packet(adapter.play_clientbound["held_item_slot"], b"\x08")
 
     inventory = tracker.state["inventory"]
     assert inventory["slots"][41]["count"] == 2
@@ -51,7 +51,7 @@ def test_java26_inventory_maps_player_slots_to_container_slots():
     adapter, tracker = setup_inventory()
 
     for player_slot in (0, 8, 9, 35, 36, 39, 40):
-        tracker._on_packet(
+        tracker.on_packet(
             adapter.play_clientbound["set_player_inventory"],
             Connection._encode_varint(player_slot) + stack(player_slot + 1),
         )

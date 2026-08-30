@@ -724,7 +724,7 @@ class Java26ProtocolAdapter:
         # takes effect immediately, every following packet uses the compressed framing
         if packet_id == ids["compress"]:
             threshold, _ = self.connection._decode_varint_bytes(payload, 0)
-            self.connection._compression_threshold = threshold
+            self.connection.enable_compression(threshold)
             return False
 
         if packet_id == ids["cookie_request"]:
