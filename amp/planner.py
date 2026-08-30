@@ -28,6 +28,7 @@ gives the AI genuine spatial grounding without overwhelming the context window.
 # imports
 import json
 import math
+import re
 import threading
 import queue
 from amp.command_data import planner_command_error
@@ -48,6 +49,7 @@ class Planner:
     LOW_LEVEL_ACTIONS = {"chat", "look"}
     # commands the planner resolves into move sequences before passing to executor
     HIGH_LEVEL_ACTIONS = {"go_to", "mine_nearest", "mine", "place", "attack", "kill"}
+    COUNTED_MINING_GOAL = re.compile(r"\b(?:break|mine)\s+(?:exactly\s+)?(\d+)\b[^.!?\n]*\bblocks?\b", re.IGNORECASE)
 
 
     def __init__(self, world_state, model_client=None):
@@ -70,6 +72,37 @@ class Planner:
 
     def stop(self):
         self._stop_event.set()
+
+
+    @classmethod
+    def _mining_target(cls, goal):
+        match = cls.COUNTED_MINING_GOAL.search(goal)
+        if not match:
+            return None
+
+        target = int(match.group(1))
+        return target if target > 0 else None
+
+
+    @staticmethod
+    def _successful_mine_count(result):
+        return result.count("Succeeded: Mined block at ")
+
+
+    @staticmethod
+    def _limit_mining_commands(commands, remaining):
+        limited = []
+        mines = 0
+
+        for command in commands:
+            if command.get("action") in ("mine", "mine_nearest"):
+                if mines >= remaining:
+                    break
+                mines += 1
+
+            limited.append(command)
+
+        return limited
 
 
     """
@@ -395,6 +428,8 @@ class Planner:
     def plan_loop(self, goal, on_step=None, max_steps=20):
         self._history = []
         last_result = "Starting task."
+        mining_target = self._mining_target(goal)
+        successful_mines = 0
 
         for step in range(max_steps):
             # checked before the step, after the API call, and after execution, so a stop takes
@@ -438,6 +473,9 @@ class Planner:
                 else:
                     resolved.extend(self._resolve(cmd, snapshot))
 
+            if mining_target is not None:
+                resolved = self._limit_mining_commands(resolved, mining_target - successful_mines)
+
             # on_step runs the batch and reports back, without one this plans but never acts,
             # which is what makes the loop testable without a live connection
             if on_step:
@@ -445,10 +483,17 @@ class Planner:
             else:
                 last_result = f"Planned {len(resolved)} commands without an executor"
 
+            if mining_target is not None:
+                successful_mines += self._successful_mine_count(last_result)
+
             if self._stop_event.is_set():
                 break
 
             print(f"Step {step + 1}: {last_result}")
+
+            if mining_target is not None and successful_mines >= mining_target:
+                print(f"Autonomous loop complete after {step + 1} steps.")
+                break
 
         # only reached when the loop was never broken out of, so this is the exhausted case
         else:

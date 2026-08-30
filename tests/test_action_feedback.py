@@ -301,3 +301,57 @@ def test_autonomous_loop_stops_before_reporting_or_planning_another_step(capsys)
 
     assert len(calls) == 1
     assert "Step 1:" not in capsys.readouterr().out
+
+
+def test_counted_mining_goal_stops_after_requested_successes():
+    planner = Planner({
+        "position": {"x": 0, "y": 64, "z": 0}, "health": 20, "food": 20,
+        "map": {}, "entities": {}, "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    })
+    batches = iter((1, 4, 1))
+    api_calls = []
+    executed = []
+
+    def call_api(message):
+        api_calls.append(message)
+        count = next(batches)
+        return "[" + ",".join(
+            f'{{"action":"mine","x":{x},"y":64,"z":0}}'
+            for x in range(count)
+        ) + "]"
+
+    def execute(commands):
+        executed.extend(commands)
+        return "; ".join(
+            f"Succeeded: Mined block at ({command['x']}, 64, 0)"
+            for command in commands
+        )
+
+    planner._call_api = call_api
+    planner.plan_loop("break 5 grass blocks", on_step=execute)
+
+    assert len(api_calls) == 2
+    assert len(executed) == 5
+
+
+def test_counted_mining_goal_caps_a_model_batch_to_the_remaining_count():
+    planner = Planner({
+        "position": {"x": 0, "y": 64, "z": 0}, "health": 20, "food": 20,
+        "map": {}, "entities": {}, "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    })
+    executed = []
+    planner._call_api = lambda message: "[" + ",".join(
+        f'{{"action":"mine","x":{x},"y":64,"z":0}}'
+        for x in range(7)
+    ) + "]"
+
+    def execute(commands):
+        executed.extend(commands)
+        return "; ".join(
+            f"Succeeded: Mined block at ({command['x']}, 64, 0)"
+            for command in commands
+        )
+
+    planner.plan_loop("mine exactly 5 dirt blocks", on_step=execute)
+
+    assert len(executed) == 5
