@@ -268,17 +268,40 @@ def test_autonomous_loop_passes_real_step_result_to_next_turn():
         "map": {}, "entities": {}, "inventory": {"slots": {}, "selected_hotbar_slot": 0},
     })
     messages = []
-    replies = iter(('[{"action":"chat","message":"hi"}]', "[]"))
+    replies = iter(('[{"action":"look","yaw":90,"pitch":0}]', "[]"))
 
     def call_api(message):
         messages.append(message)
         return next(replies)
 
     planner._call_api = call_api
-    planner.plan_loop("say hi", on_step=lambda commands: "Succeeded: chat reached server")
+    planner.plan_loop("look around", on_step=lambda commands: "Succeeded: look packet sent")
 
     assert len(messages) == 2
-    assert "Last step result: Succeeded: chat reached server" in messages[1]
+    assert "Last step result: Succeeded: look packet sent" in messages[1]
+
+
+def test_autonomous_chat_only_response_ends_a_non_actionable_goal(capsys):
+    planner = Planner({
+        "position": {"x": 0, "y": 64, "z": 0}, "health": 20, "food": 20,
+        "map": {}, "entities": {}, "inventory": {"slots": {}, "selected_hotbar_slot": 0},
+    })
+    calls = []
+    executed = []
+
+    def call_api(message):
+        calls.append(message)
+        return '[{"action":"chat","message":"Please give me a specific goal."}]'
+
+    planner._call_api = call_api
+    planner.plan_loop(
+        "blah",
+        on_step=lambda commands: executed.extend(commands) or "Succeeded: chat packet sent",
+    )
+
+    assert len(calls) == 1
+    assert executed == [{"action": "chat", "message": "Please give me a specific goal."}]
+    assert "Autonomous loop complete after 1 steps." in capsys.readouterr().out
 
 
 def test_autonomous_loop_stops_before_reporting_or_planning_another_step(capsys):

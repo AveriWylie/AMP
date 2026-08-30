@@ -465,6 +465,7 @@ class Planner:
                 print(f"Autonomous loop complete after {step + 1} steps.")
                 break
 
+            chat_only = all(command.get("action") == "chat" for command in commands)
             resolved = []
 
             for cmd in commands:
@@ -490,6 +491,13 @@ class Planner:
                 break
 
             print(f"Step {step + 1}: {last_result}")
+
+            # A chat-only plan is the model's response to the user, not world progress to feed
+            # into another planning turn. This covers both completed speech goals and requests
+            # to clarify a non-actionable goal.
+            if chat_only:
+                print(f"Autonomous loop complete after {step + 1} steps.")
+                break
 
             if mining_target is not None and successful_mines >= mining_target:
                 print(f"Autonomous loop complete after {step + 1} steps.")
