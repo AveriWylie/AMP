@@ -1,8 +1,7 @@
-"""AMP's public Python package."""
-
+# Imports
 from importlib.metadata import PackageNotFoundError, version
-
 from amp.bot import Bot
+
 
 try:
     __version__ = version("amp-mc")

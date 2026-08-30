@@ -46,7 +46,7 @@ def test_device_authorization_normalizes_to_redacted_minecraft_session():
     transport = FakeTransport("authorization_pending")
     notices = []
     session = MicrosoftAuthenticator(
-        "client", transport, Clock(), notices.append
+        "client", transport.request, Clock(), notices.append
     ).authorize()
 
     assert session == MinecraftSession(
@@ -65,7 +65,7 @@ def test_device_authorization_normalizes_to_redacted_minecraft_session():
 
 def test_refresh_uses_refresh_grant_and_checks_entitlement():
     transport = FakeTransport(entitled=False)
-    authenticator = MicrosoftAuthenticator("client", transport, Clock())
+    authenticator = MicrosoftAuthenticator("client", transport.request, Clock())
 
     try:
         authenticator.refresh("refresh-secret")

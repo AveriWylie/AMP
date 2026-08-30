@@ -113,7 +113,7 @@ def test_java26_login_joins_session_and_enables_encrypted_transport(monkeypatch)
     value.set_protocol_adapter(adapter)
     raw_socket = FakeSocket()
     value._socket = raw_socket
-    monkeypatch.setattr("amp.connection.os.urandom", lambda size: b"s" * size)
+    monkeypatch.setattr("amp.authentication.os.urandom", lambda size: b"s" * size)
     encode = Connection._encode_varint
     payload = (
         value._encode_string("") + encode(len(public_key)) + public_key

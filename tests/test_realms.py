@@ -29,7 +29,7 @@ def world(**overrides):
 
 def test_resolve_realm_by_name_and_normalize_endpoint():
     transport = Transport([world()])
-    endpoint = RealmResolver(transport).resolve(SESSION, "build")
+    endpoint = RealmResolver(transport.request).resolve(SESSION, "build")
 
     assert (endpoint.host, endpoint.port, endpoint.realm.id) == ("realm.example", 25565, 42)
     assert all(call[2]["headers"]["Authorization"] == "Bearer secret" for call in transport.calls)
@@ -43,7 +43,7 @@ def test_resolve_rejects_missing_closed_and_invalid_realms():
         (Transport(error="service unavailable"), 42, "service unavailable"),
     ):
         try:
-            RealmResolver(transport).resolve(SESSION, selection)
+            RealmResolver(transport.request).resolve(SESSION, selection)
             assert False
         except RealmError as error:
             assert message in str(error)

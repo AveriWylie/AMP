@@ -1,4 +1,3 @@
-"""Public AMP façade that composes transport, world state, gameplay, planning, and execution."""
 # imports
 import os
 import threading
@@ -22,34 +21,33 @@ Class Header - Bot initialization
 --------------------------------------------------------------------------------------------
 """
 class Bot:
+
     version_protocol = runnable_version_protocols()
     pending_versions = frozenset(pending_versions())
 
     """
     --------------------------------------------------------------------------------------------
-    Function Header - Constants field
+    Constants field
     --------------------------------------------------------------------------------------------
     Within Bot to avoid duplication of constants for each Bot object. Explicitely we are saying 
     username/host has no restricted range of allowed possibilities (same as saying "username": 
     None ... etc.).
     --------------------------------------------------------------------------------------------
     """
-    allowed_values = {"game_mode": {"survival", "creative"},
-                      "port": range(1024, 65536),
-                      "version": set(version_protocol)}
+    allowed_values = {
+        "game_mode": {"survival", "creative"},
+        "port": range(1024, 65536),
+        "version": set(version_protocol)
+    }
 
-    default_values = {"host": "localhost", "port": 25565, "username": "Guest", "version": "26.2",
-        "game_mode": "survival"}
+    default_values = {
+        "host": "localhost",
+        "port": 25565,
+        "username": "Guest",
+        "version": "26.2",
+        "game_mode": "survival"
+    }
 
-    """
-    --------------------------------------------------------------------------------------------
-    Function Header - Version to protocol map
-    --------------------------------------------------------------------------------------------
-    The handshake sends a protocol number, not a version string, and every packet ID is keyed
-    to that number.
-    --------------------------------------------------------------------------------------------
-    """
-    # ------------------------------------------------------------------------------------------
 
     """
     --------------------------------------------------------------------------------------------
@@ -76,13 +74,10 @@ class Bot:
             # if theres no restricted range then is_valid is true for any none empty input
             if key == "version" and value is not None and value not in allowed:
                 if value in self.pending_versions:
-                    raise ValueError(
-                        f"Minecraft version '{value}' is pending protocol validation"
-                    )
-                raise ValueError(
-                    f"Unsupported Minecraft version: {value!r}; "
-                    f"runnable versions: {sorted(allowed)}"
-                )
+                    raise ValueError(f"Minecraft version '{value}' is pending protocol validation")
+
+                raise ValueError(f"Unsupported Minecraft version: {value!r}; "f"runnable versions: {sorted(allowed)}")
+
             if allowed is None:
                 is_valid = value is not None
             else:
@@ -92,6 +87,7 @@ class Bot:
 
             if not is_valid:
                 setattr(self, f"_{key}", self.default_values[key])
+
 
     def __init__(self, config):
         # config.get("..") = config[""] in esence and efficiency however .get
@@ -111,6 +107,7 @@ class Bot:
         self._validate_input()
         protocol = self.version_protocol[self._version]
         self.play_ids = packet_ids_for_protocol(protocol, "clientbound")
+
         self._connection = connection.Connection(
             self._host, self._port, self._version, self._username,
             on_failure=lambda error: self._lifecycle.handle_failure(error),
@@ -118,92 +115,110 @@ class Bot:
             auth_session=config.get("auth_session"),
             session_joiner=config.get("session_joiner"),
         )
+
         adapter_registry = ProtocolAdapterRegistry()
         manifest = load_support_manifest()
+
         adapter = Java26ProtocolAdapter(
             manifest["versions"][self._version]["family"],
             self._version,
             self._connection,
         )
+
         adapter_registry.register(adapter)
         self._protocol_adapter = adapter_registry.for_version(self._version)
         self._connection.set_protocol_adapter(self._protocol_adapter)
-        self._world_tracker = WorldStateTracker(
-            self._protocol_adapter, self._connection
-        )
+        self._world_tracker = WorldStateTracker(self._protocol_adapter, self._connection)
         self._world_state = self._world_tracker.state
         self._connection._packet_handler = self._world_tracker._on_packet
         self._input_mode = None
         self._pathfinder = Pathfinder(self._world_state, self._version)
+
         self._executor = Execute(
             self._connection,
             game_mode=self._game_mode,
             protocol_adapter=self._protocol_adapter,
             world_state=self._world_state,
         )
-        self._gameplay = GameplayController(
-            self._world_state, self._pathfinder, self._executor,
-            self._version, self._game_mode,
-        )
+
+        self._gameplay = GameplayController(self._world_state, self._pathfinder, self._executor,self._version, self._game_mode,)
+        # on_idle gives gravity a tick whenever nothing was queued, before_reconnect clears
+        # tracked state between the dead session closing and the new one opening
+
         self._lifecycle = LifecycleManager(
-            self._connection,
-            self._executor,
-            (self._username, self._host, self._port),
-            on_idle=self._gameplay.tick,
-            before_reconnect=self._world_tracker.reset_for_reconnect,
+            self._connection, self._executor,(self._username, self._host, self._port),
+            on_idle=self._gameplay.tick, before_reconnect=self._world_tracker.reset_for_reconnect
         )
+
+        # death cancels queued work first, then reconnects once the respawn actually lands
         self._world_tracker.on_respawn = self._executor.cancel_pending
-        self._world_tracker.on_respawn_complete = (
-            self._lifecycle.reconnect_after_death
-        )
+        self._world_tracker.on_respawn_complete = self._lifecycle.reconnect_after_death
+
         # Load local development credentials without overriding environment variables
         # supplied by a shell, CI runner, or deployment platform. Search from the
         # working directory: the package lives in site-packages once installed.
         load_dotenv(find_dotenv(usecwd=True))
         model_client = build_model_client(os.environ)
+
         if model_client is None and not config.get("model_optional", False):
             print("Warning: model provider is not configured, planner will not function")
 
         self._planner = Planner(self._world_state, model_client)
         self._run_thread = None
 
+
     def move_to(self, goal):
         return self._gameplay.move_to(goal)
+
 
     def mine_block(self, target):
         return self._gameplay.mine_block(target)
 
+
     def mine_nearest(self, block_name, radius=8):
         return self._gameplay.mine_nearest(block_name, radius)
+
 
     def place_block(self, target, block_name):
         return self._gameplay.place_block(target, block_name)
 
+
     def attack_entity(self, entity_id):
         return self._gameplay.attack_entity(entity_id)
 
+
+    # attack_entity is a single swing, this is the goal, it approaches and keeps hitting until
+    # the entity is gone. Both exist because the planner needs to be able to ask for either.
     def kill_entity(self, entity_id):
         return self._gameplay.kill_entity(entity_id)
 
+
     # entrance for cli
     def start(self):
+
         if not all(self._valid_flags.values()):
             invalid = [k for k, v in self._valid_flags.items() if not v]
             print(f"Warning: fields fell back to defaults: {invalid}")
 
         self._lifecycle.start()
 
+
+    # Stops the planner before the socket goes, so an autonomous run cannot keep planning
+    # against a connection that is being torn down, and joins its thread with a bound so a
+    # wedged run delays shutdown by a second rather than hanging it.
     def disconnect(self):
-        """Disconnect through the Bot lifecycle boundary."""
         self._planner.stop()
         self._lifecycle.disconnect()
         worker = self._run_thread
+
         if worker and worker is not threading.current_thread():
             worker.join(1)
+
 
     def set_mode(self, mode):
         self._input_mode = mode
         self._gameplay.set_mode(mode)
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -217,6 +232,7 @@ class Bot:
     def prompt(self, user_prompt):
         commands = self._planner.plan(user_prompt)
         return self._on_step(commands)
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -234,75 +250,101 @@ class Bot:
     def _on_step(self, commands):
         planning_results = []
         execution_results = []
+
+        # one command at a time now, each fully executed before the next is planned. The batch
+        # used to be queued up front and waited on once, but a plan is a chain, later steps
+        # assume earlier ones landed, so planning step three against the world as it was before
+        # step one meant walking to coordinates that no longer made sense.
         for cmd in commands:
             result_start = self._executor.result_count()
             planned = True
+
             if cmd.get("action") == "go_to":
                 if not self.move_to((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"No path to {(cmd['x'], cmd['y'], cmd['z'])}")
                     planned = False
+
             elif cmd.get("action") == "mine_nearest":
                 if not self.mine_nearest(cmd["block"], cmd["radius"]):
-                    planning_results.append(
-                        f"Could not find a reachable {cmd['block']}"
-                    )
+                    planning_results.append(f"Could not find a reachable {cmd['block']}")
                     planned = False
+
             elif cmd.get("action") == "mine":
                 if not self.mine_block((cmd["x"], cmd["y"], cmd["z"])):
                     planning_results.append(f"Could not plan mining at {(cmd['x'], cmd['y'], cmd['z'])}")
                     planned = False
+
             elif cmd.get("action") == "place":
-                if not self.place_block(
-                    (cmd["x"], cmd["y"], cmd["z"]), cmd["block"]
-                ):
-                    planning_results.append(
-                        f"Could not plan placing {cmd['block']} at {(cmd['x'], cmd['y'], cmd['z'])}"
-                    )
+                if not self.place_block((cmd["x"], cmd["y"], cmd["z"]), cmd["block"]):
+                    planning_results.append(f"Could not plan placing {cmd['block']} at {(cmd['x'], cmd['y'], cmd['z'])}")
                     planned = False
+
             elif cmd.get("action") == "attack":
                 if not self.attack_entity(cmd["entity_id"]):
                     planning_results.append(f"Could not attack entity {cmd['entity_id']}")
                     planned = False
+
             elif cmd.get("action") == "kill":
                 if not self.kill_entity(cmd["entity_id"]):
                     planning_results.append(f"Could not kill entity {cmd['entity_id']}")
                     planned = False
+
             else:
                 self._executor.enque_command(cmd)
+
+            # nothing was queued, so there is nothing to wait for and the rest of the plan was
+            # built on this step succeeding
             if not planned:
                 break
+
             results = self._executor.wait_until_idle(result_start=result_start)
             execution_results.extend(results)
+
+            # stop on the first failure rather than running the remainder blind, and let the
+            # planner see what happened and decide from the world as it actually is
             if any(not result["success"] for result in results):
                 break
-        summaries = planning_results + [
-            ("Succeeded: " if result["success"] else "Failed: ") + result["message"]
-            for result in execution_results if not result.get("internal")
-        ]
+
+        # internal results are gravity and other physics the planner never asked for, so they
+        # are dropped from the summary rather than read back as though they were its own actions
+        summaries = (planning_results +
+                     [("Succeeded: " if result["success"] else "Failed: ") + result["message"]
+                      for result in execution_results if not result.get("internal")])
+
         return "; ".join(summaries) or "No actions were queued"
 
     def run(self, goal, max_steps=20):
+        # cleared here rather than when the last run ended, so a stop stays in force until a
+        # new goal deliberately starts
         self._planner.reset_stop()
+
         self._run_thread = threading.Thread(
             target=self._planner.plan_loop,
             args=(goal,),
             kwargs={"on_step": self._on_step, "max_steps": max_steps},
             daemon=True
         )
+
         self._run_thread.start()
 
+    # Lets the CLI tell a live autonomous run from a finished one, so typed input becomes a
+    # mid-task injection or a fresh goal rather than being silently dropped.
     def is_running(self):
         return self._run_thread is not None and self._run_thread.is_alive()
+
 
     def inject(self, prompt):
         # injects a mid-task prompt into the autonomous loop while it is running
         self._planner.inject(prompt)
 
     def stop_run(self):
+        # signals the autonomous loop to stop after the current step completes
+        # by injecting a stop signal into the planner history
         self._planner.stop()
         self._executor.cancel_pending()
 
         # ------------------------------------------------------------------------------------------
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -314,6 +356,7 @@ class Bot:
     --------------------------------------------------------------------------------------------
     """
     def set(self, key, value):
+
         while key not in self.default_values:
             key = input(f"'{key}' is not a valid field. Enter a valid key: ")
 
@@ -323,14 +366,11 @@ class Bot:
         allowed = self.allowed_values.get(key)
 
         if key == "version" and value not in allowed:
+
             if value in self.pending_versions:
-                raise ValueError(
-                    f"Minecraft version '{value}' is pending protocol validation"
-                )
-            raise ValueError(
-                f"Unsupported Minecraft version: {value!r}; "
-                f"runnable versions: {sorted(allowed)}"
-            )
+                raise ValueError(f"Minecraft version '{value}' is pending protocol validation")
+
+            raise ValueError(f"Unsupported Minecraft version: {value!r}; "f"runnable versions: {sorted(allowed)}")
 
         if allowed is None:
             is_valid = value is not None

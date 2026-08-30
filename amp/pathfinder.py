@@ -23,7 +23,6 @@ something to stand on.
 # imports
 import heapq
 import math
-
 from amp.mining_data import block_data
 
 # non-solid blocks the bot can move through or stand in
@@ -43,17 +42,27 @@ Class Header - Pathfinder
 --------------------------------------------------------------------------------------------
 Takes world_state dict directly so it can query the live map as chunks arrive. The map
 dict is keyed by (cx, cz) chunk coordinates and values are Chunk objects with get_block.
+
+Holding the dict rather than a snapshot is deliberate. Chunks stream in while a path is being
+walked, so a search run a second later sees terrain the previous one could not, and a path
+planned through unloaded space gets replanned against real blocks once they arrive.
+
+The passable set has two sources. PASSABLE above is the hand-written fallback, but when a
+version is supplied the set is rebuilt from that version's block registry, taking every block
+whose bounding box is empty. That is derived from the same data the server uses, so it stays
+correct across versions instead of needing a new block name added by hand every release.
 --------------------------------------------------------------------------------------------
 """
 class Pathfinder:
+
     def __init__(self, world_state, version=None):
         self._world_state = world_state
         self._passable = set(PASSABLE)
+
+        # derived from the version's own registry, which beats a hand-maintained name list
         if version is not None:
-            self._passable = {
-                name for name, data in block_data(version).items()
-                if data.get("boundingBox") == "empty"
-            }
+            self._passable = {name for name, data in block_data(version).items() if data.get("boundingBox") == "empty"}
+
         # last search's node-expansion count, set by find_path via _finish. Exposed so the
         # weighted-A* mode difference (guided w=1.0 vs autonomous w=1.5) is measurable at the
         # boundary rather than just asserted.
@@ -66,14 +75,20 @@ class Pathfinder:
     Resolves absolute world coordinates to a block name by finding the right chunk first.
     Chunk coordinates are absolute x and z each right-shifted by 4 (divided by 16).
     Returns air if the chunk isn't loaded so unknown terrain is treated as passable.
+
+    Optimistic rather than conservative on purpose. Treating unloaded space as solid would
+    wall the bot in behind its own render distance and it would never path anywhere, whereas
+    treating it as air lets it route outward and correct once the chunks actually arrive.
     --------------------------------------------------------------------------------------------
     """
     def _get_block(self, x, y, z):
         cx = x >> 4
         cz = z >> 4
         chunk = self._world_state["map"].get((cx, cz))
+
         if chunk is None:
             return "air"
+
         return chunk.get_block(x, y, z)
 
     """
@@ -85,30 +100,45 @@ class Pathfinder:
     - the block at (x, y+1, z) is passable (bot's head)
     - the block at (x, y-1, z) is solid (something to stand on)
 
-    The solid check is just the inverse of passable, if it's not in the passable set, it's 
+    The solid check is just the inverse of passable, if it's not in the passable set, it's
     solid enough to stand on.
+
+    Note this makes water and lava walkable, since both are in the passable set. That is right
+    for water and wrong for lava, but neither is distinguished here, _movement_cost and
+    _has_stable_floor are where preference between surfaces gets expressed.
     --------------------------------------------------------------------------------------------
     """
     def _is_walkable(self, x, y, z):
         feet = self._get_block(x, y, z)
         head = self._get_block(x, y + 1, z)
         floor = self._get_block(x, y - 1, z)
+
         # The 2-block hitbox needs passable feet and head positions plus a solid floor.
-        return (
-            feet in self._passable
-            and head in self._passable
-            and floor not in self._passable
-        )
+        return feet in self._passable and head in self._passable and floor not in self._passable
+
 
     def _is_passable(self, block_name):
         return block_name in self._passable
 
+    """
+    --------------------------------------------------------------------------------------------
+    Function Field Header - Floor quality
+    --------------------------------------------------------------------------------------------
+    Walkability says a floor exists, these two say whether it is a floor worth standing on.
+
+    Leaves are the case both exist for. They are solid enough to walk on, so _is_walkable
+    accepts them, but they are a bad place to stop, a canopy route is usually a long way above
+    the ground with nothing under it once the tree ends.
+
+    _has_stable_floor is the hard filter, used when choosing where to end up. _movement_cost is
+    the soft one, used during the search, making leaves cost 6 instead of 1 so a route over
+    canopy is taken only when the alternative is at least six times longer.
+    --------------------------------------------------------------------------------------------
+    """
     def _has_stable_floor(self, x, y, z):
         floor = self._get_block(x, y - 1, z)
-        return (
-            floor not in self._passable
-            and not floor.endswith("_leaves")
-        )
+        return floor not in self._passable and not floor.endswith("_leaves")
+
 
     def _movement_cost(self, x, y, z):
         floor = self._get_block(x, y - 1, z)
@@ -124,6 +154,10 @@ class Pathfinder:
 
     Cost is 1 for all moves, uniform cost since diagonal movement is excluded and all
     steps are one block.
+
+    The three vertical cases are elif rather than separate ifs, so each direction yields at
+    most one neighbor. Flat wins over stepping up, which wins over dropping down. Yielding all
+    three would let the search consider walking into a wall and climbing it in the same move.
     --------------------------------------------------------------------------------------------
     """
     def _neighbors(self, x, y, z):
@@ -148,6 +182,10 @@ class Pathfinder:
     --------------------------------------------------------------------------------------------
     Manhattan distance in 3D. Admissible for grid movement with unit costs so A* is
     guaranteed to find the shortest path. Wieight not yet applied
+
+    Admissible only while the cheapest move costs 1, which is why the leaves penalty in
+    _movement_cost is a penalty and never a discount. A move cheaper than 1 would let the
+    heuristic overestimate and A* could return a path that is not the shortest.
     --------------------------------------------------------------------------------------------
     """
     @staticmethod
@@ -179,10 +217,20 @@ class Pathfinder:
     came_from maps each visited node to its predecessor for path reconstruction.
     g_score maps each visited node to its cheapest known cost from start.
 
-    The search is capped at max_nodes to prevent runaway searches in open terrain, 
+    The search is capped at max_nodes to prevent runaway searches in open terrain,
     if the goal is unreachable or too far the function returns empty rather than hanging.
-    
+
     weight=1 is standard A*. Higher weights favor faster, potentially suboptimal searches.
+
+    Coordinates are floored on entry because position arrives as floats from world state,
+    where the bot stands mid-block, while the search works on integer block coordinates.
+
+    Stale heap entries are skipped rather than removed. Python's heapq has no decrease-key, so
+    a node found by a cheaper route is pushed again and the older entry stays behind. Comparing
+    the popped g against g_score is how the outdated copy gets discarded when it surfaces.
+
+    An unreachable goal and an exhausted budget both return an empty list, since the caller can
+    do nothing different about either, only nodes_expanded distinguishes them afterwards.
     --------------------------------------------------------------------------------------------
     """
     def find_path(self, start, goal, weight=1.0, max_nodes=10000):
@@ -204,6 +252,7 @@ class Pathfinder:
         visited = 0
 
         while open_heap:
+            # budget spent, give up rather than searching open terrain forever
             if visited >= max_nodes:
                 return self._finish(visited, [], weight)
 
@@ -219,6 +268,8 @@ class Pathfinder:
 
             for nx, ny, nz, cost in self._neighbors(x, y, z):
                 ng = g + cost
+
+                # cheaper route found, record it and push again, heapq cannot decrease a key
                 if ng < g_score.get((nx, ny, nz), float("inf")):
                     g_score[(nx, ny, nz)] = ng
                     came_from[(nx, ny, nz)] = (x, y, z)
@@ -227,28 +278,51 @@ class Pathfinder:
 
         return self._finish(visited, [], weight)
 
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - find_path_near
+    --------------------------------------------------------------------------------------------
+    For goals that are not themselves standable. "Go to that tree" names the trunk, which is a
+    solid block the bot can never occupy, so find_path to it would always fail. This searches
+    the neighbourhood for somewhere it can actually stand and paths there instead.
+
+    The box is radius by radius horizontally, 5 by 5 at the default, and seven levels
+    vertically with dy ordered 0, 1, -1, 2, -2 outward from the goal's own level so nearer
+    heights are collected first. Only the horizontal span widens with radius, the vertical span
+    is fixed, since searching further up mostly finds cliff faces rather than useful ground.
+
+    Sorting on (horizontal distance, vertical distance, unstable) puts the closest ground-level
+    stable cell first and pushes canopy landings to the back, so a leaf perch is only chosen
+    once every real option has failed.
+
+    Only the best twelve are attempted. Each attempt is a full A* search, so trying all 175
+    candidates would cost far more than the approximate goal is worth.
+    --------------------------------------------------------------------------------------------
+    """
     def find_path_near(self, start, goal, weight=1.0, radius=2):
-        """Find a path to the closest walkable cell around an approximate goal."""
-        gx, gy, gz = (
-            math.floor(goal[0]), math.floor(goal[1]), math.floor(goal[2])
-        )
+        gx, gy, gz = (math.floor(goal[0]), math.floor(goal[1]), math.floor(goal[2]))
         candidates = []
+
         for dx in range(-radius, radius + 1):
             for dz in range(-radius, radius + 1):
+                # ordered outward from the goal's own level, nearer heights collected first
                 for dy in (0, 1, -1, 2, -2, 3, -3):
                     candidate = (gx + dx, gy + dy, gz + dz)
+
                     if not self._is_walkable(*candidate):
                         continue
+
                     horizontal_distance = abs(dx) + abs(dz)
                     unstable = not self._has_stable_floor(*candidate)
-                    candidates.append((
-                        horizontal_distance, abs(dy), unstable, candidate
-                    ))
+                    candidates.append((horizontal_distance, abs(dy), unstable, candidate))
 
+        # each attempt is a whole A* run, so only the most promising handful are worth trying
         for _, _, _, candidate in sorted(candidates)[:12]:
             path = self.find_path(start, candidate, weight=weight)
+
             if path:
                 return path
+
         return []
 
     """
@@ -256,11 +330,15 @@ class Pathfinder:
     Function Header - Path reconstruction
     --------------------------------------------------------------------------------------------
     Walks came_from backwards from goal to start, then reverses to get start-to-goal order.
+
+    Terminates because the start node is the only one never inserted as a key, so following
+    predecessors always ends there.
     --------------------------------------------------------------------------------------------
     """
     @staticmethod
     def _reconstruct(came_from, x, y, z):
         path = [(x, y, z)]
+
         while (x, y, z) in came_from:
             x, y, z = came_from[(x, y, z)]
             path.append((x, y, z))

@@ -33,27 +33,32 @@ because here you're reading from a buffer not a socket, same algorithm, differen
 --------------------------------------------------------------------------------------------
 """
 class Chunk:
+
     _state_to_block_cache = {}
 
     @staticmethod
     def _build_state_map(blocks_json):
         state_map = {}
+
         for block in blocks_json:
-            explicit_ids = [
-                state["id"] for state in block.get("states", []) if "id" in state
-            ]
+            explicit_ids = [state["id"] for state in block.get("states", []) if "id" in state]
+
             if explicit_ids:
                 for state_id in explicit_ids:
                     state_map[state_id] = block["name"]
             else:
                 for state_id in range(block["minStateId"], block["maxStateId"] + 1):
                     state_map[state_id] = block["name"]
+
         return state_map
 
-    def __init__(self, payload, version="26.1.2", heightmaps=None):
-        self._java26_heightmaps = heightmaps
+
+    def __init__(self, payload, version="26.1.2", hm=None):
+        # setting hmap in initializer would overwrite parser we iitialize this here to parser with hmap
+        self._java26_heightmaps = hm
         self._min_y = -64
         self._world_height = 384
+
         if version not in Chunk._state_to_block_cache:
             blocks_path = Path(__file__).parent / "blocks" / f"blocks_{version}.json"
             blocks_json = json.loads(blocks_path.read_text())
@@ -63,6 +68,7 @@ class Chunk:
         # sections indexed vertically (by y index)
         self._sections = {}
         self._parse(payload)
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -93,9 +99,11 @@ class Chunk:
         else:
             self._hmap, offset = self._read_nbt(payload, 0)
             sections_end = len(payload)
+
         # standard world is 384 blocks tall (-64 to 320) = 24 sections
         # section_y 0 corresponds to y=-64, section_y 23 corresponds to y=304
         section_y = 0
+
         # get data for each section y of the chunk for the payload
         while offset < sections_end and section_y < 24:
             # peek ahead to see if we've reached block entities which
@@ -145,6 +153,7 @@ class Chunk:
                             f"in section {section_y} (bits={bits_per_entry}, "
                             f"longs={data_length}, offset={offset}, end={sections_end})"
                         )
+
                     longs = struct.unpack_from(f">{data_length}q", payload, offset)
                     offset += data_length * 8
                     self._sections[section_y] = {
@@ -165,7 +174,6 @@ class Chunk:
             # bookkeeping, not data extraction.
             if biome_bits == 0:
                 offset += self._varint_size(payload, offset)
-
             else:
                 if biome_bits < 4:
                     biome_palette_length = self._read_varint(payload, offset)
@@ -175,12 +183,11 @@ class Chunk:
                         offset += self._varint_size(payload, offset)
 
                 effective_biome_bits = max(1, biome_bits)
-                biome_data_length = (
-                    64 + (64 // effective_biome_bits) - 1
-                ) // (64 // effective_biome_bits)
+                biome_data_length = (64 + (64 // effective_biome_bits) - 1) // (64 // effective_biome_bits)
                 offset += biome_data_length * 8
 
             section_y += 1
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -193,9 +200,15 @@ class Chunk:
     def _read_nbt(self, data, offset):
         tag_type = data[offset]
         offset += 1
+
         if tag_type == TAG_END:
             return None, offset
+        # Removed from NBT sent over the network drops the root compound's name:
+        # name_length = struct.unpack_from(">H", data, offset)[0]
+        # offset += 2 + name_length
+
         return self._read_nbt_payload(data, offset, tag_type)
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -284,28 +297,35 @@ class Chunk:
             length = struct.unpack_from(">i", data, offset)[0]
             offset += 4
             values = []
+
             for _ in range(length):
                 value, offset = self._read_nbt_payload(data, offset, element_type)
                 values.append(value)
+
             return values, offset
 
         elif tag_type == TAG_COMPOUND:
             entries = {}
+
             while True:
                 child_type = data[offset]
                 offset += 1
+
                 if child_type == TAG_END:
                     break
+
                 name_length = struct.unpack_from(">H", data, offset)[0]
                 offset += 2
                 name = data[offset:offset + name_length].decode("utf-8")
                 offset += name_length
                 value, offset = self._read_nbt_payload(data, offset, child_type)
                 entries[name] = value
+
             return entries, offset
 
         else:
             raise ValueError(f"Unknown NBT tag type: {tag_type}")
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -334,11 +354,10 @@ class Chunk:
             return None, offset
 
         palette_length = self._read_varint(payload, offset)
+
         if palette_length > 4096:
-            raise ValueError(
-                f"Invalid block palette length {palette_length} "
-                f"for {bits_per_entry} bits at offset {offset}"
-            )
+            raise ValueError(f"Invalid block palette length {palette_length} for {bits_per_entry} bits at offset {offset}")
+
         offset += self._varint_size(payload, offset)
         palette = []
 
@@ -349,31 +368,49 @@ class Chunk:
 
         return palette, offset
 
+
     """
     --------------------------------------------------------------------------------------------
     Function Header - Get block
     --------------------------------------------------------------------------------------------
-    Public interface. Takes absolute world coordinates and returns the block name string.
-    Converts to section-local coordinates first, then unpacks the correct bits from the
-    long array.
+    The single public interface. Takes absolute world coordinates and returns the block name
+    string. Converts to section-local coordinates first, then unpacks the correct bits out of
+    the long array.
 
     The lookup chain is section coordinates, packed palette index, global state ID, block name.
+    Four hops, and each one can miss, which is why there are so many early returns. Every miss
+    answers "air" rather than raising. A query for a chunk column the server never sent is a
+    normal thing for a pathfinder to do while it probes ahead of itself, so an exception there
+    would mean every caller wrapping every lookup in a try. "air" is also the honest answer,
+    since an unsent section is unloaded, not solid, and treating unknown space as walkable is
+    what lets the pathfinder route into it and find out.
+
+    The two dictionary values that can be None are what make the branching look uneven.
+    single_state is set only when bits_per_entry is 0, and palette is None only in direct mode,
+    so the two are never both meaningful at once. Reading them in the wrong order would mean
+    unpacking a long array that was never allocated.
+
+    Order matters in one more place. Patched updates are checked before the packed data because
+    the parsed section is a snapshot from whenever the chunk packet arrived, while patches are
+    the block change packets that have landed since. The packed data is stale the moment anyone
+    mines anything, so the patch dict wins.
     --------------------------------------------------------------------------------------------
     """
     def get_block(self, x, y, z):
         # world starts at y=-64, section 0 is y=-64 to y=-49
         section_y = (y + 64) >> 4
 
+        # server never sent this section, so treat it as open space rather than an error
         if section_y not in self._sections:
             return "air"
 
         section = self._sections[section_y]
-        # single value section, entire section is one block type
+        # single value section, entire section is one block type, no palette or longs to unpack
         if section["bits_per_entry"] == 0:
             state_id = section["single_state"]
             return self._state_to_block.get(state_id, "unknown")
 
-        # check for block updates patched over the parsed data
+        # check for block updates patched over the parsed data, these are newer than the packet
         patched = section.get("patched", {})
         lx_check = x & 0xF
         ly_check = y & 0xF
@@ -386,6 +423,7 @@ class Chunk:
         palette = section["palette"]
         longs = section["longs"]
 
+        # empty long array, the section carries a palette but no packed data to index into
         if not longs:
             return "air"
 
@@ -393,27 +431,36 @@ class Chunk:
         lx = x & 0xF
         ly = y & 0xF
         lz = z & 0xF
-        # block index within the section
+        # block index within the section, y major then z then x, the order the server packs in
         block_index = (ly * 16 + lz) * 16 + lx
-        # post-1.16 packing, entries never straddle longs
+        # post-1.16 packing, entries never straddle longs, so one divide finds the right long
+        # and any leftover high bits at the top of each long are simply padding you ignore
         blocks_per_long = 64 // bits
         long_index = block_index // blocks_per_long
         bit_offset = (block_index % blocks_per_long) * bits
         mask = (1 << bits) - 1
 
+        # short array for the section size, the packet was truncated or misparsed upstream
         if long_index >= len(longs):
             return "air"
 
+        # shift the entry down to bit 0 then mask off everything above it
         palette_index = (longs[long_index] >> bit_offset) & mask
 
+        # direct mode stores global state IDs in the long array, so there is no lookup to do
         if palette is None:
             state_id = palette_index
         else:
+            # index past the end of the palette means the bits were unpacked wrong
             if palette_index >= len(palette):
                 return "air"
+
             state_id = palette[palette_index]
 
+        # a state ID absent from the registry is a real block from a version we lack data for,
+        # which is different from empty space, so it answers "unknown" rather than "air"
         return self._state_to_block.get(state_id, "unknown")
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -453,30 +500,65 @@ class Chunk:
 
         return size
 
+
     """
     --------------------------------------------------------------------------------------------
     Function Header - Surface getter
     --------------------------------------------------------------------------------------------
-    Returns the Y of the highest non-air block at column (x,z) useful for pathfinding and 
-    surface queries. Heightmap is a packed long array indexed by x+z*16.
+    Returns the Y of the highest non-air block at column (x,z), useful for pathfinding and
+    surface queries. Asking "find a tree" benefits from knowing the surface Y so you search
+    near it rather than scanning all 24 sections top to bottom, which is 98304 get_block calls
+    per chunk you would otherwise be making to answer one question.
+
+    The heightmap is a packed long array in the same style as the block data, but packed to a
+    different width, so it does not reuse the block unpacking above. Block sections pack to
+    bits_per_entry, which the server tells you. Here nobody tells you anything, you derive it,
+    because the width is whatever it takes to hold the world height. 384 needs 9 bits, so 7
+    entries fit per long and the top bit of each long is padding. That is why _world_height is
+    a field rather than a literal, the arithmetic falls out of it.
+
+    One index quirk worth knowing. Block data is indexed y major, this is indexed x + z * 16
+    because there is no y, one entry per column and 256 columns in the chunk.
+
+    The stored value is not a Y coordinate, it is a count of blocks up from the bottom of the
+    world, so 0 genuinely means "nothing found in this column" rather than "the surface is at
+    y=0", and it has to answer None instead of _min_y. Any real value converts back with
+    _min_y + value - 1, the minus one because a count of 1 means the block sitting at _min_y
+    itself.
+
+    Reads WORLD_SURFACE, which ignores whether a block blocks movement and only asks whether
+    it is air. That is the right map for "where is the ground", and the wrong one for "can I
+    stand here", since leaves and water both count.
     --------------------------------------------------------------------------------------------
     """
     def get_surface_y(self, x, z):
         lx = x & 0xF
         lz = z & 0xF
+
+        # no heightmap when the server sent none, or when an older chunk parsed without one
         if self._hmap and "WORLD_SURFACE" in self._hmap:
             values = self._hmap["WORLD_SURFACE"]
+            # width is derived from world height, not sent, 384 -> 9 bits -> 7 per long
             bits = self._world_height.bit_length()
             entries_per_long = 64 // bits
+            # one entry per column, so x and z only, 256 columns in the chunk
             index = lx + lz * 16
             long_index = index // entries_per_long
+
+            # short array, the heightmap did not cover the whole chunk
             if long_index >= len(values):
                 return None
+
             bit_offset = (index % entries_per_long) * bits
+            # NBT longs are signed, so mask back to unsigned before shifting the entry out
             packed = values[long_index] & ((1 << 64) - 1)
             first_available = (packed >> bit_offset) & ((1 << bits) - 1)
+
+            # 0 means the column is empty all the way up, not that the surface sits at the floor
             if first_available == 0:
                 return None
+
+            # stored as a count up from the world floor, so convert it back to a real Y
             return self._min_y + first_available - 1
 
         return None

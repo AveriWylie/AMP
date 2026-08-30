@@ -1,45 +1,45 @@
-"""Minecraft protocol transport and connection lifecycle."""
+"""Minecraft protocol transport and connection lifecycle, For realm functionality strictly"""
 
 import hashlib
-import os
 import socket
-import struct
 import threading
 import uuid
 import zlib
-
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 
 try:
     from cryptography.hazmat.decrepit.ciphers.modes import CFB8
 except ImportError:
     from cryptography.hazmat.primitives.ciphers.modes import CFB8
 
-from amp.authentication import SessionJoiner
-
+# whats necessary to implement microsofts encryption and decryption
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+from amp.authentication import SessionJoiner, begin_server_encryption
 from amp.protocol_data import packet_ids_for_protocol
 
 
 class EncryptedSocket:
+
     def __init__(self, raw_socket, shared_secret):
-        cipher = Cipher(algorithms.AES(shared_secret), CFB8(shared_secret))
         self.raw_socket = raw_socket
+        cipher = Cipher(algorithms.AES(shared_secret), CFB8(shared_secret))
         self.encryptor = cipher.encryptor()
         self.decryptor = cipher.decryptor()
+
 
     def recv(self, size):
         return self.decryptor.update(self.raw_socket.recv(size))
 
+
     def sendall(self, data):
         return self.raw_socket.sendall(self.encryptor.update(data))
+
 
     def close(self):
         return self.raw_socket.close()
 
 
 class Connection:
+
     MAX_PACKET_SIZE = 2_097_151
 
     """
@@ -51,8 +51,7 @@ class Connection:
     because keepalive is received clientbound and echoed serverbound.
     --------------------------------------------------------------------------------------------
     """
-    def __init__(self, host, port, version, username, on_failure, protocol_version,
-                 packet_handler=None, auth_session=None, session_joiner=None):
+    def __init__(self, host, port, version, username, on_failure, protocol_version, packet_handler=None, auth_session=None, session_joiner=None):
         self._host = host
         self._port = port
         self._version = version
@@ -69,40 +68,38 @@ class Connection:
         # None until the server sends Set Compression during login. Once set to a threshold,
         # every read and every send uses the compressed frame envelope (see _read_packet/_send).
         self._compression_threshold = None
+        # The layer that owns everything version-specific
+        #
+        # Concretely, Java26ProtocolAdapter implements five methods:
+        # login_start   handle_login   handle_configuration   decode_play   encode_action
+        #
+        # decode_play turns a packet into events like BlockChanged; encode_action turns a MineAction into packets.
+
+        # The registry picks one by family, not version. 26.1, 26.1.1 and 26.1.2 share a wire format, so they
+        # share one adapter, which is why version_support.json stores a family per version.
         self._protocol_adapter = None
         self._auth_session = auth_session
         self._session_joiner = session_joiner or SessionJoiner()
 
-    @staticmethod
-    def _minecraft_server_hash(server_id, shared_secret, public_key):
-        digest = hashlib.sha1(
-            server_id.encode("iso-8859-1") + shared_secret + public_key,
-            usedforsecurity=False,
-        ).digest()
-        signed = int.from_bytes(digest, "big", signed=True)
-        return ("-" if signed < 0 else "") + format(abs(signed), "x")
-
-    def authenticate_server(self, server_id, public_key, verify_token):
-        if self._auth_session is None:
-            raise ConnectionError("Server requires a Microsoft-authenticated session")
-        key = serialization.load_der_public_key(public_key)
-        shared_secret = os.urandom(16)
-        server_hash = self._minecraft_server_hash(server_id, shared_secret, public_key)
-        self._session_joiner.join(self._auth_session, server_hash)
-        encrypted_secret = key.encrypt(shared_secret, padding.PKCS1v15())
-        encrypted_token = key.encrypt(verify_token, padding.PKCS1v15())
-        encode = self._encode_varint
-        payload = (
-            encode(len(encrypted_secret)) + encrypted_secret
-            + encode(len(encrypted_token)) + encrypted_token
-        )
-        self._send_protocol_packet(
-            self._protocol_adapter.login_serverbound["encryption_begin"], payload
-        )
-        self._socket = EncryptedSocket(self._socket, shared_secret)
 
     def set_protocol_adapter(self, adapter):
         self._protocol_adapter = adapter
+
+
+    def authenticate_server(self, server_id, public_key, verify_token):
+
+        if self._auth_session is None:
+            raise ConnectionError("Server requires a Microsoft-authenticated session")
+
+        shared_secret, encrypted_secret, encrypted_token = (
+            begin_server_encryption(self._auth_session, self._session_joiner,server_id, public_key, verify_token)
+        )
+
+        encode = self._encode_varint
+        payload = encode(len(encrypted_secret)) + encrypted_secret + encode(len(encrypted_token)) + encrypted_token
+        self._send_protocol_packet(self._protocol_adapter.login_serverbound["encryption_begin"], payload)
+        self._socket = EncryptedSocket(self._socket, shared_secret)
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -113,19 +110,20 @@ class Connection:
     coming" signal (value != 0: temp |= 0b10000000 If there's anything left after the shift, you 
     OR the high bit to 1. This is the signal to the receiver that another byte is coming).
 
-    So the algorithm has two jobs per iteration — pack 7 bits of data, and signal whether the 
+    So the algorithm has two jobs per iteration, pack 7 bits of data, and signal whether the 
     reader should keep reading (ie if the number can be repped in 7). The Minecraft protocol 
     receiver on the other end is reading one byte at a time and needs to know when to stop. 
     The convention chosen is:high bit = 1 → keep reading, high bit = 0 → this is the last byte 
     --------------------------------------------------------------------------------------------
     """
-
     @staticmethod
     def _encode_varint(value: int) -> bytes:
+
         if value < 0:
             raise ValueError("VarInt cannot be negative")
 
         result = bytearray()
+
         while True:
             # we make high bit zero for temp not value
             temp = value & 0b01111111
@@ -141,6 +139,7 @@ class Connection:
 
         return bytes(result)
 
+
     """
     --------------------------------------------------------------------------------------------
     Function Field Header - Handshake (Minecraft Conventional Binary)
@@ -149,7 +148,7 @@ class Connection:
     expects them, one uses VarInt for integers (algorithm above), and length-prefixed UTF-8 for 
     strings, the other is returns big-endian 2 bytes for the port.
 
-    Those helpers are then used to build two packets. Each packet follows the same envelope — 
+    Those helpers are then used to build two packets. Each packet follows the same envelope, 
     length, then packet_id, then data fields in the order Minecraft specifies. The length is 
     computed last because it needs to measure the finished packet_id + data bytes before it can 
     be encoded. The two send functions just call their serialize counterpart and hand the result 
@@ -157,46 +156,51 @@ class Connection:
 
     The handshake packet tells the server your protocol version, where you're connecting to, 
     and that you intend to log in. The login start packet tells it your username. Together they 
-    complete the opening exchange — after these two packets the server has everything it needs 
+    complete the opening exchange, after these two packets the server has everything it needs 
     to either accept or reject the connection, which is why connect() immediately reads a 
     packet after sending them.
     --------------------------------------------------------------------------------------------
     """
 
     def _encode_string(self, s: str) -> bytes:
-        encoded = s.encode("utf-8")
-        return self._encode_varint(len(encoded)) + encoded
+        return self._encode_varint(len(s.encode("utf-8"))) + s.encode("utf-8")
+
 
     @staticmethod
     def _encode_unsigned_short(port: int) -> bytes:
         return port.to_bytes(2, byteorder="big")  # big endian
 
+
     def _serialize_handshake(self) -> bytes:
         packet_id = self._encode_varint(0x00)
         data = (self._encode_varint(self._protocol_version) + self._encode_string(self._host) +
                 self._encode_unsigned_short(self._port) + self._encode_varint(2))
+
         length = self._encode_varint(len(packet_id + data))
+
         return length + packet_id + data
+
 
     def _send_handshake(self):
         packet = self._serialize_handshake()
         self._socket.sendall(packet)
 
+
     def _serialize_login_start(self, username: str) -> bytes:
         packet_id = self._encode_varint(0x00)  # Login Start packet ID
         data = self._encode_string(username)
-        digest = hashlib.md5(
-            f"OfflinePlayer:{username}".encode("utf-8"), usedforsecurity=False
-        ).digest()
+        digest = hashlib.md5(f"OfflinePlayer:{username}".encode("utf-8"), usedforsecurity=False).digest()
         data += uuid.UUID(bytes=digest, version=3).bytes
         length = self._encode_varint(len(packet_id + data))
         return length + packet_id + data
+
 
     def _send_login_start(self):
         packet = self._serialize_login_start(self._username)
         self._socket.sendall(packet)
 
     # ------------------------------------------------------------------------------------------
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -213,18 +217,20 @@ class Connection:
     int we check high bit and shift it if bytes high is 0 then break other wise read moire
     --------------------------------------------------------------------------------------------
     """
-
     def _read_varint_from_socket(self) -> int:
         result = 0
         shift = 0
+
         while True:
             # we never advance in index as the socket connection automatically advances.When
             # you call _read_exact(1) it asks for exactly 1 byte from the os buffer,
             # returning it as a single byte chunk. You then index with [0] to get the
             # integer value of that byte, which is what you actually check the high bit on
             raw = self._socket.recv(1)
+
             if not raw:
                 raise ConnectionError("Socket closed while reading VarInt")
+
             byte = raw[0]
             # so for each socket in read_var_int we check high bit and shift it if bytes
             # high is 0 then break otherwise read more
@@ -240,6 +246,7 @@ class Connection:
 
         return result
 
+
     """
     --------------------------------------------------------------------------------------------
     Function Header - Decode varint from an in-memory buffer
@@ -250,22 +257,25 @@ class Connection:
     the threshold inside Set Compression, where the bytes are already in hand.
     --------------------------------------------------------------------------------------------
     """
-
     @staticmethod
     def _decode_varint_bytes(buf: bytes, offset: int) -> tuple[int, int]:
+
         if offset < 0 or offset >= len(buf):
             raise ValueError("VarInt offset outside buffer")
 
         result = 0
         shift = 0
         consumed = 0
+
         while True:
             if offset + consumed >= len(buf):
                 raise ValueError("Truncated VarInt")
 
             byte = buf[offset + consumed]
+
             if consumed == 4 and byte & 0xF0:
                 raise ValueError("VarInt exceeds 32 bits")
+
             result |= (byte & 0b01111111) << shift
             consumed += 1
 
@@ -278,6 +288,7 @@ class Connection:
                 raise ValueError("VarInt too large")
 
         return result, consumed
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -294,6 +305,7 @@ class Connection:
 
     def _read_exact(self, n: int) -> bytes:
         buf = b""
+
         while len(buf) < n:
             # Why n - len(buf)? n = total number of bytes you want to read. but = bytes
             # you've already received so far. len(but) = how many bytes you already have.
@@ -314,8 +326,10 @@ class Connection:
         # Set Compression / Login Success, and again in Play. The live socket is the real
         # precondition.
         length = self._read_varint_from_socket()
+
         if not 0 < length <= self.MAX_PACKET_SIZE:
             raise ValueError(f"Invalid packet length: {length}")
+
         frame = self._read_exact(length)
 
         # Uncompressed framing: the frame is packet_id + data directly.
@@ -328,23 +342,21 @@ class Connection:
         else:
             data_length, consumed = self._decode_varint_bytes(frame, 0)
             body = frame[consumed:]
+
             if data_length == 0:
                 payload = body
+
             else:
                 if not 0 < data_length <= self.MAX_PACKET_SIZE:
-                    raise ValueError(
-                        f"Invalid decompressed packet length: {data_length}"
-                    )
+                    raise ValueError(f"Invalid decompressed packet length: {data_length}")
+
                 if data_length < self._compression_threshold:
                     raise ValueError("Compressed packet is below compression threshold")
+
                 inflater = zlib.decompressobj()
                 payload = inflater.decompress(body, self.MAX_PACKET_SIZE + 1)
-                if (
-                    len(payload) != data_length
-                    or not inflater.eof
-                    or inflater.unconsumed_tail
-                    or inflater.unused_data
-                ):
+
+                if (len(payload) != data_length or not inflater.eof or inflater.unconsumed_tail or inflater.unused_data):
                     raise ValueError("Invalid decompressed packet size or stream")
 
         if not payload:
@@ -354,6 +366,7 @@ class Connection:
         return packet_id, payload[1:]
 
     # ------------------------------------------------------------------------------------------
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -366,6 +379,7 @@ class Connection:
     """
 
     def _send(self, data: bytes):
+
         if not self._connected:
             raise ConnectionError("Cannot send packet while disconnected")
 
@@ -411,8 +425,10 @@ class Connection:
         """Send a packet during Login, Configuration, or Play."""
         encoded_id = self._encode_varint(packet_id)
         frame = self._encode_varint(len(encoded_id + payload)) + encoded_id + payload
+
         if self._compression_threshold is not None:
             frame = self._compress_frame(frame)
+
         self._socket.sendall(frame)
 
     # ------------------------------------------------------------------------------------------
@@ -439,9 +455,7 @@ class Connection:
                     self._send(self._keepalive_response_aux(payload))
 
                 elif packet_id == self.clientbound_ids["start_configuration"]:
-                    self._send_protocol_packet(
-                        self.play_ids["configuration_acknowledged"]
-                    )
+                    self._send_protocol_packet(self.play_ids["configuration_acknowledged"])
                     self._protocol_adapter.handle_configuration()
 
                 else:
@@ -458,6 +472,7 @@ class Connection:
                 failed_socket = self._socket
                 self._connected = False
                 self._socket = None
+
                 if failed_socket is not None:
                     failed_socket.close()
 
@@ -484,10 +499,12 @@ class Connection:
     """
 
     def _start_func(self):
+
         if not self._started:
             # breaks when target throws an exception
             self._thread_a = threading.Thread(target=self._listen, daemon=True)
             self._started = True
+
             try:
                 self._thread_a.start()
             except Exception:
@@ -497,6 +514,30 @@ class Connection:
 
         else:
             print("Already started")
+
+
+    """
+    --------------------------------------------------------------------------------------------
+    Function Header - Login state machine
+    --------------------------------------------------------------------------------------------
+    After Login Start, the selected protocol adapter owns the Login and Configuration state
+    machines. Transport only reads framed packets and starts the listener after the adapter
+    reports that Play has been reached.
+    --------------------------------------------------------------------------------------------
+    """
+    def _login(self):
+
+        if not callable(getattr(self._protocol_adapter, "handle_login", None)):
+            raise ConnectionError("No protocol adapter configured")
+
+        while True:
+            packet_id, payload = self._read_packet()
+            if self._protocol_adapter.handle_login(packet_id, payload, self._auth_session):
+                self._connected = True
+                self._start_func()
+                print(f"Connected to {self._host}:{self._port}")
+                break
+
 
     """
     --------------------------------------------------------------------------------------------
@@ -509,6 +550,7 @@ class Connection:
     """
 
     def connect(self):
+
         if self._connected:
             print("Already connected")
             return
@@ -520,6 +562,7 @@ class Connection:
         self._compression_threshold = None
         raw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket = raw_socket
+
         try:
             self._socket.connect((self._host, self._port))
             self._send_handshake()
@@ -533,28 +576,6 @@ class Connection:
             failed_socket.close()
             raise
 
-    """
-    --------------------------------------------------------------------------------------------
-    Function Header - Login state machine
-    --------------------------------------------------------------------------------------------
-    After Login Start, the selected protocol adapter owns the Login and Configuration state
-    machines. Transport only reads framed packets and starts the listener after the adapter
-    reports that Play has been reached.
-    --------------------------------------------------------------------------------------------
-    """
-
-    def _login(self):
-        if not callable(getattr(self._protocol_adapter, "handle_login", None)):
-            raise ConnectionError("No protocol adapter configured")
-        while True:
-            packet_id, payload = self._read_packet()
-            if self._protocol_adapter.handle_login(
-                packet_id, payload, self._auth_session
-            ):
-                self._connected = True
-                self._start_func()
-                print(f"Connected to {self._host}:{self._port}")
-                break
 
     def disconnect(self):
         socket_to_close = self._socket
@@ -562,6 +583,7 @@ class Connection:
         self._socket = None
         self._connected = False
         self._started = False
+
         if socket_to_close is not None:
             socket_to_close.close()
 
