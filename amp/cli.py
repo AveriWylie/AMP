@@ -1,10 +1,30 @@
 
 # Imports
 import argparse
+import sys
+from prompt_toolkit import PromptSession
+from prompt_toolkit.patch_stdout import patch_stdout
 from amp.bot import Bot
 
 
 QUIT_COMMANDS = {"q", "quit"}
+_prompt_session = None
+
+
+def _read_input(label):
+    global _prompt_session
+
+    # Piped input and test capture are not editable terminal buffers, so ordinary input is the
+    # correct behavior there. Interactive terminals need prompt_toolkit to redraw the current
+    # line when a connection or worker thread prints in the background.
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        return input(label)
+
+    if _prompt_session is None:
+        _prompt_session = PromptSession()
+
+    with patch_stdout():
+        return _prompt_session.prompt(label)
 
 """
 --------------------------------------------------------------------------------------------
@@ -80,7 +100,7 @@ def select_mode():
     print("2. Autonomous - bot reasons on its own")
 
     while True:
-        choice = input("Mode (1/2): ").strip()
+        choice = _read_input("Mode (1/2): ").strip()
 
         if choice in ("1", "2"):
             return "guided" if choice == "1" else "autonomous"
@@ -93,7 +113,7 @@ def guided_loop(bot):
     print("Type your instructions. 'q' or 'quit' to exit.\n")
 
     while True:
-        user_prompt = input("> ").strip()
+        user_prompt = _read_input("> ").strip()
 
         if not user_prompt:
             continue
@@ -108,7 +128,7 @@ def autonomous_loop(bot):
     print("\n=== Autonomous Mode ===")
     print("Enter a high level goal. The bot will reason and act until complete.")
     print("While running: type new instructions to inject mid-task, 'stop' to end task, 'q' or 'quit' to disconnect.\n")
-    goal = input("Goal: ").strip()
+    goal = _read_input("Goal: ").strip()
 
     if not goal:
         print("No goal entered.")
@@ -118,7 +138,7 @@ def autonomous_loop(bot):
 
     try:
         while True:
-            user_input = input("> ").strip()
+            user_input = _read_input("> ").strip()
 
             if not user_input:
                 continue

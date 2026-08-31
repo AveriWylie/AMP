@@ -1,5 +1,8 @@
+from contextlib import contextmanager
+
 import pytest
 
+from amp import cli
 from amp.cli import autonomous_loop, collect_config, guided_loop
 
 
@@ -20,6 +23,42 @@ class BotStub:
 
     def is_running(self):
         return True
+
+
+def test_tty_prompt_protects_typed_input_from_background_output(monkeypatch):
+    events = []
+
+    class Terminal:
+        @staticmethod
+        def isatty():
+            return True
+
+    class Session:
+        @staticmethod
+        def prompt(label):
+            events.append(("prompt", label))
+            return "q"
+
+    @contextmanager
+    def protected_output(**kwargs):
+        events.append(("enter", kwargs))
+        yield
+        events.append(("exit", None))
+
+    monkeypatch.setattr(cli.sys, "stdin", Terminal())
+    monkeypatch.setattr(cli.sys, "stdout", Terminal())
+    monkeypatch.setattr(cli, "PromptSession", lambda: Session())
+    monkeypatch.setattr(cli, "patch_stdout", protected_output)
+
+    monkeypatch.setattr(cli, "_prompt_session", None)
+
+    assert cli._read_input("> ") == "q"
+
+    assert events == [
+        ("enter", {}),
+        ("prompt", "> "),
+        ("exit", None),
+    ]
 
 
 def test_collect_config_exposes_only_implemented_game_modes(monkeypatch, capsys):

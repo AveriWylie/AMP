@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   "anthropic>=0.121,<1",
   "cryptography>=45,<51",
+  "prompt-toolkit>=3.0.52,<4",
   "python-dotenv>=1,<2",
 ]
 
