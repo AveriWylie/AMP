@@ -596,7 +596,10 @@ def run_amp(args):
                 time.sleep(3600)
 
         bot.set_mode(args.mode)
-        guided_loop if args.mode == "guided" else autonomous_loop(bot)
+        if args.mode == "guided":
+            guided_loop(bot)
+        else:
+            autonomous_loop(bot)
 
     except KeyboardInterrupt:
         print("\nDisconnecting AMP...")

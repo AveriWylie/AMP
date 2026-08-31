@@ -188,6 +188,51 @@ def test_mode_prompts_show_and_accept_shortcuts(tmp_path, monkeypatch):
     assert "AMP gameplay mode ([S]urvival/[c]reative): " in prompts
 
 
+def test_run_amp_enters_guided_loop_before_disconnecting(monkeypatch):
+    events = []
+
+    class Bot:
+        def __init__(self, config):
+            events.append(("init", config["host"], config["port"]))
+
+        def start(self):
+            events.append("start")
+
+        @staticmethod
+        def is_connected():
+            return True
+
+        def set_mode(self, mode):
+            events.append(("mode", mode))
+
+        def disconnect(self):
+            events.append("disconnect")
+
+    monkeypatch.setattr("amp.bot.Bot", Bot)
+    monkeypatch.setattr("amp.cli.guided_loop", lambda bot: events.append("guided"))
+    monkeypatch.setattr(
+        "amp.cli.autonomous_loop",
+        lambda bot: events.append("autonomous"),
+    )
+    args = SimpleNamespace(
+        port=25576,
+        username="AMP",
+        version="26.2",
+        amp_game_mode="survival",
+        mode="guided",
+    )
+
+    run_local_world.run_amp(args)
+
+    assert events == [
+        ("init", "127.0.0.1", 25576),
+        "start",
+        ("mode", "guided"),
+        "guided",
+        "disconnect",
+    ]
+
+
 def test_unsupported_version_is_rejected_before_profile_creation(
     tmp_path,
     monkeypatch,
