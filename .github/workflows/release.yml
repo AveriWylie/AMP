@@ -51,14 +51,45 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: python-distributions
           path: dist
+      - name: Prepare release notes from the changelog
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_TAG"].removeprefix("v")
+          changelog = Path("docs/CHANGELOG.md").read_text(encoding="utf-8")
+          heading = re.compile(
+              rf"^## {re.escape(version)} - (?!Unreleased\s*$).+$",
+              re.MULTILINE,
+          ).search(changelog)
+          if heading is None:
+              raise SystemExit(
+                  f"docs/CHANGELOG.md has no dated section for {version}"
+              )
+          next_heading = re.compile(r"^## ", re.MULTILINE).search(
+              changelog, heading.end()
+          )
+          end = next_heading.start() if next_heading else len(changelog)
+          notes = changelog[heading.end():end].strip()
+          if not notes:
+              raise SystemExit(f"changelog section for {version} is empty")
+          Path(os.environ["RUNNER_TEMP"], "release-notes.md").write_text(
+              notes + "\n", encoding="utf-8"
+          )
+          PY
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: dist/*
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-notes.md
 
   pypi-publish:
     needs: build

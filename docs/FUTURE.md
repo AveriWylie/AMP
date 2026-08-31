@@ -29,8 +29,9 @@ compatibility promise or delivery commitment.
 
 ## Movement and navigation
 
-- Replace discrete position steps with physics-aware movement that models
-  velocity, acceleration, collision, fall distance, and server corrections.
+- Extend the current tick-paced path-edge movement and vertical gravity model
+  with horizontal velocity, acceleration, full collision shapes, fall distance,
+  and correction-aware replanning.
 - Add sprinting, jumping across gaps, multi-block falls with safety checks,
   swimming, climbing ladders and vines, crawling, and elytra movement.
 - Interact with doors, gates, trapdoors, buttons, pressure plates, scaffolding,
@@ -120,18 +121,22 @@ compatibility promise or delivery commitment.
 
 ## Combat and survival
 
-- Pursue moving or distant targets and replan as their positions change.
+- Discover and pursue targets beyond the currently tracked, loaded, and
+  pathfindable area. Repeated kill actions already replan while a tracked target
+  moves.
 - Add target selection by entity type, hostility, distance, threat, owner, and
   user policy instead of requiring a tracked entity ID.
-- Respect attack cooldowns, weapon reach, line of sight, knockback, shields,
-  armor, critical hits, and version-specific combat rules.
-- Confirm combat outcomes from tracked entity state instead of relying only on
-  the attack packet or an external live-check query.
+- Add line-of-sight checks, knockback, shields, armor, critical hits, and
+  version-specific combat rules. AMP 1.0 already enforces attack reach and waits
+  for both the held weapon and the target's post-hit invulnerability window.
+- Confirm single-hit damage from tracked entity health or metadata. Repeated
+  kill actions currently confirm only that the server removed the target.
 - Add ranged combat with bows, crossbows, tridents, and projectiles.
 - Add defensive behavior: retreat, strafing, blocking, healing, eating, avoiding
   hazards, and responding to low health or hunger.
-- Add death recovery, respawn goals, dropped-inventory retrieval, and safe task
-  cancellation after death.
+- Add explicit respawn goals and dropped-inventory retrieval. AMP 1.0 already
+  sends the respawn request, rebuilds connection and world state, and cancels
+  queued actions after death.
 - Add farming, hunting, food acquisition, shelter, sleeping, and other
   long-running survival behaviors.
 
@@ -146,8 +151,9 @@ compatibility promise or delivery commitment.
   a model supports it while preserving the plain-text fallback.
 - Add model-specific prompt profiles and validation repair for smaller local
   models that do not reliably follow the JSON-only instruction.
-- Add goal decomposition, durable task state, resumable plans, priorities,
-  cancellation at action boundaries, and explicit success criteria.
+- Add goal decomposition, durable task state, resumable plans, priorities, and
+  explicit success criteria. AMP 1.0 can already stop between autonomous steps
+  and cancels queued actions on death.
 - Add staged long-distance navigation that replans as movement loads new chunks.
 - Add memory and mapping that persist across sessions without exposing
   credentials or mixing state between servers or users.

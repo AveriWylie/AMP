@@ -30,9 +30,12 @@ user goal
 - `amp/world_state.py` applies normalized protocol events and owns mutable
   world, inventory, health, and entity state.
 - `amp/pathfinder.py` reads world state and produces walkable coordinate paths.
+- `amp/movement.py` expands path edges into tick-paced position updates and
+  models idle gravity and landing.
 - `amp/gameplay.py` turns high-level actions into paths, inventory preparation,
   orientation, and executable interactions.
-- `amp/execution.py` owns the action queue and serverbound packet serialization.
+- `amp/execution.py` owns the action queue, dispatches commands through the
+  protocol adapter, and confirms observable results.
 - `amp/planner.py` builds model context, validates replies, resolves supported
   commands, and runs the autonomous loop.
 - `amp/model_clients.py` normalizes provider APIs to a plain-text completion
@@ -48,7 +51,9 @@ user goal
 AMP uses separate threads for socket listening, action execution, and autonomous
 planning. The CLI remains responsive so a user can inject or stop an autonomous
 goal. The execution queue and result list share a condition variable, and the
-planner waits for a completed action batch before replanning.
+planner waits for a completed action batch before replanning. Interactive input
+uses prompt-safe output patching so background status messages do not overwrite
+partially typed instructions.
 
 ## World representation
 

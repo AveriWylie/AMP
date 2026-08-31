@@ -12,7 +12,8 @@ python -m pytest
 The suite covers protocol framing and compression, login/configuration flow,
 chunk decoding, generated registries, pathfinding, packet dispatch, inventory
 state, mining calculations, placement planning, combat coordination, provider
-adapters, planner validation, lifecycle composition, and execution feedback.
+adapters, planner validation, tick-paced movement and gravity, death and respawn,
+lifecycle composition, interruption-safe CLI input, and execution feedback.
 Model-provider tests use injected fakes and do not contact external APIs.
 
 The live connection test skips when no server is listening on `localhost:25565`.

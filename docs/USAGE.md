@@ -74,8 +74,11 @@ When AMP connects:
 4. Enter guided instructions in the runner terminal.
 5. Enter `quit` to disconnect AMP and stop the server.
 
-Autonomous mode asks for a high-level goal instead. Idle mode only connects AMP
-for a smoke test and does not require a model provider.
+Autonomous mode asks for a high-level goal instead. While it runs, enter another
+instruction to inject it into the task, `stop` to end the task without
+disconnecting, or `quit` to stop AMP and the server. Background status output
+preserves text already entered at the prompt. Idle mode only connects AMP for a
+smoke test and does not require a model provider.
 
 ## Shutdown and copy-back
 

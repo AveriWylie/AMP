@@ -1,9 +1,9 @@
 # Changelog
 
-## 1.0.0 - Unreleased
+## 1.0.0 - 2026-08-30
 
-- Requires Python 3.10 or later. Development tests require pytest 9.0.3 or
-  later.
+- Requires Python 3.10 or later. The locked release and test environment uses
+  pytest 9.0.3.
 - Ships as the MIT-licensed `amp-mc` Python package with `amp` and
   `amp-world` console commands and an exact release-environment lock.
 - Supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct
@@ -16,20 +16,23 @@
   archive.
 - Implements raw protocol transport, Configuration and Play states, bounded
   packet decompression, keepalive handling, and reconnection.
-- Tracks chunks, heightmaps, block updates, inventory, health, and nearby
-  entities as live world state.
-- Supports pathfinding, movement, creative and survival mining, block placement,
-  and attacks against nearby tracked entities.
+- Tracks chunks, heightmaps, block updates, inventory, health, nearby entities,
+  server corrections, death, and respawn as live world state.
+- Supports pathfinding, tick-paced movement and gravity, creative and survival
+  mining, block placement, and attacks against nearby tracked entities.
+- Approaches tracked combat targets, respects weapon and target cooldowns, and
+  can continue attacking until the server removes the target.
 - Provides guided and autonomous model planning with validated structured
-  commands and server-confirmed mining and placement feedback.
+  commands, server-confirmed mining and placement feedback, mid-task instruction
+  injection, and bounded non-progress handling.
 - Supports Anthropic and OpenAI-compatible providers behind a provider-neutral
   completion interface.
 - Reads provider configuration from the environment or an ignored `.env` file.
 - Provides one cross-platform Python workflow for copied single-player worlds,
-  isolated profiles, operator access, interactive AMP control, backup-first
-  copy-back, and graceful server shutdown.
-- Separates transport, world state, gameplay, lifecycle, execution, model
-  providers, and planning behind the `Bot` facade.
+  isolated profiles, operator access, interruption-safe interactive AMP control,
+  backup-first copy-back, and graceful server shutdown.
+- Separates transport, world state, movement, gameplay, lifecycle, execution,
+  model providers, and planning behind the `Bot` facade.
 - Includes offline pytest coverage and vanilla-server checks for connection and
   gameplay behavior.
 - Generates protocol, block, item, and entity data from a pinned MIT-licensed

@@ -83,6 +83,8 @@ Survival and creative are the supported gameplay modes.
 
 - A* pathfinding over loaded chunk data, including flat movement, 1-block steps,
   and 1-block drops
+- Tick-paced movement along path edges, airborne step trajectories, idle gravity,
+  landing detection, and cancellation after server position corrections
 - Position, health, food, chunks, block updates, player inventory, selected
   hotbar slot, and nearby entity tracking
 - Creative and survival mining with inventory tool selection and hardness-based
@@ -106,10 +108,13 @@ Survival and creative are the supported gameplay modes.
   implemented.
 - Blueprint import, material planning, and multi-block construction are not
   implemented.
-- Movement uses discrete 1-block position steps. AMP does not sprint, swim,
-  climb, jump gaps, open doors, bridge gaps, or continuously replan around
-  moving obstacles.
-- Combat does not pursue moving or distant targets.
+- Paths use discrete 1-block edges, expanded into tick-paced position updates.
+  AMP does not model horizontal acceleration or momentum, sprint, swim, climb,
+  jump gaps, open doors, bridge gaps, or continuously replan around moving
+  obstacles.
+- A single-hit attack requires a target already within reach. A repeated kill
+  action can approach and re-path to a tracked, reachable target, but AMP does
+  not discover targets outside its loaded entity state or check line of sight.
 - Mining timing does not account for enchantments, status effects, or underwater
   and airborne penalties.
 - Real-provider behavior remains a manual pre-release gate; the offline suite
@@ -126,10 +131,11 @@ amp/connection.py      TCP framing, compression, encryption, and keepalive
 amp/java26_protocol.py Java 26 login, decoding, and action encoding
 amp/world_state.py     live world, inventory, and entity state
 amp/gameplay.py        movement, mining, placement, and combat coordination
+amp/movement.py        tick-paced path movement, gravity, and landing
 amp/lifecycle.py       connection recovery and worker lifecycle
 amp/chunk.py           chunk, NBT, palette, and block-state decoding
 amp/pathfinder.py      A* pathfinding over loaded world data
-amp/execution.py       action queue and packet serialization
+amp/execution.py       action queue, protocol dispatch, and result confirmation
 amp/planner.py         provider-neutral guided and autonomous planning
 amp/model_clients.py   model-client contract and provider adapters
 amp/command_data.py    planner and executor action validation

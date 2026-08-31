@@ -26,6 +26,9 @@ version:
   succeeds.
 - Complete 1 autonomous goal with either provider, including at least 1
   successful action and server-confirmed feedback.
+- While an autonomous goal runs, type a partial instruction as background status
+  arrives, finish and submit it, and confirm the intact instruction is applied.
+  Enter `stop` and confirm the goal ends without disconnecting AMP.
 - Confirm that invalid or missing provider configuration fails before Java
   starts and provides an actionable message.
 - Stop the local-world workflow and answer No to copy-back. Confirm that the
@@ -61,8 +64,11 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
 1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
 2. Push the commit and tag. The release workflow verifies that the tag matches
    `pyproject.toml`, runs the offline suite, and builds once. It publishes to
-   PyPI through Trusted Publishing and then attaches the same artifacts to the
-   GitHub release, so a failed PyPI upload leaves no published release behind.
+   PyPI through Trusted Publishing and then creates a GitHub release whose body
+   is the matching dated section from `docs/CHANGELOG.md`. The workflow attaches
+   the same artifacts to that release. It fails if the changelog section is
+   missing, empty, or still marked `Unreleased`, and a failed PyPI upload leaves
+   no published GitHub release behind.
 3. Confirm that both published artifacts contain the license and Minecraft
    runtime data. Confirm that the source distribution also contains the project
    documents and protocol fixtures.
