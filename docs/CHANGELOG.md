@@ -3,7 +3,7 @@
 ## 1.0.0 - 2026-08-30
 
 - Requires Python 3.10 or later. The locked release and test environment uses
-  pytest 9.0.3.
+  pytest 9.1.1.
 - Ships as the MIT-licensed `amp-mc` Python package with `amp` and
   `amp-world` console commands and an exact release-environment lock.
 - Supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct
