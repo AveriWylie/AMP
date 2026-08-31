@@ -63,9 +63,12 @@ jobs:
           python - <<'PY'
           import os
           import re
+          import tomllib
           from pathlib import Path
 
           version = os.environ["RELEASE_TAG"].removeprefix("v")
+          with Path("pyproject.toml").open("rb") as source:
+              project = tomllib.load(source)["project"]
           changelog = Path("docs/CHANGELOG.md").read_text(encoding="utf-8")
           heading = re.compile(
               rf"^## {re.escape(version)} - (?!Unreleased\s*$).+$",
@@ -82,12 +85,27 @@ jobs:
           notes = changelog[heading.end():end].strip()
           if not notes:
               raise SystemExit(f"changelog section for {version} is empty")
+          author_names = [author["name"] for author in project["authors"]]
+          if len(author_names) == 1:
+              authors = author_names[0]
+          else:
+              authors = ", ".join(author_names[:-1]) + f" and {author_names[-1]}"
+          source_url = (
+              f'{project["urls"]["Homepage"]}/tree/{os.environ["RELEASE_TAG"]}'
+          )
+          body = (
+              f'- **Authors:** {authors}\n'
+              f'- **License:** {project["license"]}\n'
+              f'- **Source:** {source_url}\n\n'
+              f'## Release highlights\n\n{notes}\n'
+          )
           Path(os.environ["RUNNER_TEMP"], "release-notes.md").write_text(
-              notes + "\n", encoding="utf-8"
+              body, encoding="utf-8"
           )
           PY
       - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
+          name: AMP ${{ github.ref_name }} - Agentic Minecraft Player
           files: dist/*
           body_path: ${{ runner.temp }}/release-notes.md
 

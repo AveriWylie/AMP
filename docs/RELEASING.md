@@ -64,11 +64,12 @@ usage](USAGE.md) for startup, shutdown, and copy-back behavior.
 1. Create an annotated `vMAJOR.MINOR.PATCH` tag at the verified commit.
 2. Push the commit and tag. The release workflow verifies that the tag matches
    `pyproject.toml`, runs the offline suite, and builds once. It publishes to
-   PyPI through Trusted Publishing and then creates a GitHub release whose body
-   is the matching dated section from `docs/CHANGELOG.md`. The workflow attaches
-   the same artifacts to that release. It fails if the changelog section is
-   missing, empty, or still marked `Unreleased`, and a failed PyPI upload leaves
-   no published GitHub release behind.
+   PyPI through Trusted Publishing and then creates a titled GitHub release with
+   project authors, license, a tag-specific source link, and the matching dated
+   section from `docs/CHANGELOG.md`. The workflow attaches the same artifacts to
+   that release. It fails if the changelog section is missing, empty, or still
+   marked `Unreleased`, and a failed PyPI upload leaves no published GitHub
+   release behind.
 3. Confirm that both published artifacts contain the license and Minecraft
    runtime data. Confirm that the source distribution also contains the project
    documents and protocol fixtures.
