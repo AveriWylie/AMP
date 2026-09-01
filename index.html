@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AMP is an open-source agentic Minecraft player for Java Edition.">
+  <title>AMP — Agentic Minecraft Player</title>
+  <style>
+    :root { --bg:#0d120f; --panel:#141c17; --line:#29352d; --text:#edf5ef; --muted:#9aaa9f; --green:#b8f15b; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    a { color:inherit; }
+    .wrap { width:min(1080px,calc(100% - 36px)); margin:auto; }
+    header.wrap { width:min(1600px,calc(100% - 72px)); }
+    nav { height:72px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+    .brand { font-weight:800; letter-spacing:-.04em; text-decoration:none; font-size:21px; }
+    .brand span { color:var(--green); }
+    nav div { display:flex; gap:24px; }
+    nav div a { color:var(--muted); text-decoration:none; font-size:14px; }
+    nav div a:hover { color:var(--text); }
+    header { padding:120px 0 105px; }
+    .hero-identity { text-align:center; }
+    .hero-identity strong { display:block; font-size:clamp(58px,7vw,112px); line-height:.9; letter-spacing:-.07em; white-space:nowrap; }
+    .hero-identity p { margin:28px 0 0; color:var(--muted); font-size:18px; }
+    .terminal { background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:0 24px 60px #0008; overflow:hidden; }
+    .terminal b { display:block; padding:12px 16px; border-bottom:1px solid var(--line); color:var(--muted); font:12px ui-monospace,monospace; }
+    pre { margin:0; padding:25px; overflow:auto; color:#dfe9e1; font:13px/1.8 ui-monospace,monospace; }
+    pre span { color:var(--green); }
+    section { padding:90px 0; border-top:1px solid var(--line); }
+    h2 { margin:0 0 12px; font-size:38px; letter-spacing:-.045em; }
+    .section-copy { color:var(--muted); margin:0 0 38px; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .card { padding:28px; background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+    .card small { color:var(--green); font:12px ui-monospace,monospace; }
+    .card h3 { margin:26px 0 8px; font-size:21px; }
+    .card p { color:var(--muted); margin:0; font-size:14px; }
+    .versions { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
+    .versions span { padding:7px 11px; border:1px solid var(--line); border-radius:4px; color:var(--green); font:13px ui-monospace,monospace; }
+    .notice { padding:28px; border:1px solid #4b6532; background:#172318; border-radius:7px; }
+    .grid + .notice { margin-top:16px; }
+    .notice strong { display:block; margin-bottom:8px; color:var(--green); font-size:18px; }
+    .notice p { margin:0; color:#bdc9c0; }
+    .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:0; margin-top:36px; counter-reset:step; }
+    .step { padding:26px 28px; border:1px solid var(--line); border-right:0; }
+    .step:last-child { border-right:1px solid var(--line); }
+    .step::before { counter-increment:step; content:"0" counter(step); display:block; margin-bottom:18px; color:var(--green); font:12px ui-monospace,monospace; }
+    .step h3 { margin:0 0 7px; font-size:17px; }.step p { margin:0; color:var(--muted); font-size:14px; }
+    .installing { margin-top:70px; padding-top:70px; border-top:1px solid var(--line); }
+    .run-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:34px; }
+    .run-card { padding:28px; border:1px solid var(--line); background:var(--panel); border-radius:7px; }
+    .run-card h3 { margin:0 0 8px; }.run-card p { color:var(--muted); margin:0 0 20px; font-size:14px; }
+    .run-card code { display:block; padding:13px 15px; background:#0b100d; color:var(--green); overflow:auto; font:13px ui-monospace,monospace; }
+    .mode-grid .run-card p { margin-bottom:0; }
+    .plain-list { display:grid; grid-template-columns:1fr 1fr; gap:12px 36px; padding:0; list-style:none; }
+    .plain-list li { position:relative; padding-left:20px; color:var(--muted); }
+    .plain-list li::before { content:"×"; position:absolute; left:0; color:var(--green); font-weight:800; }
+    .docs-link { display:inline-block; margin-top:28px; color:var(--green); font-weight:700; text-underline-offset:4px; }
+    footer { padding:34px 0; display:flex; justify-content:space-between; color:var(--muted); font-size:13px; border-top:1px solid var(--line); }
+    footer div { display:flex; gap:20px; }
+    @media (max-width:760px) { header.wrap { width:calc(100% - 36px); } header { padding:82px 0 72px; }.hero-identity strong { white-space:normal; }.grid,.steps,.run-grid,.plain-list { grid-template-columns:1fr; } .step { border-right:1px solid var(--line); border-bottom:0; }.step:last-child { border-bottom:1px solid var(--line); } nav div a:not(:last-child) { display:none; } footer { gap:18px; flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <nav class="wrap">
+    <a class="brand" href="#">A<span>M</span>P</a>
+    <div><a href="#features">Features</a><a href="#scope">Scope</a><a href="#install">Install</a><a href="https://github.com/AveriWylie/AMP">GitHub ↗</a></div>
+  </nav>
+
+  <header class="wrap">
+    <div class="hero-identity">
+      <strong>Agentic Minecraft Player</strong>
+      <p>Give it an instruction or a larger goal. AMP observes the world, acts, and checks what happened.</p>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Plans against the real world</h2>
+      <p class="section-copy">AMP reasons over server state and verifies observable results instead of assuming an action worked.</p>
+      <div class="grid">
+        <article class="card"><small>01 / NAVIGATE</small><h3>Pathfinding and movement</h3><p>A* routes, tick-paced movement, gravity, landing detection, and server-correction handling.</p></article>
+        <article class="card"><small>02 / UNDERSTAND</small><h3>Live world state</h3><p>Tracks chunks, blocks, inventory, health, position, and nearby entities directly from protocol events.</p></article>
+        <article class="card"><small>03 / ACT</small><h3>Verified gameplay</h3><p>Mines, places blocks, moves, chats, and fights through validated structured commands.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="scope">
+    <div class="wrap">
+      <h2>What AMP 1.0 supports</h2>
+      <p class="section-copy">AMP 1.0 combines model-driven planning with a direct implementation of Minecraft's Java protocol and a live view of the game world.</p>
+      <div class="grid">
+        <article class="card"><small>01 / GAMEPLAY</small><h3>Move, mine, build, and fight</h3><p>Pathfinds through loaded terrain, mines in survival or creative, places inventory blocks, and attacks reachable tracked entities.</p></article>
+        <article class="card"><small>02 / PLANNING</small><h3>Guided or autonomous</h3><p>Accepts single instructions or larger goals, validates model commands, checks results, replans, and accepts instructions mid-task.</p></article>
+        <article class="card"><small>03 / WORLD STATE</small><h3>Understands its surroundings</h3><p>Tracks terrain, block updates, position, health, food, inventory, selected items, nearby entities, death, and respawn.</p></article>
+        <article class="card"><small>04 / MODELS</small><h3>Cloud or local models</h3><p>Works with Anthropic or OpenAI-compatible services, including local Ollama, LM Studio, and vLLM endpoints.</p></article>
+        <article class="card"><small>05 / LOCAL WORLDS</small><h3>Safe single-player workflow</h3><p>Runs a copied world on a local server, manages setup and shutdown, and offers backup-first copy-back when play ends.</p></article>
+        <article class="card"><small>06 / CONNECTION</small><h3>Direct, resilient protocol</h3><p>Handles Java protocol states, bounded packet decoding, keepalives, server corrections, reconnection, and action confirmation.</p></article>
+      </div>
+      <div class="notice">
+        <strong>Minecraft and server compatibility</strong>
+        <p>AMP 1.0 supports Minecraft Java 26.1, 26.1.1, 26.1.2, and 26.2. Microsoft-authenticated online servers and Java Realms are not enabled because AMP's client identity is still awaiting approval from Minecraft Services.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Before installing</h2>
+      <p class="section-copy">You do not need to modify Minecraft, but you should be comfortable running a command in a terminal and setting an API key or local model address.</p>
+      <div class="steps">
+        <article class="step"><h3>Install Python</h3><p>Use Python 3.10 or newer on Windows, macOS, or Linux.</p></article>
+        <article class="step"><h3>Choose a model</h3><p>Use Anthropic or an OpenAI-compatible service such as Ollama, LM Studio, or vLLM.</p></article>
+        <article class="step"><h3>Choose a world</h3><p>Connect to an existing offline server or let AMP work from a safe copy of a single-player save.</p></article>
+      </div>
+      <div class="installing">
+      <h2>Installing</h2>
+      <div class="terminal"><b>Terminal</b><pre><span>$</span> python -m pip install amp-mc
+<span>$</span> amp</pre></div>
+      <div class="versions" aria-label="Supported Minecraft Java versions"><span>Java 26.1</span><span>Java 26.1.1</span><span>Java 26.1.2</span><span>Java 26.2</span></div>
+      <div class="run-grid">
+        <article class="run-card"><h3>Connect to a server</h3><p>Run the interactive client, then enter the server address, username, version, and planning mode.</p><code>amp</code></article>
+        <article class="run-card"><h3>Use a single-player world</h3><p>AMP copies the save, hosts it locally, and offers backup-first copy-back when you finish.</p><code>amp-world --world "PATH" --version 26.2</code></article>
+      </div>
+      <a class="docs-link" href="https://github.com/AveriWylie/AMP#run">Read setup and model configuration →</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="limits">
+    <div class="wrap">
+      <h2>Limitations</h2>
+      <p class="section-copy">AMP 1.0 is a capable gameplay foundation, not a full replacement for a human player.</p>
+      <ul class="plain-list">
+        <li>No crafting, containers, or general inventory management</li>
+        <li>No sprinting, swimming, climbing, doors, or gap jumping</li>
+        <li>No blueprint import or large construction planning</li>
+        <li>Combat only uses entities already visible in loaded world state</li>
+        <li>Navigation targets the standard Java 26 Overworld height range</li>
+        <li>Real model requests may have provider usage costs</li>
+      </ul>
+      <a class="docs-link" href="https://github.com/AveriWylie/AMP#current-limits">See the complete limitations and roadmap →</a>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    <span>Built by Shahyar Anfaz and Averi Wylie.</span>
+    <div><a href="https://github.com/AveriWylie/AMP/tree/master/docs">Documentation</a><a href="https://pypi.org/project/amp-mc/">PyPI</a><a href="https://github.com/AveriWylie/AMP/releases/tag/v1.0.0">Release</a></div>
+  </footer>
+</body>
+</html>
