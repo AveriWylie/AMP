@@ -5,6 +5,8 @@ connects directly to a Minecraft Java Edition server, implements the network
 protocol over raw TCP, builds live world state from chunk and entity packets,
 and converts natural-language goals into validated gameplay actions.
 
+[Website](https://averiwylie.github.io/AMP/) · [PyPI](https://pypi.org/project/amp-mc/) · [Documentation](docs/USAGE.md)
+
 ## Demo
 
 [Watch AMP play Minecraft (MP4)](docs/demo/demo.mp4)
