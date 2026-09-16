@@ -5,6 +5,10 @@ connects directly to a Minecraft Java Edition server, implements the network
 protocol over raw TCP, builds live world state from chunk and entity packets,
 and converts natural-language goals into validated gameplay actions.
 
+## Demo
+
+[Watch AMP play Minecraft (MP4)](docs/demo/demo.mp4)
+
 AMP 1.0 supports Minecraft Java Edition 26.1, 26.1.1, 26.1.2, and 26.2 on direct
 servers running in offline mode. Each advertised version has generated protocol
 data, fixture coverage, and live gameplay verification. Historical protocol
