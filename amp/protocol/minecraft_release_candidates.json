@@ -1,0 +1,10 @@
+{
+  "candidates": [
+    {
+      "metadata_url": "https://piston-meta.mojang.com/v1/packages/61fff1316bd50312624a858bbb5eb18fa45208ed/26.3.json",
+      "release_time": "2026-09-15T11:23:02+00:00",
+      "version": "26.3"
+    }
+  ],
+  "source": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+}
